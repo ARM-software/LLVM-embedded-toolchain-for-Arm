@@ -1,0 +1,108 @@
+diff --git a/libgloss/arm/crt0.S b/libgloss/arm/crt0.S
+index 8490bde..8b85b28 100644
+--- a/libgloss/arm/crt0.S
++++ b/libgloss/arm/crt0.S
+@@ -565,7 +565,7 @@ change_back:
+ 
+ 	/* For Thumb, constants must be after the code since only 
+ 	   positive offsets are supported for PC relative addresses.  */
+-	.align 0
++	.p2align 2
+ .LC0:
+ #ifdef ARM_RDI_MONITOR
+ 	.word	HeapBase
+diff --git a/libgloss/arm/linux-crt0.c b/libgloss/arm/linux-crt0.c
+index 6b2d62a..000a2c7 100644
+--- a/libgloss/arm/linux-crt0.c
++++ b/libgloss/arm/linux-crt0.c
+@@ -29,7 +29,7 @@ asm("\n"
+ __attribute__((naked, used))
+ static void _start_thumb(void)
+ #else
+-__attribute__((naked))
++//__attribute__((naked))
+ void _start(void)
+ #endif
+ {
+diff --git a/libgloss/arm/syscalls.c b/libgloss/arm/syscalls.c
+index fc394f9..0b3287d 100644
+--- a/libgloss/arm/syscalls.c
++++ b/libgloss/arm/syscalls.c
+@@ -180,7 +180,7 @@ initialise_monitor_handles (void)
+   const char * name;
+ 
+   name = ":tt";
+-  asm ("mov r0,%2; mov r1, #0; swi %a1; mov %0, r0"
++  asm ("movs r0,%2; movs r1, #0; swi %a1; mov %0, r0"
+        : "=r"(fh)
+        : "i" (SWI_Open),"r"(name)
+        : "r0","r1");
+@@ -189,14 +189,14 @@ initialise_monitor_handles (void)
+   if (_has_ext_stdout_stderr ())
+   {
+     name = ":tt";
+-    asm ("mov r0,%2; mov r1, #4; swi %a1; mov %0, r0"
++    asm ("movs r0,%2; movs r1, #4; swi %a1; mov %0, r0"
+ 	 : "=r"(fh)
+ 	 : "i" (SWI_Open),"r"(name)
+ 	 : "r0","r1");
+     monitor_stdout = fh;
+ 
+     name = ":tt";
+-    asm ("mov r0,%2; mov r1, #8; swi %a1; mov %0, r0"
++    asm ("movs r0,%2; movs r1, #8; swi %a1; mov %0, r0"
+ 	 : "=r"(fh)
+ 	 : "i" (SWI_Open),"r"(name)
+ 	 : "r0","r1");
+diff --git a/libgloss/arm/trap.S b/libgloss/arm/trap.S
+index 845ad01..2056c2a 100644
+--- a/libgloss/arm/trap.S
++++ b/libgloss/arm/trap.S
+@@ -5,7 +5,7 @@
+ 
+ /* .text is used instead of .section .text so it works with arm-aout too.  */
+ 	.text
+-        .align 0
++        .p2align 2
+         .global __rt_stkovf_split_big
+         .global __rt_stkovf_split_small
+ 
+diff --git a/libgloss/libnosys/configure b/libgloss/libnosys/configure
+index 7c23c7a..2fc5841 100755
+--- a/libgloss/libnosys/configure
++++ b/libgloss/libnosys/configure
+@@ -2058,7 +2058,7 @@ case "${target}" in
+ esac
+ 
+ case "${target}" in
+-  *-*-elf)
++  *-*-elf|*-*-eabi*)
+         $as_echo "#define HAVE_ELF 1" >>confdefs.h
+ 
+ 
+diff --git a/newlib/libc/sys/arm/crt0.S b/newlib/libc/sys/arm/crt0.S
+index 5e677a2..6faf740 100644
+--- a/newlib/libc/sys/arm/crt0.S
++++ b/newlib/libc/sys/arm/crt0.S
+@@ -556,7 +556,7 @@ change_back:
+ 
+ 	/* For Thumb, constants must be after the code since only 
+ 	   positive offsets are supported for PC relative addresses.  */
+-	.align 0
++	.p2align 2
+ .LC0:
+ #ifdef ARM_RDI_MONITOR
+ 	.word	HeapBase
+diff --git a/newlib/libc/sys/arm/trap.S b/newlib/libc/sys/arm/trap.S
+index 681b3db..8a49f39 100644
+--- a/newlib/libc/sys/arm/trap.S
++++ b/newlib/libc/sys/arm/trap.S
+@@ -4,7 +4,7 @@
+ 
+ /* .text is used instead of .section .text so it works with arm-aout too.  */
+ 	.text
+-        .align 0
++        .p2align 2
+         .global __rt_stkovf_split_big
+         .global __rt_stkovf_split_small
+ 
