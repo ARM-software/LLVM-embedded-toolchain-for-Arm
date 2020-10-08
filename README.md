@@ -24,7 +24,9 @@ newlib     | https://sourceware.org/newlib
 
 ## License
 
-Content of this repository is licensed under Apache-2.0. See LICENSE.txt
+Content of this repository is licensed under Apache-2.0. See ``LICENSE.txt``.
+
+The resulting binaries are covered under their respective open source licenses, see component links above.
 
 ## Contributions and Pull Requests
 
