@@ -90,12 +90,20 @@ USE_CCACHE=1 USE_PARALLEL=1 USE_NINJA=1 ./build.sh
 
 ### Use the toolchain
 
-Once built, you can use the generated config files to configure the compiler correctly. The available config files can be listed with `${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION/bin/*.cfg`
+Once built, you can use the generated config files to configure the compiler correctly. The available config files can be listed with `ls ${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION/bin/*.cfg`
 
 ```
 PATH=${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION/bin:$PATH
 clang --config armv6m-none-eabi_rdimon -o example example.c
 ```
+
+Note that `armv6m-none-eabi_nosys` and `armv6m-none-eabi_rdimon_baremetal` require the linker script to be specifed with `-T`:
+
+```
+PATH=${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION/bin:$PATH
+clang --config armv6m-none-eabi_nosys -T device.ld -o example example.c
+```
+
 
 ### Test the toolchain
 
@@ -130,7 +138,7 @@ Hello Embedded LLVM!
 
 Debug the example with GDB:
 
-Console 1: start EQMU in debug mode:
+Console 1: start QEMU in debug mode:
 ```
 $ qemu-arm -cpu cortex-m0 -g 1234 hello
 ```
