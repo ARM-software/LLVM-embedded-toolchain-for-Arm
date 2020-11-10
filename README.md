@@ -104,49 +104,9 @@ PATH=${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION/bin:$PATH
 clang --config armv6m-none-eabi_nosys -T device.ld -o example example.c
 ```
 
-
 ### Test the toolchain
 
-Simple examples built with the toolchain can be run with [QEMU User space emulator](https://www.qemu.org/docs/master/user/main.html) making use of semihosting for input and output as follows.
-
-_Note: More complex bare-metal examples may need to use [QEMU Arm System emulator](https://www.qemu.org/docs/master/system/target-arm.html)._
-
-Assuming this example code in `hello.c` file:
-```
-#include <stdio.h>
-
-int main()
-{
-	printf("Hello Embedded LLVM!\n");
-	return 0;
-}
-```
-
-Build the example:
-
-```
-$ PATH=${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION/bin:$PATH
-$ clang --config armv6m-none-eabi_rdimon -g -o hello hello.c
-```
-
-Run the example with QEMU:
-
-```
-$ qemu-arm -cpu cortex-m0 hello
-Hello Embedded LLVM!
-```
-
-Debug the example with GDB:
-
-Console 1: start QEMU in debug mode:
-```
-$ qemu-arm -cpu cortex-m0 -g 1234 hello
-```
-Console 2: attach to QEMU with GDB provided by the [GNU Arm Embedded Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads):
-```
-$ arm-none-eabi-gdb hello
-(gdb) target remote :1234
-```
+See the `samples` folder for sample code and instructions on building, running and debugging.
 
 ## Known limitations
 * Depending on the state of the components, build errors may occur when ``VERSION=HEAD`` is used.
