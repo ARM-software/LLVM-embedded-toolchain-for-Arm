@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 #
 # Copyright (c) 2020, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
@@ -14,8 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-#!/usr/bin/env python3
 
 from setuptools import setup, find_packages
 setup(
