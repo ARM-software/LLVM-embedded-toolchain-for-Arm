@@ -30,7 +30,7 @@
   Modules:
     - Name: llvm.git
       URL:  https://github.com/llvm/llvm-project.git
-      Branch: master
+      Branch: main
       Revision: HEAD
       Patch: llvm-0.1.patch
     - Name: newlib.git
