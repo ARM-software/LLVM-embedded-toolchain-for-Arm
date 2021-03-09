@@ -35,20 +35,19 @@ build_compilerrt () {
     -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
     -DLLVM_CONFIG_PATH="$BUILD_DIR/llvm/bin/llvm-config" \
     -DCMAKE_C_COMPILER="$TARGET_LLVM_PATH/bin/clang" \
-    -DCMAKE_C_FLAGS="--sysroot $TARGET_LLVM_PATH/targets/$TARGET" \
     -DCMAKE_AR="$TARGET_LLVM_PATH/bin/llvm-ar" \
     -DCMAKE_NM="$TARGET_LLVM_PATH/bin/llvm-nm" \
     -DCMAKE_RANLIB="$TARGET_LLVM_PATH/bin/llvm-ranlib" \
     -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
-    -DCMAKE_INSTALL_PREFIX="$TARGET_LLVM_PATH/targets/$TARGET"
+    -DCMAKE_INSTALL_PREFIX="$TARGET_LLVM_PATH/lib/clang-runtimes/$TARGET"
 
   build
 
   install
 
   # Cleanup the no longer necessary installed dir
-  mv "$TARGET_LLVM_PATH/targets/$TARGET/lib/linux/"* "$TARGET_LLVM_PATH/targets/$TARGET/lib/"
-  rmdir "$TARGET_LLVM_PATH/targets/$TARGET/lib/linux"
+  mv "$TARGET_LLVM_PATH/lib/clang-runtimes/$TARGET/lib/linux/"* "$TARGET_LLVM_PATH/lib/clang-runtimes/$TARGET/lib/"
+  rmdir "$TARGET_LLVM_PATH/lib/clang-runtimes/$TARGET/lib/linux"
 
   popd
 }

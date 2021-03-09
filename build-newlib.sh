@@ -31,7 +31,7 @@ build_newlib () {
   OBJDUMP_FOR_TARGET="$TARGET_LLVM_PATH/bin/llvm-objdump" \
   $REPOS_DIR/newlib.git/configure --target=$TARGET \
     --prefix=$TARGET_LLVM_PATH \
-    --exec-prefix="$TARGET_LLVM_PATH/targets" \
+    --exec-prefix="$TARGET_LLVM_PATH/lib/clang-runtimes" \
     --enable-newlib-io-long-long \
     --enable-newlib-register-fini \
     --disable-newlib-supplied-syscalls \

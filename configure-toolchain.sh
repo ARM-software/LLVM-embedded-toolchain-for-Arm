@@ -19,38 +19,35 @@
 
 configure_toolchain() {
   # LLD does not have a good bare-metal builtin linker script (yet)
-  cp "$SOURCE_ROOT_DIR/ldscript/base.ld" "$TARGET_LLVM_PATH/targets/${TARGET}/base.ld"
+  cp "$SOURCE_ROOT_DIR/ldscript/base.ld" "$TARGET_LLVM_PATH/lib/clang-runtimes/${TARGET}/base.ld"
 
   # write config files
 
   # no semihosting and no linker script
   cat > "$TARGET_LLVM_PATH/bin/${TARGET}_nosys.cfg" <<-EOF
 	--target=$TARGET
-	--sysroot=\$@/../targets/$TARGET
 	-fuse-ld=lld
-	-L\$@/../targets/$TARGET/lib
-	\$@/../targets/$TARGET/lib/crt0.o
+	-L\$@/../lib/clang-runtimes/$TARGET/lib
+	\$@/../lib/clang-runtimes/$TARGET/lib/crt0.o
 	-lnosys
 	EOF
 
   # semihosting and linker script provided
   cat > "$TARGET_LLVM_PATH/bin/${TARGET}_rdimon.cfg" <<-EOF
 	--target=$TARGET
-	--sysroot=\$@/../targets/$TARGET
 	-fuse-ld=lld
-	-Wl,-T\$@/../targets/$TARGET/base.ld
-	-L\$@/../targets/$TARGET/lib
-	\$@/../targets/$TARGET/lib/rdimon-crt0.o
+	-Wl,-T\$@/../lib/clang-runtimes/$TARGET/base.ld
+	-L\$@/../lib/clang-runtimes/$TARGET/lib
+	\$@/../lib/clang-runtimes/$TARGET/lib/rdimon-crt0.o
 	-lrdimon
 	EOF
 
   # semihosting, but no linker script, e.g. to use with QEMU Arm System emulator
   cat > "$TARGET_LLVM_PATH/bin/${TARGET}_rdimon_baremetal.cfg" <<-EOF
 	--target=$TARGET
-	--sysroot=\$@/../targets/$TARGET
 	-fuse-ld=lld
-	-L\$@/../targets/$TARGET/lib
-	\$@/../targets/$TARGET/lib/rdimon-crt0.o
+	-L\$@/../lib/clang-runtimes/$TARGET/lib
+	\$@/../lib/clang-runtimes/$TARGET/lib/rdimon-crt0.o
 	-lrdimon
 	EOF
 }
