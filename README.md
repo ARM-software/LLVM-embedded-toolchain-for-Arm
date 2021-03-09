@@ -79,10 +79,9 @@ venv/bin/repos.py list
 ./build.sh
 ```
 The build script can optionally take advantage of some tools to speed up the
-build. At the time of writing, the known tools are ``ccache``, ``parallel`` and
-``ninja``.
+build. At the time of writing, the known tools are ``ccache``, and ``ninja``.
 ```
-USE_CCACHE=1 USE_PARALLEL=1 USE_NINJA=1 ./build.sh
+USE_CCACHE=1 USE_NINJA=1 ./build.sh
 ```
 4. By now, you should have a working toolchain in directory
 * ``${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION`` if you were building a release (e.g ``VERSION=0.1``) or in
