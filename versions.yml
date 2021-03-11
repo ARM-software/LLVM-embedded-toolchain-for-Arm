@@ -19,7 +19,7 @@
   Modules:
     - Name: llvm.git
       URL:  https://github.com/llvm/llvm-project.git
-      Revision: llvmorg-11.0.0-rc4
+      Revision: llvmorg-12.0.0-rc3
       Patch: llvm-0.1.patch
     - Name: newlib.git
       URL:  https://github.com/mirror/newlib-cygwin.git
