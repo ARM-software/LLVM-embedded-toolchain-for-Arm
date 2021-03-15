@@ -27,7 +27,6 @@ configure_toolchain() {
   cat > "$TARGET_LLVM_PATH/bin/${TARGET}_nosys.cfg" <<-EOF
 	--target=$TARGET
 	-fuse-ld=lld
-	-L\$@/../lib/clang-runtimes/$TARGET/lib
 	\$@/../lib/clang-runtimes/$TARGET/lib/crt0.o
 	-lnosys
 	EOF
@@ -37,7 +36,6 @@ configure_toolchain() {
 	--target=$TARGET
 	-fuse-ld=lld
 	-Wl,-T\$@/../lib/clang-runtimes/$TARGET/base.ld
-	-L\$@/../lib/clang-runtimes/$TARGET/lib
 	\$@/../lib/clang-runtimes/$TARGET/lib/rdimon-crt0.o
 	-lrdimon
 	EOF
@@ -46,7 +44,6 @@ configure_toolchain() {
   cat > "$TARGET_LLVM_PATH/bin/${TARGET}_rdimon_baremetal.cfg" <<-EOF
 	--target=$TARGET
 	-fuse-ld=lld
-	-L\$@/../lib/clang-runtimes/$TARGET/lib
 	\$@/../lib/clang-runtimes/$TARGET/lib/rdimon-crt0.o
 	-lrdimon
 	EOF
