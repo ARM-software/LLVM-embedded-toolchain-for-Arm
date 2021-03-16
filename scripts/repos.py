@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (c) 2020, Arm Limited and affiliates.
+# Copyright (c) 2020-2021, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,49 +19,49 @@
 
 import argparse
 import os
-import re
 import textwrap
 import sys
+from typing import Dict, List, Any
 
 import git
 import yaml
 
 
-def die(msg, ret_val=1):
+def die(msg: str, ret_val=1) -> None:
     """Exit from program with the specified message and return value."""
     print('Error: {}'.format(msg))
     sys.exit(ret_val)
 
 
-def warn(msg):
+def warn(msg: str) -> None:
     """Print a warning message."""
     print('Warning: {}'.format(msg))
 
 
 class ModuleTC:
     """A building block of the LLVM Embedded Toolchain for Arm."""
-    def __init__(self, module_yml):
-        assert isinstance(module_yml, dict)
+    def __init__(self, module_yml: Dict[str, str]):
         for key in ['Name', 'URL', 'Revision']:
             assert key in module_yml, (
-                "ModuleTC is missing mandatory key '{}'".format(key))
+                'ModuleTC is missing mandatory key "{}"'.format(key))
         self.name = module_yml['Name']
         self.url = module_yml['URL']
         self.branch = module_yml['Branch'] if 'Branch' in module_yml else None
         self.revision = module_yml['Revision']
         self.patch = module_yml['Patch'] if 'Patch' in module_yml else None
         if self.revision == 'HEAD' and self.branch is None:
-            die('for repository {}, HEAD needs a branch name !'.format(
+            die('for repository {}, HEAD needs a branch name'.format(
                 self.name))
 
     def __repr__(self):
         return ', '.join(self.yamlize())
 
-    def yamlize(self):
+    def yamlize(self) -> str:
         """Convert to YAML represented as a list of lines."""
-        res = list()
-        res.append('Name: {}'.format(self.name))
-        res.append('URL: {}'.format(self.url))
+        res = [
+            'Name: {}'.format(self.name),
+            'URL: {}'.format(self.url),
+        ]
         if self.branch:
             res.append('Branch: {}'.format(self.branch))
         res.append('Revision: {}'.format(self.revision))
@@ -70,12 +70,11 @@ class ModuleTC:
 
 class LLVMBMTC:
     """An LLVM Embedded Toolchain for Arm package."""
-    def __init__(self, data_yml):
-        assert isinstance(data_yml, dict), 'Toolchains must be a dict !'
-        assert 'Revision' in data_yml, 'Toolchain is missing a revision !'
-        assert 'Modules' in data_yml, 'Toolchain is missing a modules list !'
-        assert isinstance(data_yml['Modules'],
-                          list), 'Toolchains modules must be a list !'
+    def __init__(self, data_yml: Dict[str, Any]):
+        assert 'Revision' in data_yml, 'Toolchain is missing a revision'
+        assert 'Modules' in data_yml, 'Toolchain is missing a modules list'
+        assert isinstance(data_yml['Modules'], list), (
+            'Toolchains modules must be a list')
         self.revision = str(data_yml['Revision'])
         self.modules = {}
         for module_yml in data_yml['Modules']:
@@ -90,63 +89,57 @@ class LLVMBMTC:
                                                         self.revision, modules)
 
 
-def get_all_versions(filename):
-    """ Build the database containing all releases from a YAML file."""
-    assert isinstance(filename, str), "Expecting a string for the file name."
-    versions = dict()
+def get_all_versions(filename: str) -> Dict[str, Any]:
+    """Build the database containing all releases from a YAML file."""
+    versions = {}
     with open(filename, 'r') as stream:
         try:
             yml = yaml.load(stream, Loader=yaml.FullLoader)
             for value in yml:
                 toolchain = LLVMBMTC(value)
                 if toolchain.revision in versions:
-                    die('toolchain revision {} previously defined !'.format(
+                    die('toolchain revision {} previously defined'.format(
                         toolchain.revision))
                 versions[toolchain.revision] = toolchain
-        except yaml.YAMLError as exc:
-            print(exc)
+        except yaml.YAMLError as ex:
+            print(ex)
 
     return versions
 
 
-def print_versions(versions, verbose):
-    """Print releases (as parsed from a YAML file)"""
-    assert isinstance(versions, dict), "Expecting a dictionary of versions."
+def print_versions(versions: Dict[str, Any], verbose: bool) -> int:
+    """Print releases (as parsed from a YAML file)."""
     if verbose:
-        for version, toolchain in list(versions.items()):
+        for version, toolchain in versions.items():
             print(' - revision: {}'.format(version))
             print('   modules:')
             for module in list(toolchain.modules.values()):
                 print('    - {}'.format(module))
     else:
-        print("\n".join(versions.keys()))
+        print('\n'.join(versions.keys()))
 
     return 0
 
 
-def find_all_git_repositories(repositories):
-    """ Walk repositories to find all GIT checkouts."""
-    assert isinstance(repositories,
-                      str), "Expecting a string for the directory name."
-    if not os.path.isdir(repositories):
-        die("repositories location '{}' does not exists !".format(repositories))
-    repos = list()
-    for root, sub_dirs, _ in os.walk(repositories):
+def find_all_git_repositories(checkout_path: str) -> List[str]:
+    """Walk repositories to find all GIT checkouts."""
+    if not os.path.isdir(checkout_path):
+        die("repositories location '{}' does not exists!".format(
+            checkout_path))
+    repos = []
+    for root, sub_dirs, _ in os.walk(checkout_path):
         if '.git' in sub_dirs:
             repos.append(root)
     return repos
 
 
-def get_repositories_status(repositories):
-    """ Get the state of each git repository."""
-    assert isinstance(repositories,
-                      str), "Expecting a string for the directory name."
-    status = dict()
-    repos = find_all_git_repositories(repositories)
-    rex = re.compile('^' + repositories + r'\/')
+def get_repositories_status(checkout_path: str) -> Dict[str, Any]:
+    """Get the state of each git repository."""
+    status = {}
+    repos = find_all_git_repositories(checkout_path)
     for repo_path in repos:
         repo = git.Repo(repo_path)
-        rel_path = rex.sub('', repo_path)
+        rel_path = os.path.relpath(repo_path, checkout_path)
         status[rel_path] = {
             'SHA1': repo.head.commit.hexsha,
             'Dirty': repo.is_dirty(),
@@ -159,43 +152,38 @@ def get_repositories_status(repositories):
     return status
 
 
-def print_repositories_status(repositories):
-    """ Report the state of each git repository."""
-    assert isinstance(repositories,
-                      str), "Expecting a string for the directory name."
-    statuses = get_repositories_status(repositories)
-    print("Status (in directory '{}'):".format(repositories))
-    for repo, status in list(statuses.items()):
-        if status['Branch'] is None:
-            print(" - {}: Detached, Revision:{}, Dirty:{}".format(
-                repo, status['SHA1'], status['Dirty']))
+def print_repositories_status(checkout_path: str) -> int:
+    """Report the state of each git repository."""
+    statuses = get_repositories_status(checkout_path)
+    print('Status (in directory "{}"):'.format(checkout_path))
+    for repo, status in statuses.items():
+        if status['Branch'] is not None:
+            branch_str = 'Branch: {}'.format(status['Branch'])
         else:
-            print(" - {}: Branch:{}, Revision:{}, Dirty:{}".format(
-                repo, status['Branch'], status['SHA1'], status['Dirty']))
+            branch_str = 'Detached'
+        print(' - {}: {}, Revision: {}, Dirty: {}'.format(
+              repo, branch_str, status['SHA1'], status['Dirty']))
 
     return 0
 
 
-def check_repositories_status(repositories, tc_version):
+def check_repositories_status(checkout_path: str, tc_version: LLVMBMTC) -> int:
     """Check the state of each git repository against the one stored in the
        release database.
     """
-    assert isinstance(repositories,
-                      str), "Expecting a string for the directory name."
-    assert isinstance(tc_version, LLVMBMTC), "Expecting an LLVMBMTC object."
-    statuses = get_repositories_status(repositories)
+    statuses = get_repositories_status(checkout_path)
     ret_val = 0
-    print("Check (in directory '{}', for revision '{}'):".format(
-        repositories, tc_version.revision))
+    print('Check (in directory "{}", for revision "{}"):'.format(
+        checkout_path, tc_version.revision))
     if len(statuses) != len(tc_version.modules):
-        warn('{} and {} do not have the same number of modules !'.format(
-            repositories, tc_version.revision))
+        warn('{} and {} do not have the same number of modules'.format(
+            checkout_path, tc_version.revision))
         ret_val = 1
 
-    for repo, status in list(statuses.items()):
+    for repo, status in statuses.items():
         msg = []
         if repo not in tc_version.modules:
-            die('{} was not found in the revision database !'.format(repo))
+            die('{} was not found in the revision database'.format(repo))
         module = tc_version.modules[repo]
         if status['Dirty']:
             msg.append('Dirty')
@@ -209,78 +197,72 @@ def check_repositories_status(repositories, tc_version):
             msg.append('OK')
         else:
             ret_val = 1
-        print(" - {}: {}".format(repo, ', '.join(msg)))
+        print(' - {}: {}'.format(repo, ', '.join(msg)))
 
     return ret_val
 
 
-def clone_repositories(repositories, tc_version, patches):
-    """Checkout each git repository for tc_version in directory repositories."""
-    assert isinstance(repositories,
-                      str), "Expecting a string for the directory name."
-    assert isinstance(tc_version, LLVMBMTC), "Expecting an LLVMBMTC object."
-    if os.path.isdir(repositories):
+def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
+                       patches: str) -> int:
+    """Checkout each git repository for tc_version in the directory
+       checkout_path.
+    """
+    if os.path.isdir(checkout_path):
         # Ensure the directory is empty if it exists
-        if os.listdir(repositories):
-            die("repositories location '{}' is not empty !".format(
-                repositories))
+        if os.listdir(checkout_path):
+            die('repositories location "{}" is not empty'.format(
+                checkout_path))
     else:
-        os.mkdir(repositories)
+        os.mkdir(checkout_path)
 
-    repos = list(tc_version.modules.keys())
-
-    print('Clone ({} @ {}):'.format(repositories, tc_version.revision))
-    for repo_path in repos:
-        module = tc_version.modules[repo_path]
+    print('Clone ({} @ {}):'.format(checkout_path, tc_version.revision))
+    for repo_path, module in tc_version.modules.items():
         print(' - {}: {} @ {}{}'.format(
             repo_path, module.branch, module.revision,
             ' (detached)' if module.revision != 'HEAD' else ''))
         repo = git.Repo.clone_from(module.url,
-                                   os.path.join(repositories, module.name))
+                                   os.path.join(checkout_path, module.name))
         if module.revision == 'HEAD':
             try:
                 repo.git.checkout(module.branch)
-            except git.exc.GitCommandError as ex:  # pylint: disable=no-member
-                die("could not checkout '{}' @ '{}/{}' !\n"
-                    "Git command failed with:\n{}"
+            except git.exc.GitCommandError as ex: # pylint: disable=no-member
+                die('could not checkout "{}" @ "{}/{}"\n'
+                    'Git command failed with:\n{}'
                     .format(repo_path, module.branch, module.revision, ex))
         else:
             # Detached state
             try:
                 repo.git.checkout(module.revision)
-            except git.exc.GitCommandError as ex:  # pylint: disable=no-member
-                die("could not checkout '{}' @ '{}' !\n"
-                    "Git command failed with:\n{}"
+            except git.exc.GitCommandError as ex: # pylint: disable=no-member
+                die('could not checkout "{}" @ "{}".\n'
+                    'Git command failed with:\n{}'
                     .format(repo_path, module.revision, ex))
 
         if module.patch:
             patch_file = os.path.join(patches, module.patch)
             if not os.path.isfile(patch_file):
-                die("patch file '{}' not found !".format(patch_file))
+                die('patch file "{}" not found'.format(patch_file))
 
             print(' - {}: patch {}'.format(repo_path, patch_file))
             try:
                 repo.git.apply(['-p1', patch_file])
-            except git.exc.GitCommandError as ex:  # pylint: disable=no-member
-                die("could not patch '{}' with '{}' !\n"
-                    "Git command failed with:\n{}"
+            except git.exc.GitCommandError as ex: # pylint: disable=no-member
+                die('could not patch "{}" with "{}".\n'
+                    'Git command failed with:\n{}'
                     .format(repo_path, patch_file, ex))
 
     return 0
 
 
-def freeze_repositories(repositories, version):
-    """ Print a YAML compatible output of the repositories state."""
-    assert isinstance(repositories,
-                      str), "Expecting a string for the directory name."
-    assert isinstance(version, str), "Expecting a string for the version."
-    statuses = get_repositories_status(repositories)
-    for repo, status in list(statuses.items()):
+def freeze_repositories(checkout_path: str, version: str) -> int:
+    """Print a YAML compatible output of the repositories state."""
+    statuses = get_repositories_status(checkout_path)
+    for repo, status in statuses.items():
         if status['Dirty']:
-            die("'{}' is in a dirty state. Refusing to freeze !".format(repo))
+            die('"{}" is in a dirty state. Refusing to freeze.'.format(repo))
     print('- Revision: {}'.format(version))
     print('  Modules:')
-    for repo, status in list(statuses.items()):
+    for repo, status in statuses.items():
         print('    - Name: {}'.format(repo))
         print('      URL: {}'.format(status['URL']))
         print('      Revision: {}'.format(status['SHA1']))
@@ -344,7 +326,7 @@ def main():
 
     # Make sure the requested version actually exists
     if args.revision not in versions:
-        die("revision '{}' is unknown !".format(args.revision))
+        die('revision "{}" is unknown'.format(args.revision))
 
     if args.action == 'list':
         ret_val = print_versions(versions, args.verbose)
@@ -355,7 +337,7 @@ def main():
         ret_val = clone_repositories(args.repositories, versions[args.revision],
                                      args.patches)
     else:
-        die("Error ! Unsupported command '{}' !".format(args.action))
+        die('unsupported command: "{}"'.format(args.action))
 
     sys.exit(ret_val)
 
