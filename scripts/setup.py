@@ -18,11 +18,11 @@
 #
 
 from setuptools import setup, find_packages
-setup(
-    name = "LLVMEmbeddedToolchainForArm",
-    version = "0.1",
-    packages = find_packages(),
-    scripts = [ 'repos.py',
-              ],
-    install_requires = ['pyyaml', 'gitpython']
-)
+
+setup(name="LLVMEmbeddedToolchainForArm",
+      version="0.1",
+      packages=find_packages(),
+      scripts=[
+          'repos.py',
+      ],
+      install_requires=['pyyaml', 'gitpython'])
