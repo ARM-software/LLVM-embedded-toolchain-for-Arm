@@ -26,6 +26,7 @@ configure_toolchain() {
   # no semihosting and no linker script
   cat > "$TARGET_LLVM_PATH/bin/${TARGET}_nosys.cfg" <<-EOF
 	--target=$TARGET
+    $FLAGS
 	-fuse-ld=lld
 	\$@/../lib/clang-runtimes/$TARGET/lib/crt0.o
 	-lnosys
@@ -34,6 +35,7 @@ configure_toolchain() {
   # semihosting and linker script provided
   cat > "$TARGET_LLVM_PATH/bin/${TARGET}_rdimon.cfg" <<-EOF
 	--target=$TARGET
+    $FLAGS
 	-fuse-ld=lld
 	-Wl,-T\$@/../lib/clang-runtimes/$TARGET/base.ld
 	\$@/../lib/clang-runtimes/$TARGET/lib/rdimon-crt0.o
@@ -43,6 +45,7 @@ configure_toolchain() {
   # semihosting, but no linker script, e.g. to use with QEMU Arm System emulator
   cat > "$TARGET_LLVM_PATH/bin/${TARGET}_rdimon_baremetal.cfg" <<-EOF
 	--target=$TARGET
+    $FLAGS
 	-fuse-ld=lld
 	\$@/../lib/clang-runtimes/$TARGET/lib/rdimon-crt0.o
 	-lrdimon

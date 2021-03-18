@@ -20,8 +20,14 @@
 build_newlib () {
   pushToCleanDir $BUILD_DIR/newlib
 
+  NEWLIB_HW_FP="--disable-newlib-hw-fp"
+  if [ $NEWLIB_FP_SUPPORT = true ]; then
+      NEWLIB_HW_FP="--enable-newlib-hw-fp"
+  fi
+
   CC_FOR_TARGET="$TARGET_LLVM_PATH/bin/clang -target $TARGET -ffreestanding" \
   CXX_FOR_TARGET="$TARGET_LLVM_PATH/bin/clang++ -target $TARGET -ffreestanding" \
+  CFLAGS_FOR_TARGET="${FLAGS}" \
   AR_FOR_TARGET="$TARGET_LLVM_PATH/bin/llvm-ar" \
   NM_FOR_TARGET="$TARGET_LLVM_PATH/bin/llvm-nm" \
   AS_FOR_TARGET="$TARGET_LLVM_PATH/bin/llvm-as" \
@@ -37,7 +43,8 @@ build_newlib () {
     --disable-newlib-supplied-syscalls \
     --enable-newlib-io-c99-formats \
     --disable-nls \
-    --enable-lite-exit
+    --enable-lite-exit \
+    $NEWLIB_HW_FP
 
   make -j$NPROC
   make install
