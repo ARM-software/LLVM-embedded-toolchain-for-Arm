@@ -28,12 +28,30 @@ readonly HOST_LLVM_PATH="${HOST_LLVM_PATH:-/usr/bin}"
 # How many CPUs to use for building the LLVM baremetal toolchain for Arm:
 readonly NPROC="${NPROC:-$(getconf _NPROCESSORS_ONLN)}"
 
-# Default triple of the toolchain:
-readonly TARGET=armv6m-none-eabi
+# The Arm sub-arch we want to use:
+readonly ARCH=${ARCH:-"armv6m"}
+
+# Architecture options:
+# (good overview: https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html)
+readonly ARCH_OPTIONS=${ARCH_OPTIONS:-""}
+
+# Float ABI
+readonly FLOAT_ABI=${FLOAT_ABI:-"soft"}
 
 #
 # No modification should be necessary beyond this point.
 #
+# Default triple of the toolchain:
+NEWLIB_FP_SUPPORT=false
+if [ $FLOAT_ABI != "soft" ]; then
+    NEWLIB_FP_SUPPORT=true
+fi
+
+readonly TARGET=$ARCH-none-eabi
+
+# CFLAGS/ASM_FLAGS
+readonly FLAGS="-mfloat-abi=${FLOAT_ABI} -march=${ARCH}${ARCH_OPTIONS}"
+
 readonly SOURCE_ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Install directory of the LLVM baremetal toolchain for Arm:
 readonly INSTALL_ROOT_DIR=${INSTALL_ROOT_DIR:-$SOURCE_ROOT_DIR}

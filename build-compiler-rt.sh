@@ -35,6 +35,8 @@ build_compilerrt () {
     -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
     -DLLVM_CONFIG_PATH="$BUILD_DIR/llvm/bin/llvm-config" \
     -DCMAKE_C_COMPILER="$TARGET_LLVM_PATH/bin/clang" \
+    -DCMAKE_C_FLAGS="${FLAGS}" \
+    -DCMAKE_ASM_FLAGS="${FLAGS}" \
     -DCMAKE_AR="$TARGET_LLVM_PATH/bin/llvm-ar" \
     -DCMAKE_NM="$TARGET_LLVM_PATH/bin/llvm-nm" \
     -DCMAKE_RANLIB="$TARGET_LLVM_PATH/bin/llvm-ranlib" \
