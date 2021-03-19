@@ -28,29 +28,87 @@ readonly HOST_LLVM_PATH="${HOST_LLVM_PATH:-/usr/bin}"
 # How many CPUs to use for building the LLVM baremetal toolchain for Arm:
 readonly NPROC="${NPROC:-$(getconf _NPROCESSORS_ONLN)}"
 
-# The Arm sub-arch we want to use:
-readonly ARCH=${ARCH:-"armv6m"}
 
-# Architecture options:
-# (good overview: https://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html)
-readonly ARCH_OPTIONS=${ARCH_OPTIONS:-""}
+LIBRARY_SPEC="${LIBRARY_SPEC:-armv6m_soft_nofp}"
 
-# Float ABI
-readonly FLOAT_ABI=${FLOAT_ABI:-"soft"}
+case $LIBRARY_SPEC in
+    "armv8.1m.main_hard_fp")
+        ARCH="armv8.1m.main"
+        ARCH_OPTIONS="+fp"
+        FLOAT_ABI="hard"
+        ;;
+    "armv8.1m.main_hard_nofp_mve")
+        ARCH="armv8.1m.main"
+        ARCH_OPTIONS="+nofp+mve"
+        FLOAT_ABI="hard"
+        NEWLIB_FP_SUPPORT=false
+        ;;
+    "armv8.1m.main_soft_nofp_nomve")
+        ARCH="armv8.1m.main"
+        ARCH_OPTIONS="+nofp+nomve"
+        FLOAT_ABI="soft"
+        ;;
+    "armv8m.main_hard_fp")
+        ARCH="armv8m.main"
+        ARCH_OPTIONS="+fp"
+        FLOAT_ABI="hard"
+        ;;
+    "armv8m.main_soft_nofp")
+        ARCH="armv8m.main"
+        ARCH_OPTIONS="+nofp"
+        FLOAT_ABI="soft"
+        ;;
+    "armv7em_hard_fpv4_sp_d16")
+        ARCH="armv7em"
+        ARCH_OPTIONS=""
+        OTHER_FLAGS="-mfpu=fpv4-sp-d16"
+        FLOAT_ABI="hard"
+        ;;
+    "armv7em_hard_fpv5_d16")
+        ARCH="armv7em"
+        ARCH_OPTIONS=""
+        OTHER_FLAGS="-mfpu=fpv5-d16"
+        FLOAT_ABI="hard"
+        ;;
+    "armv7em_soft_nofp")
+        ARCH="armv7em"
+        ARCH_OPTIONS=""
+        OTHER_FLAGS="-mfpu=none"
+        FLOAT_ABI="soft"
+        ;;
+    "armv7m_soft_nofp")
+        ARCH="armv7m"
+        ARCH_OPTIONS="+nofp"
+        FLOAT_ABI="soft"
+        ;;
+    "armv6m_soft_nofp")
+        ARCH="armv6m"
+        ARCH_OPTIONS=""
+        FLOAT_ABI="soft"
+        ;;
+    *)
+        echo "LIBRARY_SPEC option not recognized: `$LIBRARY_SPEC`!!"
+        exit 1
+        ;;
+esac
 
 #
 # No modification should be necessary beyond this point.
 #
-# Default triple of the toolchain:
-NEWLIB_FP_SUPPORT=false
+# set to true if we need to compile the newlib fp maths variants
 if [ $FLOAT_ABI != "soft" ]; then
-    NEWLIB_FP_SUPPORT=true
+    NEWLIB_FP_SUPPORT=${NEWLIB_FP_SUPPORT:-true}
+else
+    NEWLIB_FP_SUPPORT=false
 fi
 
+# Default triple of the toolchain
 readonly TARGET=$ARCH-none-eabi
 
+OTHER_FLAGS=${OTHER_FLAGS:-""}
+
 # CFLAGS/ASM_FLAGS
-readonly FLAGS="-mfloat-abi=${FLOAT_ABI} -march=${ARCH}${ARCH_OPTIONS}"
+readonly FLAGS="-mfloat-abi=${FLOAT_ABI} -march=${ARCH}${ARCH_OPTIONS} ${OTHER_FLAGS}"
 
 readonly SOURCE_ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Install directory of the LLVM baremetal toolchain for Arm:
