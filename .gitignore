@@ -1,5 +1,7 @@
 .*.swp
+.idea
 repos*/
 build*/
 venv/
 *LLVMEmbeddedToolchainForArm*
+__pycache__
