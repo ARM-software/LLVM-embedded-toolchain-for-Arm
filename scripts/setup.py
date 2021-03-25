@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (c) 2020, Arm Limited and affiliates.
+# Copyright (c) 2020-2021, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,13 @@ setup(name="LLVMEmbeddedToolchainForArm",
       version="0.1",
       packages=find_packages(),
       scripts=[
+          'build.py',
+          'check.py',
+          'cfg_files.py',
+          'config.py',
+          'execution.py',
           'repos.py',
+          'tarball.py',
+          'util.py'
       ],
       install_requires=['pyyaml', 'gitpython'])

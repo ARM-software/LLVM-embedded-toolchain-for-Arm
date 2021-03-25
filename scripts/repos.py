@@ -56,7 +56,7 @@ class ModuleTC:
     def __repr__(self):
         return ', '.join(self.yamlize())
 
-    def yamlize(self) -> str:
+    def yamlize(self) -> List[str]:
         """Convert to YAML represented as a list of lines."""
         res = [
             'Name: {}'.format(self.name),
@@ -202,6 +202,29 @@ def check_repositories_status(checkout_path: str, tc_version: LLVMBMTC) -> int:
     return ret_val
 
 
+def patch_repositories(checkout_path: str, tc_version: LLVMBMTC,
+                       patches: str) -> int:
+    """Reset checked out repositories and apply patches."""
+    for repo_name, module in tc_version.modules.items():
+        if not module.patch:
+            continue
+        repo_path = os.path.join(checkout_path, repo_name)
+        patch_file = os.path.join(patches, module.patch)
+        if not os.path.isfile(patch_file):
+            die('patch file "{}" not found'.format(patch_file))
+
+        print(' - {}: patch {}'.format(repo_path, patch_file))
+        repo = git.Repo(repo_path)
+        try:
+            repo.head.reset(index=True, working_tree=True)
+            repo.git.apply(['-p1', patch_file])
+        except git.exc.GitCommandError as ex: # pylint: disable=no-member
+            die('could not patch "{}" with "{}".\n'
+                'Git command failed with:\n{}'
+                .format(repo_path, patch_file, ex))
+    return 0
+
+
 def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
                        patches: str) -> int:
     """Checkout each git repository for tc_version in the directory
@@ -238,20 +261,7 @@ def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
                     'Git command failed with:\n{}'
                     .format(repo_path, module.revision, ex))
 
-        if module.patch:
-            patch_file = os.path.join(patches, module.patch)
-            if not os.path.isfile(patch_file):
-                die('patch file "{}" not found'.format(patch_file))
-
-            print(' - {}: patch {}'.format(repo_path, patch_file))
-            try:
-                repo.git.apply(['-p1', patch_file])
-            except git.exc.GitCommandError as ex: # pylint: disable=no-member
-                die('could not patch "{}" with "{}".\n'
-                    'Git command failed with:\n{}'
-                    .format(repo_path, patch_file, ex))
-
-    return 0
+    return patch_repositories(checkout_path, tc_version, patches)
 
 
 def freeze_repositories(checkout_path: str, version: str) -> int:
