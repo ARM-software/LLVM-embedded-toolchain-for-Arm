@@ -300,3 +300,23 @@ index 64e4aeb9a..c0e5e9049 100644
  #include <math.h>
  
  float
+diff --git a/newlib/libc/include/machine/ieeefp.h b/newlib/libc/include/machine/ieeefp.h
+index aa8a1903b..19be99ecc 100644
+--- a/newlib/libc/include/machine/ieeefp.h
++++ b/newlib/libc/include/machine/ieeefp.h
+@@ -72,7 +72,14 @@
+    byte ordering was big or little endian depending upon the target.
+    Modern floating-point formats are naturally ordered; in this case
+    __VFP_FP__ will be defined, even if soft-float.  */
+-#ifdef __VFP_FP__
++/* Clang does not target any ARM architecture that uses the FPA architecture,
++   where double-precision floating-point values are big-endian at word level
++   and have a target-dependent endianness at byte level. Moreover, contrary
++   to gcc, Clang can leave __VFP_FP__ undefined even in modern architectures.
++   This is the case when the FPU is disabled or not present. Hence, in clang,
++   the endianness at word level is always the same as the one at byte level.
++*/
++#if defined(__VFP_FP__) || defined(__clang__)
+ # ifdef __ARMEL__
+ #  define __IEEE_LITTLE_ENDIAN
+ # else
