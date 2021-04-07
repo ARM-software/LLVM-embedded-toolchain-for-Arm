@@ -91,8 +91,8 @@ def _check_host_compiler(cfg: config.Config) -> bool:
 
     args = [cfg.host_c_compiler, '--version']
     ver_line = execution.run_stdout(args)[0]
-    assert 'clang version' in ver_line
-    ver_str = ver_line.split(' ')[-1]
+    assert ver_line.startswith('clang version ')
+    ver_str = ver_line.split(' ')[2]
     # Remove distribution suffix (if any) and convert to a tuple
     ver = _str_to_ver(ver_str.split('-')[0])
     if ver < MIN_CLANG_VERSION:

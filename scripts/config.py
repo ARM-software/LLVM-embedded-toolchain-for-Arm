@@ -123,10 +123,10 @@ class Config:  # pylint: disable=too-many-instance-attributes
 
     def _fill_args(self, args: argparse.Namespace):
         if 'all' in args.variants:
-            self.variants = LIBRARY_SPECS
+            variant_names = LIBRARY_SPECS.keys()
         else:
-            self.variants = [LIBRARY_SPECS[v] for v in
-                             sorted(set(args.variants))]
+            variant_names = set(args.variants)
+        self.variants = [LIBRARY_SPECS[v] for v in sorted(variant_names)]
 
         if not args.actions or Action.ALL.value in args.actions:
             self.actions = set(action for action in Action
