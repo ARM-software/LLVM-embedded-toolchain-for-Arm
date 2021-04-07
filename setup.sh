@@ -21,11 +21,11 @@ set -e
 # If your python3 is not just "python3" edit this
 PYTHON3=python3
 
-python_err="Error: Python3.5 or newer is required."
+python_err="Error: Python 3.6 or newer is required."
 if command -v "$PYTHON3" --version &> /dev/null
 then
   pyv=$("$PYTHON3" -c 'from sys import version_info; print("".join(map(str, (version_info.major, version_info.minor))))')
-  if [ "$pyv" -lt 35 ]
+  if [ "$pyv" -lt 36 ]
   then
     echo "$python_err" && exit 1
   fi
