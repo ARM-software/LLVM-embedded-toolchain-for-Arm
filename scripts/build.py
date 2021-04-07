@@ -70,10 +70,11 @@ def parse_args_to_config() -> Config:
                         help='path to directory containing LLVM and newlib '
                              'repositories (default: ./repos-<revision>)')
     parser.add_argument('--host-toolchain-dir', type=str, metavar='PATH',
-                        default='/bin',
+                        default='/usr/bin',
                         help='path to the directory containing the host Clang '
-                             'compiler binary (v. {} or '
-                             'later)'.format(check.MIN_CLANG_VERSION))
+                             'compiler binary v. {} or later '
+                             '(default: /usr/bin)'.format(
+                                 check.MIN_CLANG_VERSION))
     parser.add_argument('--skip-checks',
                         help='skip checks of build prerequisites',
                         action='store_true')
