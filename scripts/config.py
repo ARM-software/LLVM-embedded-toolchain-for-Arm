@@ -66,7 +66,6 @@ class LibrarySpec:
         self.float_abi = float_abi
         self.arch_options = arch_options
         self.other_flags = other_flags
-        self.newlib_fp_support = newlib_fp_support
         self.name = '{}_{}_{}'.format(arch,  float_abi.value, name_suffix)
 
     @property
