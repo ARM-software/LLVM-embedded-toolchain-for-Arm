@@ -61,11 +61,17 @@ class Runner:
             subprocess.run(args, stdout=stdout, stderr=stderr, check=True,
                            cwd=cwd, env=env)
         except subprocess.CalledProcessError as ex:
-            lines = ex.stderr.decode('utf-8', errors='replace').split('\n')
-            if len(lines) > 30:
-                lines = ['...'] + lines[-30:]
-            logging.error('Command failed with return code %d, stderr:\n%s',
-                          ex.returncode, '\n'.join(lines))
+            if not self.verbose:
+                lines = ex.stderr.decode('utf-8', errors='replace').split('\n')
+                if len(lines) > 30:
+                    lines = ['...'] + lines[-30:]
+                logging.error('Command failed with return code %d, stderr:\n%s',
+                              ex.returncode, '\n'.join(lines))
+            else:
+                # In verbose mode stderr has already been copied to sys.stderr,
+                # so we only need to output the return code
+                logging.error('Command failed with return code %d',
+                              ex.returncode)
             raise
 
 
