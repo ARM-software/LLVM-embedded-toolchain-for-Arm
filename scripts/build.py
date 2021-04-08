@@ -123,12 +123,6 @@ def parse_args_to_config() -> Config:
     return config.Config(args)
 
 
-def configure_logging() -> None:
-    """Set logging format and level threshold for the default logger."""
-    log_format = '%(levelname)s: %(message)s'
-    logging.basicConfig(format=log_format, level=logging.INFO)
-
-
 def prepare_repositories(cfg: config.Config,
                          toolchain_ver: repos.LLVMBMTC) -> None:
     """Prepare source repositories according to the selected --checkout-mode
@@ -217,7 +211,7 @@ def build_all(cfg: Config) -> None:
 
 
 def main() -> int:
-    configure_logging()
+    util.configure_logging()
     cfg = parse_args_to_config()
     versions = repos.get_all_versions(os.path.join(cfg.source_dir,
                                                    'versions.yml'))

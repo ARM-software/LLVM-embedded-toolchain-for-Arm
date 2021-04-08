@@ -18,6 +18,7 @@
 #
 
 import argparse
+import logging
 import os
 import textwrap
 import sys
@@ -26,16 +27,13 @@ from typing import Dict, List, Any
 import git
 import yaml
 
+import util
+
 
 def die(msg: str, ret_val=1) -> None:
     """Exit from program with the specified message and return value."""
-    print('Error: {}'.format(msg))
+    logging.error(msg)
     sys.exit(ret_val)
-
-
-def warn(msg: str) -> None:
-    """Print a warning message."""
-    print('Warning: {}'.format(msg))
 
 
 class ModuleTC:
@@ -102,7 +100,7 @@ def get_all_versions(filename: str) -> Dict[str, Any]:
                         toolchain.revision))
                 versions[toolchain.revision] = toolchain
         except yaml.YAMLError as ex:
-            print(ex)
+            logging.error(ex)
 
     return versions
 
@@ -173,11 +171,11 @@ def check_repositories_status(checkout_path: str, tc_version: LLVMBMTC) -> int:
     """
     statuses = get_repositories_status(checkout_path)
     ret_val = 0
-    print('Check (in directory "{}", for revision "{}"):'.format(
-        checkout_path, tc_version.revision))
+    logging.info('Check (in directory "%s", for revision "%s"):',
+                 checkout_path, tc_version.revision)
     if len(statuses) != len(tc_version.modules):
-        warn('{} and {} do not have the same number of modules'.format(
-            checkout_path, tc_version.revision))
+        logging.warning('%s and %s do not have the same number of modules',
+                        checkout_path, tc_version.revision)
         ret_val = 1
 
     for repo, status in statuses.items():
@@ -197,7 +195,7 @@ def check_repositories_status(checkout_path: str, tc_version: LLVMBMTC) -> int:
             msg.append('OK')
         else:
             ret_val = 1
-        print(' - {}: {}'.format(repo, ', '.join(msg)))
+        logging.info(' - %s: %s', repo, ', '.join(msg))
 
     return ret_val
 
@@ -213,7 +211,7 @@ def patch_repositories(checkout_path: str, tc_version: LLVMBMTC,
         if not os.path.isfile(patch_file):
             die('patch file "{}" not found'.format(patch_file))
 
-        print(' - {}: patch {}'.format(repo_path, patch_file))
+        logging.info(' - %s: patch %s', repo_path, patch_file)
         repo = git.Repo(repo_path)
         try:
             repo.head.reset(index=True, working_tree=True)
@@ -238,11 +236,11 @@ def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
     else:
         os.mkdir(checkout_path)
 
-    print('Clone ({} @ {}):'.format(checkout_path, tc_version.revision))
+    logging.info('Clone (%s @ %s):', checkout_path, tc_version.revision)
     for repo_path, module in tc_version.modules.items():
-        print(' - {}: {} @ {}{}'.format(
+        logging.info(' - %s: %s @ %s%s',
             repo_path, module.branch, module.revision,
-            ' (detached)' if module.revision != 'HEAD' else ''))
+            ' (detached)' if module.revision != 'HEAD' else '')
         repo = git.Repo.clone_from(module.url,
                                    os.path.join(checkout_path, module.name))
         if module.revision == 'HEAD':
@@ -281,6 +279,8 @@ def freeze_repositories(checkout_path: str, version: str) -> int:
 
 
 def main():
+    util.configure_logging()
+
     parser = argparse.ArgumentParser(
         description='Manage LLVM Embedded Toolchain for Arm checkout',
         formatter_class=argparse.RawDescriptionHelpFormatter,

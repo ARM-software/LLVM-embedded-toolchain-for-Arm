@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import logging
 from typing import Any, Sequence, List
 
 
@@ -31,3 +32,9 @@ def write_lines(lines: Sequence[str], dest: str) -> None:
     """Write a list of lines to destination file."""
     with open(dest, 'wt') as out_f:
         out_f.writelines(line + '\n' for line in lines)
+
+
+def configure_logging() -> None:
+    """Set logging format and level threshold for the default logger."""
+    log_format = '%(levelname)s: %(message)s'
+    logging.basicConfig(format=log_format, level=logging.INFO)
