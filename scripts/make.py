@@ -74,14 +74,22 @@ class ToolchainBuild:
         util.write_lines(sorted(flist),
                          os.path.join(self.cfg.build_dir, 'llvm-index.txt'))
 
+    def _prepare_build_dir(self, build_dir):
+        if (self.cfg.build_mode == config.BuildMode.REBUILD
+                and os.path.exists(build_dir)):
+            if self.cfg.verbose:
+                logging.info('Deleting build directory %s', build_dir)
+            shutil.rmtree(build_dir)
+        if not os.path.exists(build_dir):
+            os.makedirs(build_dir)
+
     def build_clang(self) -> None:
         """Build and install Clang, LLD and LLVM binutils-like tools."""
         self.runner.reset_cwd()
         cfg = self.cfg
-        llvm_build_dir = os.path.join(cfg.build_dir, 'llvm')
         llvm_source_dir = os.path.join(cfg.llvm_repo_dir, 'llvm')
-        if not os.path.exists(llvm_build_dir):
-            os.makedirs(llvm_build_dir)
+        llvm_build_dir = os.path.join(cfg.build_dir, 'llvm')
+        self._prepare_build_dir(llvm_build_dir)
 
         projects = [
             'clang',
@@ -127,7 +135,8 @@ class ToolchainBuild:
             'CXX': cfg.host_toolchain.cpp_compiler,
         }
 
-        if os.path.exists(os.path.join(llvm_build_dir, 'CMakeCache.txt')):
+        if (os.path.exists(os.path.join(llvm_build_dir, 'CMakeCache.txt'))
+                and cfg.skip_reconfigure):
             logging.info('LLVM CMakeCache.txt already exists, '
                          'skipping CMake configuration for LLVM')
         else:
@@ -150,9 +159,8 @@ class ToolchainBuild:
         join = os.path.join
         rt_source_dir = join(cfg.llvm_repo_dir, 'compiler-rt')
         rt_build_dir = join(cfg.build_dir, 'compiler-rt', lib_spec.name)
+        self._prepare_build_dir(rt_build_dir)
         rt_install_dir = join(cfg.target_llvm_rt_dir, target)
-        if not os.path.exists(rt_build_dir):
-            os.makedirs(rt_build_dir)
         cmake_defs = {
             'CMAKE_BUILD_TYPE:STRING': 'Release',
             'COMPILER_RT_BUILD_SANITIZERS:BOOL': 'OFF',
@@ -175,7 +183,8 @@ class ToolchainBuild:
             'CMAKE_EXE_LINKER_FLAGS': '-fuse-ld=lld',
             'CMAKE_INSTALL_PREFIX': rt_install_dir,
         }
-        if os.path.exists(os.path.join(rt_build_dir, 'CMakeCache.txt')):
+        if (os.path.exists(os.path.join(rt_build_dir, 'CMakeCache.txt'))
+                and cfg.skip_reconfigure):
             logging.info('%s compiler-rt CMakeCache.txt already exists, '
                          'skipping CMake configuration', lib_spec.name)
         else:
@@ -205,10 +214,9 @@ class ToolchainBuild:
         self.runner.reset_cwd()
         cfg = self.cfg
         join = os.path.join
-        newlib_build_dir = join(cfg.build_dir, 'newlib', lib_spec.name)
-        if not os.path.exists(newlib_build_dir):
-            os.makedirs(newlib_build_dir)
         newlib_src_dir = cfg.newlib_repo_dir
+        newlib_build_dir = join(cfg.build_dir, 'newlib', lib_spec.name)
+        self._prepare_build_dir(newlib_build_dir)
 
         def compiler_str(bin_name: str) -> str:
             bin_path = join(cfg.target_llvm_bin_dir, bin_name)
