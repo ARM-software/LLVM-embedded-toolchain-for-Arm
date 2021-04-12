@@ -23,12 +23,12 @@ import multiprocessing
 import os
 import sys
 import shutil
-from typing import Callable
+from typing import Callable, Optional
 
 import cfg_files
 import check
 import config
-from config import Action, BuildMode, CheckoutMode, Config
+from config import Action, BuildMode, CheckoutMode, CopyRuntime, Config
 import make
 import repos
 import tarball
@@ -59,9 +59,8 @@ def parse_args_to_config() -> Config:
                         help='directory to use for build '
                              '(default: ./build-<revision>)')
     parser.add_argument('--install-dir', type=str, metavar='PATH',
-                        default=cwd,
                         help='directory to install the toolchain to '
-                             '(default: .)')
+                             '(default: ./install-<revision>)')
     parser.add_argument('--package-dir', type=str, metavar='PATH',
                         default=cwd,
                         help='directory to store the packaged toolchain in '
@@ -76,6 +75,19 @@ def parse_args_to_config() -> Config:
                         help='host toolchain type '
                              '(default: {})'.format(default_toolchain))
     parser.add_argument('--host-toolchain-dir', type=str, metavar='PATH',
+                        default='/usr/bin',
+                        help='path to the directory containing the host '
+                             'compiler binary (default: /usr/bin)')
+    native_toolchain_kinds = [
+        config.ToolchainKind.CLANG.value,
+        config.ToolchainKind.GCC.value,
+    ]
+    parser.add_argument('--native-toolchain', type=str,
+                        choices=native_toolchain_kinds,
+                        default=default_toolchain,
+                        help='native toolchain type '
+                             '(default: {})'.format(default_toolchain))
+    parser.add_argument('--native-toolchain-dir', type=str, metavar='PATH',
                         default='/usr/bin',
                         help='path to the directory containing the host '
                              'compiler binary (default: /usr/bin)')
@@ -112,6 +124,18 @@ def parse_args_to_config() -> Config:
                              '  rebuild - build everything from scratch\n'
                              '  reconfigure - always rerun cmake/configure\n'
                              '  incremental - avoid rerunning cmake/configure')
+    parser.add_argument('--copy-runtime-dlls', type=str,
+                        choices=util.values_of_enum(CopyRuntime),
+                        default=CopyRuntime.ASK.value,
+                        help='specifies whether or not Mingw-w64 runtime DLLs '
+                             'should be included in the toolchain package '
+                             'when cross-compiling for Windows '
+                             '(default: ask):\n'
+                             '  no - don\'t include runtime DLLs in the '
+                             'package\n'
+                             '  yes - copy runtime DLLs from the local '
+                             'machine\n'
+                             '  ask - ask the user before starting the build')
     cpu_count = multiprocessing.cpu_count()
     parser.add_argument('-j', '--parallel', type=int, metavar='N',
                         help='number of parallel threads to use in Make/Ninja '
@@ -203,6 +227,9 @@ def build_all(cfg: Config) -> None:
        binutils, newlib, compiler_rt, configuration files.
     """
     builder = make.ToolchainBuild(cfg)
+    if cfg.is_cross_compiling:
+        run_or_skip(cfg, Action.CLANG, builder.build_native_tools,
+                    'Native LLVM tools')
     run_or_skip(cfg, Action.CLANG, builder.build_clang, 'Clang build')
     if any(action in cfg.actions for action in
            [Action.NEWLIB, Action.COMPILER_RT, Action.CONFIGURE]):
@@ -222,6 +249,45 @@ def build_all(cfg: Config) -> None:
                     'generation of config files for {}'.format(lib_spec.name))
 
 
+def ask_about_runtime_dlls(cfg: Config) -> Optional[bool]:
+    """Ask the user if they want to copy the Mingw-w64 runtime DLLs from the
+       local machine to the toolchain 'bin' directory.
+    """
+    print('LLVM Embedded Toolchain for Arm requires several runtime libraries '
+          'to be\n'
+          'installed on the host machine. These libraries can be copied from '
+          'your local\n'
+          'machine to the toolchain distribution being built.\n'
+          '\n'
+          'If you intend to redistribute the toolchain, you must comply with '
+          'the licenses\n'
+          'of the projects that provide these runtime libraries:\n'
+          '* GCC (https://gcc.gnu.org/)\n'
+          '* Mingw-w64 (http://mingw-w64.org/)\n'
+          '\n'
+          'Please specify if you want to copy the following libraries from '
+          'your local\n'
+          'machine to the "bin" directory of the toolchain and include them '
+          'in the packaged\n'
+          'toolchain archive:')
+    dlls = make.RuntimeDLLs(cfg)
+    for dll_name, dll_path in dlls.get_runtime_dll_paths():
+        print('* {} ({})'.format(dll_name, dll_path))
+    print('\n'
+          'Note: to avoid being asked this question please add '
+          '"--copy-runtime-dlls yes"\n'
+          'or "--copy-runtime-dlls no" to the build.py command line\n')
+    while True:
+        answer = input('Copy the libraries? ([c]ancel/[y]es/[n]o): ').lower()
+        if answer.lower() in ['y', 'yes']:
+            return True
+        if answer.lower() in ['n', 'no']:
+            return False
+        if answer.lower() in ['', 'c', 'cancel']:
+            return None
+        print('Expected one of: "y", "yes", "n", "no", "", "c", cancel"')
+
+
 def main() -> int:
     util.configure_logging()
     cfg = parse_args_to_config()
@@ -232,6 +298,13 @@ def main() -> int:
         return 1
 
     try:
+        if (cfg.host_toolchain.kind == config.ToolchainKind.MINGW
+                and cfg.ask_copy_runtime_dlls):
+            res = ask_about_runtime_dlls(cfg)
+            if res is None:
+                return 1
+            cfg.copy_runtime_dlls = res
+
         if not cfg.skip_checks:
             check.check_prerequisites(cfg)
         run_or_skip(cfg, Action.PREPARE,
@@ -245,6 +318,10 @@ def main() -> int:
         run_or_skip(cfg, Action.PACKAGE, do_package, 'packaging')
     except util.ToolchainBuildError:
         # By this time the error must have already been logged
+        return 1
+    except KeyboardInterrupt:
+        sys.stdout.write('\n')
+        logging.info('Build interrupted by user')
         return 1
     return 0
 

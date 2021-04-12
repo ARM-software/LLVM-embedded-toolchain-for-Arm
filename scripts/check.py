@@ -76,13 +76,13 @@ def _print_version_error(program: str, path: str, actual_ver: Version,
 
 
 def _check_compiler_version(cfg: config.Config, toolchain: config.Toolchain,
-                            ver: Version, min_ver: Version) -> bool:
+                            role: str, ver: Version, min_ver: Version) -> bool:
     if ver < min_ver:
         _print_version_error(toolchain.kind.pretty_name,
                              toolchain.c_compiler, ver, min_ver)
         return False
     if cfg.verbose:
-        logging.info('Using host toolchain: %s version %s',
+        logging.info('Using %s toolchain: %s version %s', role,
                      toolchain.kind.pretty_name, ver)
     return True
 
@@ -122,13 +122,14 @@ def _parse_gcc_version(c_compiler: str) -> Optional[Version]:
     return _str_to_ver(ver_str)
 
 
-def _check_toolchain(cfg: config.Config, toolchain: config.Toolchain) -> bool:
+def _check_toolchain(cfg: config.Config, toolchain: config.Toolchain,
+                     role: str) -> bool:
     """Check availability and version of the host compiler (Clang or GCC
        depending on build configuration).
     """
     def check_compiler_executable(executable_path):
         if not os.path.exists(executable_path):
-            logging.error('The specified host toolchain path %s is '
+            logging.error('The specified toolchain path %s is '
                           'invalid: %s not found', toolchain.toolchain_dir,
                           executable_path)
             return False
@@ -143,14 +144,15 @@ def _check_toolchain(cfg: config.Config, toolchain: config.Toolchain) -> bool:
         ver = _parse_clang_version(toolchain.c_compiler)
         min_ver = MIN_CLANG_VERSION
     else:
-        assert toolchain.kind == config.ToolchainKind.GCC
+        assert toolchain.kind in [config.ToolchainKind.GCC,
+                                  config.ToolchainKind.MINGW]
         ver = _parse_gcc_version(toolchain.c_compiler)
         min_ver = MIN_GCC_VERSION
 
     if ver is None:
         return False
 
-    return _check_compiler_version(cfg, toolchain, ver, min_ver)
+    return _check_compiler_version(cfg, toolchain, role, ver, min_ver)
 
 
 def _check_availability(bin_name: str, name: str = None) -> bool:
@@ -182,7 +184,9 @@ def _check_tool(cfg: config.Config, bin_name: str, name: str,
 def check_prerequisites(cfg: config.Config) -> None:
     """Check availability and versions of all required prerequisite software."""
     is_ok = True
-    is_ok = is_ok and _check_toolchain(cfg, cfg.host_toolchain)
+    is_ok = is_ok and _check_toolchain(cfg, cfg.host_toolchain, 'host')
+    if cfg.is_cross_compiling:
+        is_ok = is_ok and _check_toolchain(cfg, cfg.native_toolchain, 'native')
     is_ok = is_ok and _check_tool(cfg, 'cmake', 'CMake', MIN_CMAKE_VERSION)
     if cfg.use_ccache:
         is_ok = is_ok and _check_tool(cfg, 'ccache', 'CCache',
