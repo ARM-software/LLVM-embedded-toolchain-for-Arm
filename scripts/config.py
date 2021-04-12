@@ -16,7 +16,11 @@
 import argparse
 import datetime
 import enum
+import logging
 import os
+from typing import Set
+
+import execution
 
 
 @enum.unique
@@ -36,26 +40,41 @@ class CheckoutMode(enum.Enum):
 
 
 @enum.unique
-class ToolchainKind(enum.Enum):
-    """Enumeration for the --host-toolchain."""
-    CLANG = ('clang', 'Clang', 'clang', 'clang++')
-    GCC = ('gcc', 'GCC', 'gcc', 'g++')
-
-    def __new__(cls, option_name, pretty_name, c_compiler, cpp_compiler):
-        obj = object.__new__(cls)
-        obj._value_ = option_name
-        obj.option_name = option_name
-        obj.pretty_name = pretty_name
-        obj.c_compiler = c_compiler
-        obj.cpp_compiler = cpp_compiler
-        return obj
-
-
 class BuildMode(enum.Enum):
     """Enumerator for the --rebuild-mode option."""
     REBUILD = 'rebuild'
     RECONFIGURE = 'reconfigure'
     INCREMENTAL = 'incremental'
+
+
+@enum.unique
+class ToolchainKind(enum.Enum):
+    """Enumeration for the --host-toolchain and --native-toolchain options."""
+    CLANG = ('clang', 'Clang', None, 'clang', 'clang++')
+    GCC = ('gcc', 'GCC', None, 'gcc', 'g++')
+    # MINGW is only supported with --host-toolchain
+    MINGW = ('mingw', 'Mingw-w64 GCC', 'x86_64-w64-mingw32',
+             'x86_64-w64-mingw32-gcc-posix',
+             'x86_64-w64-mingw32-g++-posix')
+
+    def __new__(cls, option_name, pretty_name, host_triple, c_compiler,
+                cpp_compiler):
+        obj = object.__new__(cls)
+        obj._value_ = option_name
+        obj.option_name = option_name
+        obj.pretty_name = pretty_name
+        obj.host_triple = host_triple
+        obj.c_compiler = c_compiler
+        obj.cpp_compiler = cpp_compiler
+        return obj
+
+
+@enum.unique
+class CopyRuntime(enum.Enum):
+    """Enumeration for the --copy-runtime-dlls options."""
+    YES = 'yes'
+    NO = 'no'
+    ASK = 'ask'
 
 
 @enum.unique
@@ -74,13 +93,36 @@ class Action(enum.Enum):
 
 class Toolchain:  # pylint: disable=too-few-public-methods
     """This class is used for representing toolchains that run on the build
-       machine (the one where build.py is run).
+       machine (the one where build.py is run). In case of cross-compilation
+       we need two toolchains: host and native (e.g. when cross-compiling from
+       Linux to Windows the "host toolchain" is a Linux->Windows toolchain and
+       the "native toolchain" is a Linux->Linux one).
     """
     def __init__(self, toolchain_dir: str, kind: ToolchainKind):
         self.toolchain_dir = toolchain_dir
         self.kind = kind
         self.c_compiler = os.path.join(toolchain_dir, kind.c_compiler)
         self.cpp_compiler = os.path.join(toolchain_dir, kind.cpp_compiler)
+        if self.kind.host_triple is not None:
+            self.sys_root = os.path.join(toolchain_dir, '..',
+                                         self.kind.host_triple)
+
+    def get_lib_search_dirs(self) -> Set[str]:
+        """Returns a set of paths where the toolchain runtime libraries
+           can be found.
+        """
+        lines = execution.run_stdout([self.c_compiler, '-print-search-dirs'])
+        prefix = 'libraries: ='
+        result = set()
+        for line in lines:
+            if not line.startswith(prefix):
+                continue
+            line = line[len(prefix):]
+            for path in line.strip().split(':'):
+                result.add(os.path.normpath(path))
+        assert result, ('Failed to parse "{} -print-search-dirs" '
+                        'output'.format(self.c_compiler))
+        return result
 
 
 class LibrarySpec:
@@ -178,7 +220,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
         self.source_dir = os.path.abspath(args.source_dir)
         self.repos_dir = _assign_dir(args.repositories_dir, 'repos', rev)
         self.build_dir = _assign_dir(args.build_dir, 'build', rev)
-        self.install_dir = os.path.abspath(args.install_dir)
+        self.install_dir = _assign_dir(args.install_dir, 'install', rev)
         self.package_dir = os.path.abspath(args.package_dir)
         # According to
         # https://docs.python.org/3.6/library/enum.html#using-a-custom-new:
@@ -190,8 +232,26 @@ class Config:  # pylint: disable=too-many-instance-attributes
         host_toolchain_kind = ToolchainKind(args.host_toolchain)
         host_toolchain_dir = os.path.abspath(args.host_toolchain_dir)
         self.host_toolchain = Toolchain(host_toolchain_dir, host_toolchain_kind)
+        # pylint: disable=no-value-for-parameter
+        native_toolchain_kind = ToolchainKind(args.native_toolchain)
+        native_toolchain_dir = os.path.abspath(args.native_toolchain_dir)
+        self.native_toolchain = Toolchain(native_toolchain_dir,
+                                          native_toolchain_kind)
         self.checkout_mode = CheckoutMode(args.checkout_mode)
         self.build_mode = BuildMode(args.build_mode)
+
+        copy_runtime = CopyRuntime(args.copy_runtime_dlls)
+        self.ask_copy_runtime_dlls = True
+        if self.host_toolchain.kind == ToolchainKind.MINGW:
+            self.ask_copy_runtime_dlls = (copy_runtime == CopyRuntime.ASK)
+            if not self.ask_copy_runtime_dlls:
+                self._copy_runtime_dlls = (copy_runtime == CopyRuntime.YES)
+        else:
+            if copy_runtime != CopyRuntime.ASK:
+                logging.warning('the --copy-runtime-dlls option is only used '
+                                'during cross-compilation')
+            self.ask_copy_runtime = False
+            self._copy_runtime_dlls = False
 
         self.use_ninja = args.use_ninja
         self.use_ccache = args.use_ccache
@@ -199,11 +259,25 @@ class Config:  # pylint: disable=too-many-instance-attributes
         self.verbose = args.verbose
         self.num_threads = args.parallel
 
+    @property
+    def copy_runtime_dlls(self) -> bool:
+        """Whether or not the build script needs to copy Mingw-w64 runtime
+           DLLs to the target_llvm_bin_dir directory. """
+        assert self._copy_runtime_dlls is not None
+        return self._copy_runtime_dlls
+
+    @copy_runtime_dlls.setter
+    def copy_runtime_dlls(self, value: bool) -> None:
+        self._copy_runtime_dlls = value
+
     def _fill_inferred(self):
         """Fill in additional fields that can be inferred from the
            configuration, but are still useful for convenience."""
-        self.llvm_repo_dir = os.path.join(self.repos_dir, 'llvm.git')
-        self.newlib_repo_dir = os.path.join(self.repos_dir, 'newlib.git')
+        join = os.path.join
+        self.llvm_repo_dir = join(self.repos_dir, 'llvm.git')
+        self.newlib_repo_dir = join(self.repos_dir, 'newlib.git')
+        is_using_mingw = self.host_toolchain.kind == ToolchainKind.MINGW
+        self.is_cross_compiling = (os.name == 'posix' and is_using_mingw)
         self.cmake_generator = 'Ninja' if self.use_ninja else 'Unix Makefiles'
         self.release_mode = self.revision != 'HEAD'
         if self.release_mode:
@@ -216,13 +290,23 @@ class Config:  # pylint: disable=too-many-instance-attributes
         self.skip_reconfigure = self.build_mode == BuildMode.INCREMENTAL
         product_name = 'LLVMEmbeddedToolchainForArm'
         self.tarball_base_name = product_name + version_suffix
-        self.target_llvm_dir = os.path.join(
+        self.target_llvm_dir = join(
             self.install_dir,
             '{}-{}'.format(product_name, self.revision))
+        if self.is_cross_compiling:
+            self.native_llvm_build_dir = join(self.build_dir, 'native-llvm')
+            self.native_llvm_dir = join(self.install_dir, 'native-llvm')
+        else:
+            self.native_llvm_build_dir = join(self.build_dir, 'llvm')
+            self.native_llvm_dir = self.target_llvm_dir
+        self.native_llvm_bin_dir = os.path.join(self.native_llvm_dir, 'bin')
+        self.native_llvm_rt_dir = os.path.join(self.native_llvm_dir, 'lib',
+                                               'clang-runtimes')
         self.target_llvm_bin_dir = os.path.join(self.target_llvm_dir, 'bin')
-        self.target_llvm_rt_dir = os.path.join(self.target_llvm_dir,  'lib',
+        self.target_llvm_rt_dir = os.path.join(self.target_llvm_dir, 'lib',
                                                'clang-runtimes')
 
     def __init__(self, args: argparse.Namespace):
+        self._copy_runtime_dlls = None
         self._fill_args(args)
         self._fill_inferred()

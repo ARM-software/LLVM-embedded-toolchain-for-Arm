@@ -28,6 +28,22 @@ Content of this repository is licensed under Apache-2.0. See ``LICENSE.txt``.
 
 The resulting binaries are covered under their respective open source licenses, see component links above.
 
+In addition, if the toolchain is cross-compiled to run on Windows (see
+[Cross-compiling the toolchain for Windows](##cross-compiling-the-toolchain-for-windows)
+for details) several Mingw-w64 runtime libraries residing on your machine
+may be copied to the ``bin`` directory of the toolchain and included in the
+generated ``.tar.gz`` archive if you choose to do so.
+
+The following three libraries are used:
+
+Library             | Project   | Link
+--------------------|-----------|---------------------
+libstdc++-6.dll     | GCC       | https://gcc.gnu.org
+libgcc_s_seh-1.dll  | GCC       | https://gcc.gnu.org
+libwinpthread-1.dll | Mingw-w64 | http://mingw-w64.org
+
+The libraries are covered under their respective open source licenses.
+
 ## Contributions and Pull Requests
 
 Contributions are accepted under Apache-2.0. Only submit contributions where you have authored all of the code.
@@ -97,9 +113,12 @@ $ repos.py list
 0.1
 HEAD
 ```
-* ``--host-toolchain`` the toolchain type. Either ``clang`` or ``gcc``. Default is ``clang``
-* ``--host-toolchain-dir`` the directory from Step 0 that ``clang`` or ``gcc`` resides in. Default is ``/usr/bin``.
-* ``--install-dir`` the LLVM Embedded Toolchain for Arm installation directory. Default is the current directory.
+* ``--host-toolchain`` the toolchain type. The supported values are:
+  * ``clang`` Clang (the default)
+  * ``gcc`` GCC
+  * ``mingw`` Mingw-w64 (used for cross-compilation, see [Cross-compiling the toolchain for Windows](##cross-compiling-the-toolchain-for-windows))
+* ``--host-toolchain-dir`` the directory from Step 0 that the toolchain resides in. Default is ``/usr/bin``.
+* ``--install-dir`` the LLVM Embedded Toolchain for Arm installation directory. Default is ``./install-<revision>``.
 
 The build script can optionally take advantage of some tools to speed up the
 build. Currently, these tools are ``ccache``, and ``ninja``.
@@ -129,6 +148,50 @@ clang --config armv6m-none-eabi_nosys -T device.ld -o example example.c
 ### Test the toolchain
 
 See the `samples` folder for sample code and instructions on building, running and debugging.
+
+## Cross-compiling the toolchain for Windows
+
+The LLVM Embedded Toolchain for Arm can be cross-compiled to run on Windows.
+The compilation itself still happens on Linux. In addition to the prerequisites
+mentioned in the [Build the toolchain](###build-the-toolchain) section you will
+also need a Mingw-w64 toolchain based on GCC 5.1.0 or above installed. For
+example, to install it on Ubuntu Linux use the following command:
+
+```
+# apt-get install mingw-w64
+```
+
+Then use ``build.py`` to build the toolchain:
+
+```
+$ build.py --host-toolchain mingw
+```
+
+Cross-compilation still requires a native toolchain, i.e. a compiler toolchain
+that  produces binaries that run on the build machine. The native toolchain can
+be specified using the following options:
+* ``--native-toolchain`` the toolchain type. Either ``clang`` or ``gcc``.
+  Default is ``clang``.
+* ``--native-toolchain-dir`` the directory that the toolchain resides in.
+  Default is ``/usr/bin``.
+
+For example:
+```
+$ build.py --host-toolchain mingw \
+           --native-toolchain gcc \
+           --native-toolchain-dir /opt/gcc-latest/bin
+```
+
+The script will prompt you whether it should copy the Mingw-w64 runtime
+libraries from your local machine to the toolchain ``bin`` directory. The
+libraries are distributed under their own [licenses](##license), this needs to
+be taken into consideration if you decide to redistribute the built toolchain.
+
+To avoid an interactive prompt use the ``--copy-runtime-dlls`` command line
+option, for example:
+```
+$ build.py --host-toolchain mingw --copy-runtime-dlls no
+```
 
 ## Known limitations
 * Depending on the state of the components, build errors may occur when ``--revision HEAD`` is used.

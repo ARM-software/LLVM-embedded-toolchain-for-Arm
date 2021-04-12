@@ -1,7 +1,9 @@
 .*.swp
 .idea
-repos*/
-build*/
-venv/
-*LLVMEmbeddedToolchainForArm*
+/repos*/
+/build*/
+/install*/
+/venv/
+/*LLVMEmbeddedToolchainForArm*
 __pycache__
+*.egg-info

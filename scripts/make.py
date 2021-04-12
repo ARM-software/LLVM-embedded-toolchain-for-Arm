@@ -15,13 +15,58 @@
 
 import logging
 import os
-from typing import Mapping
+from typing import List, Mapping, Tuple
 import subprocess
 import shutil
 
 import execution
 import config
 import util
+
+
+class RuntimeDLLs:
+    """Class for handling Mingw-w64 runtime DLLs"""
+    def __init__(self, cfg: config.Config):
+        self.cfg = cfg
+        self.dlls = [
+            'libwinpthread-1.dll',  # POSIX thread API implementation
+            'libgcc_s_seh-1.dll',   # GCC runtime
+            'libstdc++-6.dll',      # C++ Standard Library
+        ]
+        self.search_dirs = list(sorted(
+            self.cfg.host_toolchain.get_lib_search_dirs()))
+        self.dll_paths = self._get_dll_paths()
+
+    def _get_dll_paths(self) -> Mapping[str, str]:
+        """Find runtime DLLs in toolchain search directories."""
+        dll_paths = {}
+        for dll_name in self.dlls:
+            for search_dir in self.search_dirs:
+                dll_path = os.path.join(search_dir, dll_name)
+                if os.path.exists(dll_path):
+                    dll_paths[dll_name] = dll_path
+                    break
+        return dll_paths
+
+    def get_runtime_dll_paths(self) -> List[Tuple[str, str]]:
+        """Return a list of (dll name, path) tuples."""
+        return [(dll_name, self.dll_paths.get(dll_name, 'NOT FOUND'))
+                for dll_name in self.dlls]
+
+    def copy_dlls(self, dest_dir: str) -> None:
+        """Copy MinGW-w64 and GCC runtime DLLs required to run on Windows."""
+        cfg = self.cfg
+        logging.info('Copying Mingw-w64 runtime DLLs')
+        for dll_name in self.dlls:
+            if dll_name not in self.dll_paths:
+                raise util.ToolchainBuildError(
+                    'Required DLL {} not found in {}'.format(dll_name,
+                                                             self.search_dirs))
+            dll_path = self.dll_paths[dll_name]
+            dest_path = os.path.join(dest_dir, dll_name)
+            if cfg.verbose:
+                logging.info('Copying %s to %s', dll_path, dest_path)
+            shutil.copy(dll_path, dest_path)
 
 
 class ToolchainBuild:
@@ -31,6 +76,9 @@ class ToolchainBuild:
     def __init__(self, cfg: config.Config):
         self.cfg = cfg
         self.runner = execution.Runner(cfg.verbose)
+        # Tools needed for newlib and compiler-rt build
+        binutils = ['ar', 'nm', 'as', 'ranlib', 'strip', 'readelf', 'objdump']
+        self.llvm_binutils = ['llvm-' + name for name in binutils]
 
     def _cmake_configure(self, source_dir: str, build_dir: str,
                          defs: Mapping[str, str],
@@ -83,12 +131,61 @@ class ToolchainBuild:
         if not os.path.exists(build_dir):
             os.makedirs(build_dir)
 
+    def build_native_tools(self) -> None:
+        """Build a native LLVM toolchain (relevant for Linux -> Windows
+           cross-compilation): an LLVM toolchain which runs on the same
+           platform build.py is currently running on and targets embedded Arm.
+        """
+        self.runner.reset_cwd()
+        cfg = self.cfg
+        llvm_build_dir = os.path.join(cfg.build_dir, 'native-llvm')
+        self._prepare_build_dir(llvm_build_dir)
+
+        projects = ['clang', 'lld']
+        dist_comps = [
+            'clang',
+            'clang-resource-headers',
+            'lld',
+            'llvm-config',
+        ]
+        dist_comps += self.llvm_binutils
+
+        cmake_defs = {
+            'LLVM_TARGETS_TO_BUILD:STRING': 'ARM',
+            'LLVM_DEFAULT_TARGET_TRIPLE:STRING': cfg.default_target,
+            'CMAKE_BUILD_TYPE:STRING': 'Release',
+            'CMAKE_INSTALL_PREFIX:STRING': cfg.native_llvm_dir,
+            'LLVM_ENABLE_PROJECTS:STRING': ';'.join(projects),
+            'LLVM_DISTRIBUTION_COMPONENTS:STRING': ';'.join(dist_comps),
+            'LLVM_INCLUDE_TESTS:BOOL': 'OFF',
+            'LLVM_INCLUDE_EXAMPLES:BOOL': 'OFF',
+            'LLVM_INCLUDE_BENCHMARKS:BOOL': 'OFF',
+        }
+        cmake_env = {
+            'CC': cfg.native_toolchain.c_compiler,
+            'CXX': cfg.native_toolchain.cpp_compiler,
+        }
+
+        if (os.path.exists(os.path.join(llvm_build_dir, 'CMakeCache.txt'))
+                and cfg.skip_reconfigure):
+            logging.info('LLVM CMakeCache.txt already exists, '
+                         'skipping CMake configuration for the native '
+                         'LLVM toolchain')
+        else:
+            logging.info('Configuring native LLVM toolchain')
+            self._cmake_configure(os.path.join(cfg.llvm_repo_dir, 'llvm'),
+                                  llvm_build_dir, cmake_defs,
+                                  cmake_env)
+        logging.info('Building and installing native LLVM toolchain')
+        self._cmake_build(llvm_build_dir,
+                          target='install-distribution-stripped')
+
     def build_clang(self) -> None:
         """Build and install Clang, LLD and LLVM binutils-like tools."""
         self.runner.reset_cwd()
         cfg = self.cfg
-        llvm_source_dir = os.path.join(cfg.llvm_repo_dir, 'llvm')
-        llvm_build_dir = os.path.join(cfg.build_dir, 'llvm')
+        join = os.path.join
+        llvm_build_dir = join(cfg.build_dir, 'llvm')
         self._prepare_build_dir(llvm_build_dir)
 
         projects = [
@@ -129,6 +226,21 @@ class ToolchainBuild:
         }
         if cfg.use_ccache:
             cmake_defs['LLVM_CCACHE_BUILD:BOOL'] = 'ON'
+        if cfg.is_cross_compiling:
+            native_tools_dir = join(cfg.native_llvm_build_dir, 'bin')
+            cmake_defs['CMAKE_CROSSCOMPILING:BOOL'] = 'ON'
+            # We only support Linux -> Windows cross-compilation, not
+            # vice-versa
+            cmake_defs['CMAKE_SYSTEM_NAME'] = 'Windows'
+            cmake_defs['CMAKE_FIND_ROOT_PATH'] = cfg.host_toolchain.sys_root
+            cmake_defs['CMAKE_FIND_ROOT_PATH_MODE_PROGRAM'] = 'NEVER'
+            cmake_defs['CMAKE_FIND_ROOT_PATH_MODE_INCLUDE'] = 'ONLY'
+            cmake_defs['CMAKE_FIND_ROOT_PATH_MODE_LIBRARY'] = 'ONLY'
+            cmake_defs['LLVM_TABLEGEN'] = join(native_tools_dir, 'llvm-tblgen')
+            cmake_defs['CLANG_TABLEGEN'] = join(native_tools_dir,
+                                                'clang-tblgen')
+            cmake_defs['LLVM_CONFIG_PATH'] = join(native_tools_dir,
+                                                  'llvm-config')
 
         cmake_env = {
             'CC': cfg.host_toolchain.c_compiler,
@@ -141,12 +253,20 @@ class ToolchainBuild:
                          'skipping CMake configuration for LLVM')
         else:
             logging.info('Configuring LLVM projects: %s', ', '.join(projects))
-            self._cmake_configure(llvm_source_dir, llvm_build_dir, cmake_defs,
-                                  cmake_env)
+            self._cmake_configure(join(cfg.llvm_repo_dir, 'llvm'),
+                                  llvm_build_dir, cmake_defs, cmake_env)
         logging.info('Building and installing LLVM components: %s',
                      ', '.join(dist_comps))
         self._cmake_build(llvm_build_dir,
                           target='install-distribution-stripped')
+        # When compiling for Windows copy required DLLs
+        if cfg.host_toolchain.kind == config.ToolchainKind.MINGW:
+            if cfg.copy_runtime_dlls:
+                dlls = RuntimeDLLs(cfg)
+                dlls.copy_dlls(cfg.target_llvm_bin_dir)
+            else:
+                if cfg.verbose:
+                    logging.info('Skipping the copying Mingw-w64 runtime DLLs')
         # Record the list of files and links installed by clang
         if cfg.release_mode:
             self._write_llvm_index()
@@ -174,12 +294,12 @@ class ToolchainBuild:
             'CMAKE_ASM_COMPILER_TARGET': target,
             'CMAKE_ASM_FLAGS': lib_spec.flags,
             'COMPILER_RT_DEFAULT_TARGET_ONLY': 'ON',
-            'LLVM_CONFIG_PATH': join(cfg.build_dir, 'llvm', 'bin',
+            'LLVM_CONFIG_PATH': join(cfg.native_llvm_build_dir, 'bin',
                                      'llvm-config'),
-            'CMAKE_C_COMPILER': join(cfg.target_llvm_bin_dir, 'clang'),
-            'CMAKE_AR': join(cfg.target_llvm_bin_dir, 'llvm-ar'),
-            'CMAKE_NM': join(cfg.target_llvm_bin_dir, 'llvm-nm'),
-            'CMAKE_RANLIB': join(cfg.target_llvm_bin_dir, 'llvm-ranlib'),
+            'CMAKE_C_COMPILER': join(cfg.native_llvm_bin_dir, 'clang'),
+            'CMAKE_AR': join(cfg.native_llvm_bin_dir, 'llvm-ar'),
+            'CMAKE_NM': join(cfg.native_llvm_bin_dir, 'llvm-nm'),
+            'CMAKE_RANLIB': join(cfg.native_llvm_bin_dir, 'llvm-ranlib'),
             'CMAKE_EXE_LINKER_FLAGS': '-fuse-ld=lld',
             'CMAKE_INSTALL_PREFIX': rt_install_dir,
         }
@@ -209,17 +329,36 @@ class ToolchainBuild:
             logging.info('Removing %s', linux_dir)
         shutil.rmtree(linux_dir)
 
+    def _copy_runtime_to_native(self, lib_spec: config.LibrarySpec) -> None:
+        """Copy runtime libraries and headers from target LLVM to
+           native target LLVM.
+        """
+        cfg = self.cfg
+        logging.info('Copying newlib libraries and headers to the native '
+                     'toolchain directory')
+        from_path = os.path.join(cfg.target_llvm_rt_dir, lib_spec.target)
+        to_path = os.path.join(cfg.native_llvm_rt_dir, lib_spec.target)
+        try:
+            if os.path.exists(to_path):
+                if cfg.verbose:
+                    logging.info('Deleting %s', to_path)
+                shutil.rmtree(to_path)
+            if cfg.verbose:
+                logging.info('Copying %s to %s', from_path, to_path)
+            shutil.copytree(from_path, to_path)
+        except shutil.Error as ex:
+            raise util.ToolchainBuildError from ex
+
     def build_newlib(self, lib_spec: config.LibrarySpec) -> None:
         """Build and install a single variant of newlib."""
         self.runner.reset_cwd()
         cfg = self.cfg
         join = os.path.join
-        newlib_src_dir = cfg.newlib_repo_dir
         newlib_build_dir = join(cfg.build_dir, 'newlib', lib_spec.name)
         self._prepare_build_dir(newlib_build_dir)
 
         def compiler_str(bin_name: str) -> str:
-            bin_path = join(cfg.target_llvm_bin_dir, bin_name)
+            bin_path = join(cfg.native_llvm_bin_dir, bin_name)
             return '{} -target {} -ffreestanding'.format(bin_path,
                                                          lib_spec.target)
 
@@ -230,13 +369,13 @@ class ToolchainBuild:
         }
         for tool in ['ar', 'nm', 'as', 'ranlib', 'strip', 'readelf', 'objdump']:
             var_name = '{}_FOR_TARGET'.format(tool.upper())
-            tool_path = join(cfg.target_llvm_bin_dir, 'llvm-{}'.format(tool))
+            tool_path = join(cfg.native_llvm_bin_dir, 'llvm-{}'.format(tool))
             config_env[var_name] = tool_path
 
         newlib_hw_fp = ('--enable-newlib-hw-fp' if lib_spec.newlib_fp_support
                         else '--disable-newlib-hw-fp')
         configure_args = [
-            join(newlib_src_dir, 'configure'),
+            join(cfg.newlib_repo_dir, 'configure'),
             '--target={}'.format(lib_spec.target),
             '--prefix={}'.format(cfg.target_llvm_dir),
             '--exec-prefix={}'.format(cfg.target_llvm_rt_dir),
@@ -261,3 +400,5 @@ class ToolchainBuild:
             self.runner.run(['make', 'install'], cwd=newlib_build_dir)
         except subprocess.SubprocessError as ex:
             raise util.ToolchainBuildError from ex
+        if cfg.is_cross_compiling:
+            self._copy_runtime_to_native(lib_spec)

@@ -44,6 +44,22 @@ def package_toolchain(cfg: config.Config) -> None:
         '--owner=root',
         '--group=root',
     ]
+    if cfg.is_cross_compiling:
+        # On Windows creating symlinks requires special access permissions
+        # which by default are only granted to the Administrator user. Hence,
+        # we dereference the symlinks when creating a tarball.
+        # We also exclude some symlinks that are not relevent for the embedded
+        # toolchain to reduce the archive size.
+        exclude_list = [
+            'clang-cl.exe',  # MSVC-compatible Clang driver
+            'ld64.lld.exe',  # Darwin (Mach-O) linker
+            'ld64.lld.darwinnew.exe',  # New Darwin (Mach-O) linker
+            'lld-link.exe',  # Windows (COFF) linker
+            'wasm-ld.exe',  # WebAssembly linker
+        ]
+        for item in exclude_list:
+            args.append('--exclude={}'.format(item))
+        args.append('--dereference')
     if cfg.verbose:
         args.append('--verbose')
     args.append(os.path.relpath(cfg.target_llvm_dir, cfg.install_dir))
