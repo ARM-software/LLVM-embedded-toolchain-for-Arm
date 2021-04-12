@@ -72,45 +72,54 @@ sudo apt-get install make
 sudo apt-get install cmake # If the cmake version installed by the package manager is older than 3.13.4, download a recent version from https://cmake.org/download and add it to PATH
 ```
 
-1. Install the release management tool ``repos.py`` in a python virtual env (in directory ``venv/``):
+1. Install the build scripts in a python virtual env (in directory ``venv``):
 ```
-./setup.sh
+$ ./setup.sh
 ```
-2. Review and set the following environment variables so that it matches your build machine.
-   1. ``HOST_LLVM_PATH`` to the directory from Step 0 that ``clang`` resides in. Default is ``/usr/bin``
-   2. ``INSTALL_ROOT_DIR`` to the LLVM Embedded Toolchain for Arm installation directory. Default is the current directory.
-   3. ``VERSION`` to the LLVM Embedded Toolchain for Arm version. Default version is ``0.1``. The available toolchain versions can be listed with:
+2. Activate the virtual environment:
 ```
-venv/bin/repos.py list
-  0.1
-  HEAD
+$ . ./venv/bin/activate
 ```
 3. Build the toolchain with:
 ```
-./build.sh
+$ build.py
 ```
+The script supports various command line options. To get a description of all options run:
+```
+$ build.py -h
+```
+Some notable options include:
+* ``--revision`` the LLVM Embedded Toolchain for Arm version. Default version is ``0.1``. The available toolchain versions can be listed with:
+```
+$ repos.py list
+0.1
+HEAD
+```
+* ``--host-toolchain-dir`` the directory from Step 0 that ``clang`` resides in. Default is ``/usr/bin``.
+* ``--install-dir`` the LLVM Embedded Toolchain for Arm installation directory. Default is the current directory.
+
 The build script can optionally take advantage of some tools to speed up the
-build. At the time of writing, the known tools are ``ccache``, and ``ninja``.
+build. Currently these tools are ``ccache``, and ``ninja``.
 ```
-USE_CCACHE=1 USE_NINJA=1 ./build.sh
+$ build.py --use-ccache --use-ninja
 ```
 4. By now, you should have a working toolchain in directory
-* ``${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION`` if you were building a release (e.g ``VERSION=0.1``) or in
-* ``${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm`` if you were building using latest component source (``VERSION=HEAD``).
+* ``<install-dir>/LLVMEmbeddedToolchainForArm-<revision>`` if you were building a release (e.g ``--revision 0.1``) or in
+* ``<install-dir>/LLVMEmbeddedToolchainForArm`` if you were building using latest component source (``--revision HEAD``).
 
 ### Use the toolchain
 
-Once built, you can use the generated config files to configure the compiler correctly. The available config files can be listed with `ls ${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION/bin/*.cfg`
+Once built, you can use the generated config files to configure the compiler correctly. The available config files can be listed with `ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg`
 
 ```
-PATH=${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION/bin:$PATH
+PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
 clang --config armv6m-none-eabi_rdimon -o example example.c
 ```
 
 Note that `armv6m-none-eabi_nosys` and `armv6m-none-eabi_rdimon_baremetal` require the linker script to be specifed with `-T`:
 
 ```
-PATH=${INSTALL_ROOT_DIR}/LLVMEmbeddedToolchainForArm-$VERSION/bin:$PATH
+PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
 clang --config armv6m-none-eabi_nosys -T device.ld -o example example.c
 ```
 
@@ -119,7 +128,7 @@ clang --config armv6m-none-eabi_nosys -T device.ld -o example example.c
 See the `samples` folder for sample code and instructions on building, running and debugging.
 
 ## Known limitations
-* Depending on the state of the components, build errors may occur when ``VERSION=HEAD`` is used.
+* Depending on the state of the components, build errors may occur when ``--revision HEAD`` is used.
 
 ## Divergences from upstream
 
