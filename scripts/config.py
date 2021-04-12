@@ -51,6 +51,13 @@ class ToolchainKind(enum.Enum):
         return obj
 
 
+class BuildMode(enum.Enum):
+    """Enumerator for the --rebuild-mode option."""
+    REBUILD = 'rebuild'
+    RECONFIGURE = 'reconfigure'
+    INCREMENTAL = 'incremental'
+
+
 @enum.unique
 class Action(enum.Enum):
     """Enumerations for the positional command line arguments. See
@@ -184,6 +191,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
         host_toolchain_dir = os.path.abspath(args.host_toolchain_dir)
         self.host_toolchain = Toolchain(host_toolchain_dir, host_toolchain_kind)
         self.checkout_mode = CheckoutMode(args.checkout_mode)
+        self.build_mode = BuildMode(args.build_mode)
 
         self.use_ninja = args.use_ninja
         self.use_ccache = args.use_ccache
@@ -205,6 +213,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
             version_suffix = ''
             now = datetime.datetime.now()
             self.version_string = now.strftime('%Y-%m-%d-%H:%M:%S')
+        self.skip_reconfigure = self.build_mode == BuildMode.INCREMENTAL
         product_name = 'LLVMEmbeddedToolchainForArm'
         self.tarball_base_name = product_name + version_suffix
         self.target_llvm_dir = os.path.join(

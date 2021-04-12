@@ -28,7 +28,7 @@ from typing import Callable
 import cfg_files
 import check
 import config
-from config import Action, CheckoutMode, Config
+from config import Action, BuildMode, CheckoutMode, Config
 import make
 import repos
 import tarball
@@ -104,6 +104,14 @@ def parse_args_to_config() -> Config:
                              '  reuse - check out and apply patches only if '
                              'one of repositories is missing, otherwise use '
                              'the checkout as-is')
+    parser.add_argument('--build-mode', type=str,
+                        choices=util.values_of_enum(BuildMode),
+                        default=BuildMode.INCREMENTAL.value,
+                        help='specifies behaviour of incremental builds '
+                             '(default: incremental):\n'
+                             '  rebuild - build everything from scratch\n'
+                             '  reconfigure - always rerun cmake/configure\n'
+                             '  incremental - avoid rerunning cmake/configure')
     cpu_count = multiprocessing.cpu_count()
     parser.add_argument('-j', '--parallel', type=int, metavar='N',
                         help='number of parallel threads to use in Make/Ninja '
