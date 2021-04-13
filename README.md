@@ -56,20 +56,22 @@ The LLVM Embedded Toolchain for Arm has been built and tested on Linux/Ubuntu 18
 ### Build the toolchain
 
 Build requirements
-* clang 6.0.0 or above
-* cmake 3.13.4 or above
-* python version 3.6 or above and python3-venv
-* git
-* make
+* a suitable compiler toolchain:
+  * Clang 6.0.0 or above, or
+  * GCC 5.1.0 or above
+* CMake 3.13.4 or above
+* Python version 3.6 or above and python3-venv
+* Git
+* GNU Make
 
 0. Install typically missing packages. There might be others depending on your setup.
 ```
-sudo apt-get install clang # If the clang version installed by the package manager is older than 6.0.0, download a recent version from https://releases.llvm.org or build from source
+sudo apt-get install clang # If the Clang version installed by the package manager is older than 6.0.0, download a recent version from https://releases.llvm.org or build from source
 sudo apt-get install python3
 sudo apt-get install python3-venv
 sudo apt-get install git
 sudo apt-get install make
-sudo apt-get install cmake # If the cmake version installed by the package manager is older than 3.13.4, download a recent version from https://cmake.org/download and add it to PATH
+sudo apt-get install cmake # If the CMake version installed by the package manager is older than 3.13.4, download a recent version from https://cmake.org/download and add it to PATH
 ```
 
 1. Install the build scripts in a python virtual env (in directory ``venv``):
@@ -95,11 +97,12 @@ $ repos.py list
 0.1
 HEAD
 ```
-* ``--host-toolchain-dir`` the directory from Step 0 that ``clang`` resides in. Default is ``/usr/bin``.
+* ``--host-toolchain`` the toolchain type. Either ``clang`` or ``gcc``. Default is ``clang``
+* ``--host-toolchain-dir`` the directory from Step 0 that ``clang`` or ``gcc`` resides in. Default is ``/usr/bin``.
 * ``--install-dir`` the LLVM Embedded Toolchain for Arm installation directory. Default is the current directory.
 
 The build script can optionally take advantage of some tools to speed up the
-build. Currently these tools are ``ccache``, and ``ninja``.
+build. Currently, these tools are ``ccache``, and ``ninja``.
 ```
 $ build.py --use-ccache --use-ninja
 ```
