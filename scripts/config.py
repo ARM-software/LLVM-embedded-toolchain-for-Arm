@@ -36,6 +36,22 @@ class CheckoutMode(enum.Enum):
 
 
 @enum.unique
+class ToolchainKind(enum.Enum):
+    """Enumeration for the --host-toolchain."""
+    CLANG = ('clang', 'Clang', 'clang', 'clang++')
+    GCC = ('gcc', 'GCC', 'gcc', 'g++')
+
+    def __new__(cls, option_name, pretty_name, c_compiler, cpp_compiler):
+        obj = object.__new__(cls)
+        obj._value_ = option_name
+        obj.option_name = option_name
+        obj.pretty_name = pretty_name
+        obj.c_compiler = c_compiler
+        obj.cpp_compiler = cpp_compiler
+        return obj
+
+
+@enum.unique
 class Action(enum.Enum):
     """Enumerations for the positional command line arguments. See
        build.py:parse_args_to_config() for description
@@ -47,6 +63,17 @@ class Action(enum.Enum):
     CONFIGURE = 'configure'
     PACKAGE = 'package'
     ALL = 'all'
+
+
+class Toolchain:  # pylint: disable=too-few-public-methods
+    """This class is used for representing toolchains that run on the build
+       machine (the one where build.py is run).
+    """
+    def __init__(self, toolchain_dir: str, kind: ToolchainKind):
+        self.toolchain_dir = toolchain_dir
+        self.kind = kind
+        self.c_compiler = os.path.join(toolchain_dir, kind.c_compiler)
+        self.cpp_compiler = os.path.join(toolchain_dir, kind.cpp_compiler)
 
 
 class LibrarySpec:
@@ -146,7 +173,16 @@ class Config:  # pylint: disable=too-many-instance-attributes
         self.build_dir = _assign_dir(args.build_dir, 'build', rev)
         self.install_dir = os.path.abspath(args.install_dir)
         self.package_dir = os.path.abspath(args.package_dir)
-        self.host_compiler_path = os.path.abspath(args.host_toolchain_dir)
+        # According to
+        # https://docs.python.org/3.6/library/enum.html#using-a-custom-new:
+        # "The __new__() method, if defined, is used during creation of the Enum
+        # members; it is then replaced by Enum’s __new__() which is used after
+        # class creation for lookup of existing members."
+        # This confuses pylint.
+        # pylint: disable=no-value-for-parameter
+        host_toolchain_kind = ToolchainKind(args.host_toolchain)
+        host_toolchain_dir = os.path.abspath(args.host_toolchain_dir)
+        self.host_toolchain = Toolchain(host_toolchain_dir, host_toolchain_kind)
         self.checkout_mode = CheckoutMode(args.checkout_mode)
 
         self.use_ninja = args.use_ninja
@@ -160,9 +196,6 @@ class Config:  # pylint: disable=too-many-instance-attributes
            configuration, but are still useful for convenience."""
         self.llvm_repo_dir = os.path.join(self.repos_dir, 'llvm.git')
         self.newlib_repo_dir = os.path.join(self.repos_dir, 'newlib.git')
-        self.host_c_compiler = os.path.join(self.host_compiler_path, 'clang')
-        self.host_cpp_compiler = \
-            os.path.join(self.host_compiler_path, 'clang++')
         self.cmake_generator = 'Ninja' if self.use_ninja else 'Unix Makefiles'
         self.release_mode = self.revision != 'HEAD'
         if self.release_mode:

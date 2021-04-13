@@ -123,8 +123,8 @@ class ToolchainBuild:
             cmake_defs['LLVM_CCACHE_BUILD:BOOL'] = 'ON'
 
         cmake_env = {
-            'CC': cfg.host_c_compiler,
-            'CXX': cfg.host_cpp_compiler,
+            'CC': cfg.host_toolchain.c_compiler,
+            'CXX': cfg.host_toolchain.cpp_compiler,
         }
 
         if os.path.exists(os.path.join(llvm_build_dir, 'CMakeCache.txt')):

@@ -69,12 +69,16 @@ def parse_args_to_config() -> Config:
     parser.add_argument('--repositories-dir', type=str, metavar='PATH',
                         help='path to directory containing LLVM and newlib '
                              'repositories (default: ./repos-<revision>)')
+    default_toolchain = config.ToolchainKind.CLANG.value
+    parser.add_argument('--host-toolchain', type=str,
+                        choices=util.values_of_enum(config.ToolchainKind),
+                        default=default_toolchain,
+                        help='host toolchain type '
+                             '(default: {})'.format(default_toolchain))
     parser.add_argument('--host-toolchain-dir', type=str, metavar='PATH',
                         default='/usr/bin',
-                        help='path to the directory containing the host Clang '
-                             'compiler binary v. {} or later '
-                             '(default: /usr/bin)'.format(
-                                 check.MIN_CLANG_VERSION))
+                        help='path to the directory containing the host '
+                             'compiler binary (default: /usr/bin)')
     parser.add_argument('--skip-checks',
                         help='skip checks of build prerequisites',
                         action='store_true')

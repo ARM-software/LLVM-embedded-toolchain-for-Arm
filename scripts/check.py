@@ -16,7 +16,9 @@
 import functools
 import logging
 import os
+import re
 import shutil
+from typing import Optional
 import util
 
 import config
@@ -46,6 +48,7 @@ class Version:
 
 # Minimum versions required by the LLVM Project
 MIN_CLANG_VERSION = Version(6, 0, 0)
+MIN_GCC_VERSION = Version(5, 1, 0)
 MIN_CMAKE_VERSION = Version(3, 14, 4)
 MIN_MAKE_VERSION = Version(3, 79)
 # If we use CCache, it must be recent enough. Older versions do weird things
@@ -72,36 +75,82 @@ def _print_version_error(program: str, path: str, actual_ver: Version,
                   actual_ver, required_ver)
 
 
-def _check_host_compiler(cfg: config.Config) -> bool:
+def _check_compiler_version(cfg: config.Config, toolchain: config.Toolchain,
+                            ver: Version, min_ver: Version) -> bool:
+    if ver < min_ver:
+        _print_version_error(toolchain.kind.pretty_name,
+                             toolchain.c_compiler, ver, min_ver)
+        return False
+    if cfg.verbose:
+        logging.info('Using host toolchain: %s version %s',
+                     toolchain.kind.pretty_name, ver)
+    return True
+
+
+def _parse_clang_version(c_compiler: str) -> Version:
+    args = [c_compiler, '--version']
+    ver_line = execution.run_stdout(args)[0]
+    # Example output:
+    # Ubuntu 20.04: clang version 10.0.0-4ubuntu1
+    # Ubuntu 18.04: clang version 6.0.0-1ubuntu2 (tags/RELEASE_600/final)
+    # Ubuntu 16.04: clang version 3.8.0-2ubuntu4 (tags/RELEASE_380/final)
+    # Built from source: clang version 9.0.1
+    assert ver_line.startswith('clang version ')
+    ver_str = ver_line.split(' ')[2]
+    # Remove distribution suffix (if any) and convert to a tuple
+    return _str_to_ver(ver_str.split('-')[0])
+
+
+def _parse_gcc_version(c_compiler: str) -> Optional[Version]:
+    args = [c_compiler, '--version']
+    ver_line = execution.run_stdout(args)[0]
+    # Example output:
+    # Ubuntu 20.04: "gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0"
+    # Ubuntu 16.04: "gcc (Ubuntu 5.5.0-12ubuntu1~16.04) 5.5.0 20171010"
+    # Ubuntu 20.04 mingw: "x86_64-w64-mingw32-gcc (GCC) 9.3-win32 20200320"
+    # Ubuntu 16.04 mingw: "x86_64-w64-mingw32-gcc (GCC) 5.3.1 20160211"
+    # RHEL 7.6: "gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-36)"
+    ver_rex = re.compile(r'(\d+\.\d+(?:\.\d+)?)(?:-.*)')
+    for part in ver_line.split(' '):
+        match = ver_rex.match(part)
+        if match is not None:
+            ver_str = match.group(1)
+            break
+    else:
+        logging.error('Failed to parse GCC version "%s"', ver_rex)
+        return None
+    return _str_to_ver(ver_str)
+
+
+def _check_toolchain(cfg: config.Config, toolchain: config.Toolchain) -> bool:
     """Check availability and version of the host compiler (Clang or GCC
        depending on build configuration).
     """
     def check_compiler_executable(executable_path):
         if not os.path.exists(executable_path):
-            logging.error('The specified host compiler path %s is '
-                          'invalid: %s not found', cfg.host_compiler_path,
+            logging.error('The specified host toolchain path %s is '
+                          'invalid: %s not found', toolchain.toolchain_dir,
                           executable_path)
             return False
         return True
 
-    if not check_compiler_executable(cfg.host_c_compiler):
+    if not check_compiler_executable(toolchain.c_compiler):
         return False
-    if not check_compiler_executable(cfg.host_cpp_compiler):
+    if not check_compiler_executable(toolchain.cpp_compiler):
         return False
 
-    args = [cfg.host_c_compiler, '--version']
-    ver_line = execution.run_stdout(args)[0]
-    assert ver_line.startswith('clang version ')
-    ver_str = ver_line.split(' ')[2]
-    # Remove distribution suffix (if any) and convert to a tuple
-    ver = _str_to_ver(ver_str.split('-')[0])
-    if ver < MIN_CLANG_VERSION:
-        _print_version_error('Clang', cfg.host_c_compiler, ver,
-                             MIN_CLANG_VERSION)
+    if toolchain.kind == config.ToolchainKind.CLANG:
+        ver = _parse_clang_version(toolchain.c_compiler)
+        min_ver = MIN_CLANG_VERSION
+    else:
+        assert toolchain.kind == config.ToolchainKind.GCC
+        ver = _parse_gcc_version(toolchain.c_compiler)
+        min_ver = MIN_GCC_VERSION
+
+    if ver is None:
         return False
-    if cfg.verbose:
-        logging.info('Using host compiler: Clang version %s', ver_str)
-    return True
+
+    return _check_compiler_version(cfg, toolchain, ver, min_ver)
 
 
 def _check_availability(bin_name: str, name: str = None) -> bool:
@@ -133,7 +182,7 @@ def _check_tool(cfg: config.Config, bin_name: str, name: str,
 def check_prerequisites(cfg: config.Config) -> None:
     """Check availability and versions of all required prerequisite software."""
     is_ok = True
-    is_ok = is_ok and _check_host_compiler(cfg)
+    is_ok = is_ok and _check_toolchain(cfg, cfg.host_toolchain)
     is_ok = is_ok and _check_tool(cfg, 'cmake', 'CMake', MIN_CMAKE_VERSION)
     if cfg.use_ccache:
         is_ok = is_ok and _check_tool(cfg, 'ccache', 'CCache',
