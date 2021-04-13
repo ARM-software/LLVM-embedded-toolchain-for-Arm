@@ -245,13 +245,9 @@ class ToolchainBuild:
             '-j{}'.format(cfg.num_threads),
         ]
         try:
-            if os.path.exists(join(newlib_build_dir, 'Makefile')):
-                logging.info('%s newlib Makefile already exists, '
-                             'skipping the "configure" stage', lib_spec.name)
-            else:
-                logging.info('Configuring newlib for %s', lib_spec.name)
-                self.runner.run(configure_args, cwd=newlib_build_dir,
-                                env=config_env)
+            logging.info('Configuring newlib for %s', lib_spec.name)
+            self.runner.run(configure_args, cwd=newlib_build_dir,
+                            env=config_env)
             logging.info('Building and installing newlib for %s', lib_spec.name)
             self.runner.run(make_args, cwd=newlib_build_dir)
             self.runner.run(['make', 'install'], cwd=newlib_build_dir)
