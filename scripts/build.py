@@ -44,8 +44,8 @@ def parse_args_to_config() -> Config:
     )
     parser.add_argument('-v', '--verbose', help='log more information',
                         action='store_true')
-    parser.add_argument('-r', '--revision', metavar='R', default='HEAD',
-                        help='revision to build (default: HEAD)')
+    parser.add_argument('-r', '--revision', metavar='R', default='0.1',
+                        help='revision to build (default: 0.1)')
     variant_names = sorted(config.LIBRARY_SPECS.keys())
     parser.add_argument('--variants', metavar='VAR', nargs='+',
                         choices=variant_names + ['all'], default=['all'],
