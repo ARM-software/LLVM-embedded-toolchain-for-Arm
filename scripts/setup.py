@@ -24,12 +24,6 @@ setup(name="LLVMEmbeddedToolchainForArm",
       packages=find_packages(),
       scripts=[
           'build.py',
-          'check.py',
-          'cfg_files.py',
-          'config.py',
-          'execution.py',
           'repos.py',
-          'tarball.py',
-          'util.py'
       ],
       install_requires=['pyyaml', 'gitpython'])
