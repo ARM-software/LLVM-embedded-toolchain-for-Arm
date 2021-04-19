@@ -1,28 +1,3 @@
-diff --git a/configure b/configure
-index 5db527014..05b82fbfc 100755
---- a/configure
-+++ b/configure
-@@ -6791,6 +6791,20 @@ if test "x$CFLAGS_FOR_TARGET" = x; then
-   fi
- fi
- 
-+# Check whether --enable-newlib_hw_fp was given.
-+if test "${enable_newlib_hw_fp+set}" = set; then :
-+  enableval=$enable_newlib_hw_fp; case "${enableval}" in
-+   yes) newlib_hw_fp=true ;;
-+   no)  newlib_hw_fp=false ;;
-+   *) as_fn_error $? "bad value ${enableval} for --enable-newlib-hw-fp" "$LINENO" 5 ;;
-+ esac
-+else
-+  newlib_hw_fp=false
-+fi
-+
-+if test $newlib_hw_fp = true; then
-+    CFLAGS_FOR_TARGET="$CFLAGS_FOR_TARGET -DNEWLIB_HW_FP"
-+fi
- 
- if test "x$CXXFLAGS_FOR_TARGET" = x; then
-   if test "x${is_cross_compiler}" = xyes; then
 diff --git a/libgloss/arm/crt0.S b/libgloss/arm/crt0.S
 index 8490bde2f..8b85b28f4 100644
 --- a/libgloss/arm/crt0.S
@@ -131,99 +106,8 @@ index 681b3dbe0..8a49f39f3 100644
          .global __rt_stkovf_split_big
          .global __rt_stkovf_split_small
  
-diff --git a/newlib/libm/machine/arm/e_sqrt.c b/newlib/libm/machine/arm/e_sqrt.c
-index 6f3eb8301..40c5d1193 100644
---- a/newlib/libm/machine/arm/e_sqrt.c
-+++ b/newlib/libm/machine/arm/e_sqrt.c
-@@ -24,7 +24,7 @@
-  * SUCH DAMAGE.
-  */
- 
--#if (__ARM_FP & 0x8) && !defined(__SOFTFP__)
-+#if (__ARM_FP & 0x8) && !defined(__SOFTFP__) && defined NEWLIB_HW_FP
- #include <math.h>
- 
- double
-diff --git a/newlib/libm/machine/arm/ef_sqrt.c b/newlib/libm/machine/arm/ef_sqrt.c
-index 3a1ba6cb4..a77547af5 100644
---- a/newlib/libm/machine/arm/ef_sqrt.c
-+++ b/newlib/libm/machine/arm/ef_sqrt.c
-@@ -24,7 +24,7 @@
-  * SUCH DAMAGE.
-  */
- 
--#if (__ARM_FP & 0x4) && !defined(__SOFTFP__)
-+#if (__ARM_FP & 0x4) && !defined(__SOFTFP__) && defined NEWLIB_HW_FP
- #include <math.h>
- 
- float
-diff --git a/newlib/libm/machine/arm/s_ceil.c b/newlib/libm/machine/arm/s_ceil.c
-index ed1e85a3c..891708975 100644
---- a/newlib/libm/machine/arm/s_ceil.c
-+++ b/newlib/libm/machine/arm/s_ceil.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
- #include <math.h>
- 
- double
-diff --git a/newlib/libm/machine/arm/s_floor.c b/newlib/libm/machine/arm/s_floor.c
-index d25132f0d..82843a4f1 100644
---- a/newlib/libm/machine/arm/s_floor.c
-+++ b/newlib/libm/machine/arm/s_floor.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
- #include <math.h>
- 
- double
-diff --git a/newlib/libm/machine/arm/s_nearbyint.c b/newlib/libm/machine/arm/s_nearbyint.c
-index 7ead69b12..ce26bb9a0 100644
---- a/newlib/libm/machine/arm/s_nearbyint.c
-+++ b/newlib/libm/machine/arm/s_nearbyint.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
- #include <math.h>
- 
- double
-diff --git a/newlib/libm/machine/arm/s_rint.c b/newlib/libm/machine/arm/s_rint.c
-index 02c102250..20ad71a87 100644
---- a/newlib/libm/machine/arm/s_rint.c
-+++ b/newlib/libm/machine/arm/s_rint.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
- #include <math.h>
- 
- double
-diff --git a/newlib/libm/machine/arm/s_trunc.c b/newlib/libm/machine/arm/s_trunc.c
-index 6fb696814..a277331b4 100644
---- a/newlib/libm/machine/arm/s_trunc.c
-+++ b/newlib/libm/machine/arm/s_trunc.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x8) && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
- #include <math.h>
- 
- double
 diff --git a/newlib/libm/machine/arm/sf_ceil.c b/newlib/libm/machine/arm/sf_ceil.c
-index b6efbff0b..27aeb6168 100644
+index b6efbff0b..44fdf834a 100644
 --- a/newlib/libm/machine/arm/sf_ceil.c
 +++ b/newlib/libm/machine/arm/sf_ceil.c
 @@ -24,7 +24,7 @@
@@ -231,12 +115,12 @@ index b6efbff0b..27aeb6168 100644
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
  
 -#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
  #include <math.h>
  
  float
 diff --git a/newlib/libm/machine/arm/sf_floor.c b/newlib/libm/machine/arm/sf_floor.c
-index 7bc95808c..8d9b1c087 100644
+index 7bc95808c..44c38c42c 100644
 --- a/newlib/libm/machine/arm/sf_floor.c
 +++ b/newlib/libm/machine/arm/sf_floor.c
 @@ -24,7 +24,7 @@
@@ -244,12 +128,12 @@ index 7bc95808c..8d9b1c087 100644
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
  
 -#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
  #include <math.h>
  
  float
 diff --git a/newlib/libm/machine/arm/sf_nearbyint.c b/newlib/libm/machine/arm/sf_nearbyint.c
-index c70d84442..bb2a4a442 100644
+index c70d84442..126673e97 100644
 --- a/newlib/libm/machine/arm/sf_nearbyint.c
 +++ b/newlib/libm/machine/arm/sf_nearbyint.c
 @@ -24,7 +24,7 @@
@@ -257,12 +141,12 @@ index c70d84442..bb2a4a442 100644
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
  
 -#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
  #include <math.h>
  
  float
 diff --git a/newlib/libm/machine/arm/sf_rint.c b/newlib/libm/machine/arm/sf_rint.c
-index d9c383a7e..c9b0b1b12 100644
+index d9c383a7e..5def21009 100644
 --- a/newlib/libm/machine/arm/sf_rint.c
 +++ b/newlib/libm/machine/arm/sf_rint.c
 @@ -24,7 +24,7 @@
@@ -270,12 +154,12 @@ index d9c383a7e..c9b0b1b12 100644
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
  
 -#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
  #include <math.h>
  
  float
 diff --git a/newlib/libm/machine/arm/sf_round.c b/newlib/libm/machine/arm/sf_round.c
-index 232fc0848..b647b0d42 100644
+index 232fc0848..88c53ba13 100644
 --- a/newlib/libm/machine/arm/sf_round.c
 +++ b/newlib/libm/machine/arm/sf_round.c
 @@ -24,7 +24,7 @@
@@ -283,12 +167,12 @@ index 232fc0848..b647b0d42 100644
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
  
 -#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
  #include <math.h>
  
  float
 diff --git a/newlib/libm/machine/arm/sf_trunc.c b/newlib/libm/machine/arm/sf_trunc.c
-index 64e4aeb9a..c0e5e9049 100644
+index 64e4aeb9a..c08fa6fed 100644
 --- a/newlib/libm/machine/arm/sf_trunc.c
 +++ b/newlib/libm/machine/arm/sf_trunc.c
 @@ -24,7 +24,7 @@
@@ -296,7 +180,7 @@ index 64e4aeb9a..c0e5e9049 100644
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
  
 -#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && !defined (__SOFTFP__) && defined NEWLIB_HW_FP
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
  #include <math.h>
  
  float

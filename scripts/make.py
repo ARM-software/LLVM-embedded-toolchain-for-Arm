@@ -372,8 +372,6 @@ class ToolchainBuild:
             tool_path = join(cfg.native_llvm_bin_dir, 'llvm-{}'.format(tool))
             config_env[var_name] = tool_path
 
-        newlib_hw_fp = ('--enable-newlib-hw-fp' if lib_spec.newlib_fp_support
-                        else '--disable-newlib-hw-fp')
         configure_args = [
             join(cfg.newlib_repo_dir, 'configure'),
             '--target={}'.format(lib_spec.target),
@@ -385,7 +383,6 @@ class ToolchainBuild:
             '--enable-newlib-io-c99-formats',
             '--disable-nls',
             '--enable-lite-exit',
-            newlib_hw_fp,
         ]
         make_args = [
             'make',
