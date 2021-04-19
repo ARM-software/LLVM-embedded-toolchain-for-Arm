@@ -86,16 +86,8 @@ class Toolchain:  # pylint: disable=too-few-public-methods
 class LibrarySpec:
     """Configuration for a single runtime library variant."""
     def __init__(self, arch: str, float_abi: FloatABI, name_suffix: str,
-                 arch_options: str, other_flags: str = '',
-                 newlib_fp_support: bool = None):
+                 arch_options: str, other_flags: str = ''):
         # pylint: disable=too-many-arguments
-        if float_abi == FloatABI.SOFT_FP:
-            assert not newlib_fp_support
-            self.newlib_fp_support = False
-        else:
-            self.newlib_fp_support = (newlib_fp_support
-                                      if newlib_fp_support is not None
-                                      else True)
         self.arch = arch
         self.float_abi = float_abi
         self.arch_options = arch_options
@@ -123,8 +115,7 @@ def _make_library_specs():
     soft = FloatABI.SOFT_FP
     lib_specs = [
         LibrarySpec('armv8.1m.main', hard, 'fp', '+fp'),
-        LibrarySpec('armv8.1m.main', hard, 'nofp_mve', '+nofp+mve',
-                    newlib_fp_support=False),
+        LibrarySpec('armv8.1m.main', hard, 'nofp_mve', '+nofp+mve'),
         LibrarySpec('armv8.1m.main', soft, 'nofp_nomve', '+nofp+nomve'),
         LibrarySpec('armv8m.main', hard, 'fp', '+fp'),
         LibrarySpec('armv8m.main', soft, 'nofp', '+nofp'),
