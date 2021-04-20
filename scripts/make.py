@@ -15,7 +15,7 @@
 
 import logging
 import os
-from typing import List, Mapping, Tuple
+from typing import Dict, List, Mapping, Tuple
 import subprocess
 import shutil
 
@@ -266,38 +266,58 @@ class ToolchainBuild:
         if cfg.release_mode:
             self._write_llvm_index()
 
+    def _get_common_cmake_defs(self, lib_spec: config.LibrarySpec,
+                               need_cxx: bool = False) -> Dict[str, str]:
+        """Return common CMake definitions used for runtime libraries
+           (compiler-rt, libc++abi, libc++).
+        """
+        cfg = self.cfg
+        join = os.path.join
+        flags = (lib_spec.flags
+                 + ' -ffunction-sections -fdata-sections -fno-ident')
+        defs = {
+            'CMAKE_TRY_COMPILE_TARGET_TYPE': 'STATIC_LIBRARY',
+            'CMAKE_C_COMPILER': join(cfg.native_llvm_bin_dir, 'clang'),
+            'CMAKE_C_COMPILER_TARGET': lib_spec.target,
+            'CMAKE_C_FLAGS': flags,
+            'CMAKE_AR': join(cfg.native_llvm_bin_dir, 'llvm-ar'),
+            'CMAKE_NM': join(cfg.native_llvm_bin_dir, 'llvm-nm'),
+            'CMAKE_RANLIB': join(cfg.native_llvm_bin_dir, 'llvm-ranlib'),
+            'CMAKE_EXE_LINKER_FLAGS': '-fuse-ld=lld',
+        }
+        if need_cxx:
+            cxx_defs = {
+                'CMAKE_CXX_COMPILER': join(cfg.native_llvm_bin_dir, 'clang++'),
+                'CMAKE_CXX_COMPILER_TARGET': lib_spec.target,
+                'CMAKE_CXX_FLAGS': flags,
+            }
+            defs.update(cxx_defs)
+        return defs
+
     def build_compiler_rt(self, lib_spec: config.LibrarySpec) -> None:
         """Build and install a single variant of compiler-rt."""
         self.runner.reset_cwd()
         cfg = self.cfg
-        target = lib_spec.target
         join = os.path.join
         rt_source_dir = join(cfg.llvm_repo_dir, 'compiler-rt')
         rt_build_dir = join(cfg.build_dir, 'compiler-rt', lib_spec.name)
         self._prepare_build_dir(rt_build_dir)
-        rt_install_dir = join(cfg.target_llvm_rt_dir, target)
-        cmake_defs = {
+        rt_install_dir = join(cfg.target_llvm_rt_dir, lib_spec.target)
+        cmake_defs = self._get_common_cmake_defs(lib_spec)
+        cmake_defs.update({
             'CMAKE_BUILD_TYPE:STRING': 'Release',
+            'CMAKE_ASM_COMPILER_TARGET': lib_spec.target,
+            'CMAKE_ASM_FLAGS': cmake_defs.get('CMAKE_C_FLAGS', ''),
+            'LLVM_CONFIG_PATH': join(cfg.native_llvm_build_dir, 'bin',
+                                     'llvm-config'),
             'COMPILER_RT_BUILD_SANITIZERS:BOOL': 'OFF',
             'COMPILER_RT_BUILD_XRAY:BOOL': 'OFF',
             'COMPILER_RT_BUILD_LIBFUZZER:BOOL': 'OFF',
             'COMPILER_RT_BUILD_PROFILE:BOOL': 'OFF',
             'COMPILER_RT_BAREMETAL_BUILD:BOOL': 'ON',
-            'CMAKE_TRY_COMPILE_TARGET_TYPE': 'STATIC_LIBRARY',
-            'CMAKE_C_COMPILER_TARGET': target,
-            'CMAKE_C_FLAGS': lib_spec.flags,
-            'CMAKE_ASM_COMPILER_TARGET': target,
-            'CMAKE_ASM_FLAGS': lib_spec.flags,
             'COMPILER_RT_DEFAULT_TARGET_ONLY': 'ON',
-            'LLVM_CONFIG_PATH': join(cfg.native_llvm_build_dir, 'bin',
-                                     'llvm-config'),
-            'CMAKE_C_COMPILER': join(cfg.native_llvm_bin_dir, 'clang'),
-            'CMAKE_AR': join(cfg.native_llvm_bin_dir, 'llvm-ar'),
-            'CMAKE_NM': join(cfg.native_llvm_bin_dir, 'llvm-nm'),
-            'CMAKE_RANLIB': join(cfg.native_llvm_bin_dir, 'llvm-ranlib'),
-            'CMAKE_EXE_LINKER_FLAGS': '-fuse-ld=lld',
             'CMAKE_INSTALL_PREFIX': rt_install_dir,
-        }
+        })
         self._cmake_configure('{} compiler-rt'.format(lib_spec.name),
                               rt_source_dir, rt_build_dir, cmake_defs)
         logging.info('Building and installing compiler-rt for %s',
@@ -318,6 +338,98 @@ class ToolchainBuild:
         if cfg.verbose:
             logging.info('Removing %s', linux_dir)
         shutil.rmtree(linux_dir)
+
+    def _create_dummy_libunwind(self, lib_spec: config.LibrarySpec) -> None:
+        """Create an empty libunwind.a library. It is needed because the Clang
+           driver always adds -lunwind to the linker command line even when
+           "-fno-exceptions" is specified on the command line.
+        """
+        dummy_unwind = os.path.join(self.cfg.target_llvm_rt_dir,
+                                    lib_spec.target, 'lib', 'libunwind.a')
+        logging.info('Creating dummy libunwind for %s', lib_spec.name)
+        self.runner.run([
+            os.path.join(self.cfg.native_llvm_bin_dir, 'llvm-ar'),
+            '-rc', dummy_unwind,
+        ])
+
+    def build_cxx_libraries(self, lib_spec: config.LibrarySpec) -> None:
+        """Build and install a single variant of lib++abi and libc++"""
+
+        def updated_dict(dict1, dict2):
+            result = dict1.copy()
+            result.update(dict2)
+            return result
+
+        cmake_common_defs = self._get_common_cmake_defs(lib_spec, True)
+        # Disable C++17 aligned allocation feature because its implementation
+        # in libc++ relies on posix_memalign() which is not available in our
+        # newlib build
+        cxx_flags = (cmake_common_defs.get('CMAKE_CXX_FLAGS', '')
+                     + ' -D_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION')
+        install_dir = os.path.join(self.cfg.target_llvm_rt_dir, lib_spec.target)
+        cmake_common_defs.update({
+            'CMAKE_BUILD_TYPE:STRING': 'MinSizeRel',
+            'CMAKE_CXX_FLAGS': cxx_flags,
+            'CMAKE_INSTALL_PREFIX': install_dir,
+        })
+
+        cmake_libcxxabi_defs = {
+            'LIBCXXABI_ENABLE_SHARED:BOOL': 'OFF',
+            'LIBCXXABI_ENABLE_STATIC:BOOL': 'ON',
+            'LIBCXXABI_ENABLE_EXCEPTIONS:BOOL': 'OFF',
+            'LIBCXXABI_ENABLE_ASSERTIONS:BOOL': 'OFF',
+            'LIBCXXABI_ENABLE_PIC:BOOL': 'OFF',
+            'LIBCXXABI_USE_COMPILER_RT:BOOL': 'ON',
+            'LIBCXXABI_ENABLE_THREADS:BOOL': 'OFF',
+            'LIBCXXABI_BAREMETAL:BOOL': 'ON',
+            'LIBCXXABI_LIBCXX_INCLUDES:PATH':
+                os.path.join(install_dir, 'include', 'c++', 'v1'),
+        }
+
+        cmake_libcxx_defs = {
+            # libc++ CMake files incorrectly detect that the "-GR-" flag
+            # (the clang-cl analog of -fno-rtti) is supported. Manually mark it
+            # as unsupported to avoid warnings.
+            'LIBCXX_SUPPORTS_GR_FLAG': 'OFF',
+            'LIBCXX_ENABLE_SHARED:BOOL': 'OFF',
+            'LIBCXX_ENABLE_STATIC:BOOL': 'ON',
+            'LIBCXX_ENABLE_FILESYSTEM:BOOL': 'OFF',
+            'LIBCXX_ENABLE_PARALLEL_ALGORITHMS:BOOL': 'OFF',
+            'LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY:BOOL': 'OFF',
+            'LIBCXX_ENABLE_DEBUG_MODE_SUPPORT:BOOL': 'OFF',
+            'LIBCXX_ENABLE_RANDOM_DEVICE:BOOL': 'OFF',
+            'LIBCXX_ENABLE_LOCALIZATION:BOOL': 'OFF',
+            'LIBCXX_ENABLE_EXCEPTIONS:BOOL': 'OFF',
+            'LIBCXX_ENABLE_RTTI:BOOL': 'OFF',
+            'LIBCXX_ENABLE_THREADS:BOOL': 'OFF',
+            'LIBCXX_ENABLE_MONOTONIC_CLOCK:BOOL': 'OFF',
+            'LIBCXX_INCLUDE_BENCHMARKS:BOOL': 'OFF',
+            'LIBCXX_CXX_ABI:STRING': 'libcxxabi',
+        }
+
+        libs = [
+            ('libc++', 'libcxx', cmake_libcxx_defs),
+            ('libc++abi', 'libcxxabi', cmake_libcxxabi_defs),
+        ]
+
+        for lib_pretty_name, lib_name, cmake_defs in libs:
+            self.runner.reset_cwd()
+            build_dir = os.path.join(self.cfg.build_dir, lib_name,
+                                     lib_spec.name)
+            self._prepare_build_dir(build_dir)
+
+            full_name = '{} for {}'.format(lib_pretty_name, lib_spec.name)
+            self._cmake_configure(full_name,
+                                  os.path.join(self.cfg.llvm_repo_dir,
+                                               lib_name),
+                                  build_dir,
+                                  updated_dict(cmake_common_defs,
+                                               cmake_defs))
+            logging.info('Building and installing %s', full_name)
+            self._cmake_build(build_dir)
+            self._cmake_build(build_dir, target='install')
+
+        self._create_dummy_libunwind(lib_spec)
 
     def _copy_runtime_to_native(self, lib_spec: config.LibrarySpec) -> None:
         """Copy runtime libraries and headers from target LLVM to

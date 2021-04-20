@@ -151,6 +151,8 @@ def parse_args_to_config() -> Config:
                              'target\n'
                              '  compiler-rt - build and install compiler-rt '
                              'for each target\n'
+                             '  libcxx - build and install libc++abi and '
+                             'libc++ for each target\n'
                              '  configure - write target configuration files\n'
                              '  package - create tarball\n'
                              '  all - perform all of the above\n'
@@ -232,7 +234,8 @@ def build_all(cfg: Config) -> None:
                     'Native LLVM tools')
     run_or_skip(cfg, Action.CLANG, builder.build_clang, 'Clang build')
     if any(action in cfg.actions for action in
-           [Action.NEWLIB, Action.COMPILER_RT, Action.CONFIGURE]):
+           [Action.NEWLIB, Action.COMPILER_RT, Action.LIBCXX,
+            Action.CONFIGURE]):
         logging.info('Building library variants and/or configurations: %s',
                      ', '.join(v.name for v in cfg.variants))
 
@@ -243,6 +246,9 @@ def build_all(cfg: Config) -> None:
         run_or_skip(cfg, Action.COMPILER_RT,
                     lambda lspec=lib_spec: builder.build_compiler_rt(lspec),
                     'compiler-rt build for {}'.format(lib_spec.name))
+        run_or_skip(cfg, Action.LIBCXX,
+                    lambda lspec=lib_spec: builder.build_cxx_libraries(lspec),
+                    'libc++/libc++abi build for {}'.format(lib_spec.name))
         run_or_skip(cfg, Action.CONFIGURE,
                     lambda lspec=lib_spec: cfg_files.configure_target(cfg,
                                                                       lspec),
