@@ -38,6 +38,7 @@ def write_cfg_files(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
         '--target={}'.format(target),
         lib_spec.flags,
         '-fuse-ld=lld',
+        '-fno-exceptions -fno-rtti'
     ]
 
     # No semihosting and no linker script

@@ -3,7 +3,8 @@
 This repository contains build scripts and auxiliary material for building a bare-metal LLVM based toolchain targeting Arm based on:
 * clang + llvm
 * lld
-* lldb
+* libc++abi
+* libc++
 * compiler-rt
 * newlib
 

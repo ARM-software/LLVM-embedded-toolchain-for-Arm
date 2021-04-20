@@ -86,6 +86,7 @@ class Action(enum.Enum):
     CLANG = 'clang'
     NEWLIB = 'newlib'
     COMPILER_RT = 'compiler-rt'
+    LIBCXX = 'libcxx'
     CONFIGURE = 'configure'
     PACKAGE = 'package'
     ALL = 'all'
