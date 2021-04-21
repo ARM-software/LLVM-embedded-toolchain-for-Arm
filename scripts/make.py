@@ -80,10 +80,18 @@ class ToolchainBuild:
         binutils = ['ar', 'nm', 'as', 'ranlib', 'strip', 'readelf', 'objdump']
         self.llvm_binutils = ['llvm-' + name for name in binutils]
 
-    def _cmake_configure(self, source_dir: str, build_dir: str,
+    def _cmake_configure(self, name: str, source_dir: str, build_dir: str,
                          defs: Mapping[str, str],
                          env: Mapping[str, str] = None) -> None:
         """Run the "configure" stage of CMake."""
+        if (os.path.exists(os.path.join(build_dir, 'CMakeCache.txt'))
+                and self.cfg.skip_reconfigure):
+            logging.info('%s CMakeCache.txt already exists, '
+                         'skipping CMake configuration', name)
+            return
+
+        logging.info('Configuring %s', name)
+
         cmake_args = [
             'cmake',
             '-G', self.cfg.cmake_generator,
@@ -166,16 +174,9 @@ class ToolchainBuild:
             'CXX': cfg.native_toolchain.cpp_compiler,
         }
 
-        if (os.path.exists(os.path.join(llvm_build_dir, 'CMakeCache.txt'))
-                and cfg.skip_reconfigure):
-            logging.info('LLVM CMakeCache.txt already exists, '
-                         'skipping CMake configuration for the native '
-                         'LLVM toolchain')
-        else:
-            logging.info('Configuring native LLVM toolchain')
-            self._cmake_configure(os.path.join(cfg.llvm_repo_dir, 'llvm'),
-                                  llvm_build_dir, cmake_defs,
-                                  cmake_env)
+        self._cmake_configure('Native LLVM',
+                              os.path.join(cfg.llvm_repo_dir, 'llvm'),
+                              llvm_build_dir, cmake_defs, cmake_env)
         logging.info('Building and installing native LLVM toolchain')
         self._cmake_build(llvm_build_dir,
                           target='install-distribution-stripped')
@@ -247,14 +248,8 @@ class ToolchainBuild:
             'CXX': cfg.host_toolchain.cpp_compiler,
         }
 
-        if (os.path.exists(os.path.join(llvm_build_dir, 'CMakeCache.txt'))
-                and cfg.skip_reconfigure):
-            logging.info('LLVM CMakeCache.txt already exists, '
-                         'skipping CMake configuration for LLVM')
-        else:
-            logging.info('Configuring LLVM projects: %s', ', '.join(projects))
-            self._cmake_configure(join(cfg.llvm_repo_dir, 'llvm'),
-                                  llvm_build_dir, cmake_defs, cmake_env)
+        self._cmake_configure('LLVM', join(cfg.llvm_repo_dir, 'llvm'),
+                              llvm_build_dir, cmake_defs, cmake_env)
         logging.info('Building and installing LLVM components: %s',
                      ', '.join(dist_comps))
         self._cmake_build(llvm_build_dir,
@@ -303,13 +298,8 @@ class ToolchainBuild:
             'CMAKE_EXE_LINKER_FLAGS': '-fuse-ld=lld',
             'CMAKE_INSTALL_PREFIX': rt_install_dir,
         }
-        if (os.path.exists(os.path.join(rt_build_dir, 'CMakeCache.txt'))
-                and cfg.skip_reconfigure):
-            logging.info('%s compiler-rt CMakeCache.txt already exists, '
-                         'skipping CMake configuration', lib_spec.name)
-        else:
-            logging.info('Configuring compiler-rt for %s', lib_spec.name)
-            self._cmake_configure(rt_source_dir, rt_build_dir, cmake_defs)
+        self._cmake_configure('{} compiler-rt'.format(lib_spec.name),
+                              rt_source_dir, rt_build_dir, cmake_defs)
         logging.info('Building and installing compiler-rt for %s',
                      lib_spec.name)
         self._cmake_build(rt_build_dir)
