@@ -37,4 +37,4 @@
       URL:  https://github.com/mirror/newlib-cygwin.git
       Branch: master
       Revision: HEAD
-      Patch: newlib-0.1.patch
+      Patch: newlib-HEAD.patch
