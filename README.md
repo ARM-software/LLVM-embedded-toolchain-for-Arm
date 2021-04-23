@@ -202,6 +202,7 @@ $ build.py --host-toolchain mingw --copy-runtime-dlls no
 ### newlib:
 * clang does not support naked attribute on a C function, breaking the linux startup (out of scope).
 * Target triple ending with eabi is not considered an ELF target.
+* Revision 0.1 only: set the correct floating-point endianness when building with Clang.
 
 ### LLVM:
 * Recognize $@ in a config file argument to mean the directory of the config file, allowing toolchain relative paths.
