@@ -127,8 +127,7 @@ build. Currently, these tools are ``ccache``, and ``ninja``.
 $ build.py --use-ccache --use-ninja
 ```
 4. By now, you should have a working toolchain in directory
-* ``<install-dir>/LLVMEmbeddedToolchainForArm-<revision>`` if you were building a release (e.g ``--revision 0.1``) or in
-* ``<install-dir>/LLVMEmbeddedToolchainForArm`` if you were building using latest component source (``--revision HEAD``).
+   ``<install-dir>/LLVMEmbeddedToolchainForArm-<revision>``
 
 ### Use the toolchain
 
