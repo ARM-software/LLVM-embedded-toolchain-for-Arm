@@ -24,7 +24,7 @@ class ToolchainBuildError(RuntimeError):
     """
 
 
-def values_of_enum(enum_class: Sequence[Any]) -> List[str]:
+def values_of_enum(enum_class: Any) -> List[str]:
     """Create a list of strings from Enum values."""
     return [str(enumerator.value) for enumerator in enum_class]
 

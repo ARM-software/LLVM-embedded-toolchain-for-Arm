@@ -18,6 +18,7 @@
 #
 
 import argparse
+import functools
 import logging
 import multiprocessing
 import os
@@ -242,17 +243,17 @@ def build_all(cfg: Config) -> None:
 
     for lib_spec in cfg.variants:
         run_or_skip(cfg, Action.NEWLIB,
-                    lambda lspec=lib_spec: builder.build_newlib(lspec),
+                    functools.partial(builder.build_newlib, lib_spec),
                     'newlib build for {}'.format(lib_spec.name))
         run_or_skip(cfg, Action.COMPILER_RT,
-                    lambda lspec=lib_spec: builder.build_compiler_rt(lspec),
+                    functools.partial(builder.build_compiler_rt, lib_spec),
                     'compiler-rt build for {}'.format(lib_spec.name))
         run_or_skip(cfg, Action.LIBCXX,
-                    lambda lspec=lib_spec: builder.build_cxx_libraries(lspec),
+                    functools.partial(builder.build_cxx_libraries, lib_spec),
                     'libc++/libc++abi build for {}'.format(lib_spec.name))
         run_or_skip(cfg, Action.CONFIGURE,
-                    lambda lspec=lib_spec: cfg_files.configure_target(cfg,
-                                                                      lspec),
+                    functools.partial(cfg_files.configure_target, cfg,
+                                      lib_spec),
                     'generation of config files for {}'.format(lib_spec.name))
 
 
