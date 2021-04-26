@@ -110,6 +110,7 @@ class Action(enum.Enum):
     COMPILER_RT = 'compiler-rt'
     LIBCXX = 'libcxx'
     CONFIGURE = 'configure'
+    TEST = 'test'
     PACKAGE = 'package'
     ALL = 'all'
 

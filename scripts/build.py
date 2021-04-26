@@ -156,6 +156,7 @@ def parse_args_to_config() -> Config:
                              '  libcxx - build and install libc++abi and '
                              'libc++ for each target\n'
                              '  configure - write target configuration files\n'
+                             '  test - run tests\n'
                              '  package - create tarball\n'
                              '  all - perform all of the above\n'
                              'Default: all')
@@ -255,6 +256,9 @@ def build_all(cfg: Config) -> None:
                     functools.partial(cfg_files.configure_target, cfg,
                                       lib_spec),
                     'generation of config files for {}'.format(lib_spec.name))
+        run_or_skip(cfg, Action.TEST,
+                    lambda lspec=lib_spec: builder.run_tests(lspec),
+                    'tests for {}'.format(lib_spec.name))
 
 
 def ask_about_runtime_dlls(cfg: Config) -> Optional[bool]:

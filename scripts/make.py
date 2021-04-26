@@ -526,3 +526,27 @@ class ToolchainBuild:
             raise util.ToolchainBuildError from ex
         if cfg.is_cross_compiling:
             self._copy_runtime_to_native(lib_spec)
+
+    def _run_smoke_tests(self, _lib_spec: config.LibrarySpec) -> None:
+        bin_path = self.cfg.target_llvm_bin_dir
+        testdir_path = os.path.join(self.cfg.source_dir, "tests/smoketests")
+        logging.info("Running smoke tests")
+        # If qemu-arm is not in PATH, just build, not run
+        if shutil.which("qemu-arm") is not None:
+            target = "run"
+        else:
+            logging.warning(
+                "qemu-arm is not present in your system path. Hence smoke "
+                "tests will only be built, not executed."
+            )
+            target = "build"
+        commands = ["make", target, f"BIN_PATH={bin_path}"]
+        try:
+            self.runner.run(commands, testdir_path)
+        except subprocess.SubprocessError as ex:
+            logging.error("Failed to run test suite: %s", "smoketests")
+            raise util.ToolchainBuildError from ex
+        logging.info("Smoke tests passed")
+
+    def run_tests(self, lib_spec: config.LibrarySpec) -> None:
+        self._run_smoke_tests(lib_spec)
