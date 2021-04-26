@@ -20,7 +20,6 @@
 import argparse
 import logging
 import os
-import textwrap
 import sys
 from typing import Dict, List, Any
 
@@ -83,8 +82,8 @@ class LLVMBMTC:
 
     def __repr__(self):
         modules = ', '.join(map(repr, list(self.modules.values())))
-        return '{}(revision:"{}", modules:[{}])'.format(self.__class__.__name__,
-                                                        self.revision, modules)
+        return '{} (revision:"{}", modules:[{}])'.format(
+            self.__class__.__name__, self.revision, modules)
 
 
 def get_all_versions(filename: str) -> Dict[str, Any]:
@@ -216,7 +215,7 @@ def patch_repositories(checkout_path: str, tc_version: LLVMBMTC,
         try:
             repo.head.reset(index=True, working_tree=True)
             repo.git.apply(['-p1', patch_file])
-        except git.exc.GitCommandError as ex: # pylint: disable=no-member
+        except git.exc.GitCommandError as ex:  # pylint: disable=no-member
             die('could not patch "{}" with "{}".\n'
                 'Git command failed with:\n{}'
                 .format(repo_path, patch_file, ex))
@@ -238,15 +237,15 @@ def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
 
     logging.info('Clone (%s @ %s):', checkout_path, tc_version.revision)
     for repo_path, module in tc_version.modules.items():
-        logging.info(' - %s: %s @ %s%s',
-            repo_path, module.branch, module.revision,
-            ' (detached)' if module.revision != 'HEAD' else '')
+        logging.info(' - %s: %s @ %s%s', repo_path, module.branch,
+                     module.revision,
+                     ' (detached)' if module.revision != 'HEAD' else '')
         repo = git.Repo.clone_from(module.url,
                                    os.path.join(checkout_path, module.name))
         if module.revision == 'HEAD':
             try:
                 repo.git.checkout(module.branch)
-            except git.exc.GitCommandError as ex: # pylint: disable=no-member
+            except git.exc.GitCommandError as ex:  # pylint: disable=no-member
                 die('could not checkout "{}" @ "{}/{}"\n'
                     'Git command failed with:\n{}'
                     .format(repo_path, module.branch, module.revision, ex))
@@ -254,7 +253,7 @@ def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
             # Detached state
             try:
                 repo.git.checkout(module.revision)
-            except git.exc.GitCommandError as ex: # pylint: disable=no-member
+            except git.exc.GitCommandError as ex:  # pylint: disable=no-member
                 die('could not checkout "{}" @ "{}".\n'
                     'Git command failed with:\n{}'
                     .format(repo_path, module.revision, ex))
@@ -284,16 +283,16 @@ def main():
     parser = argparse.ArgumentParser(
         description='Manage LLVM Embedded Toolchain for Arm checkout',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=textwrap.dedent('''\
-
-            Actions:
-              list     list available versions.
-              status   report the status of each checkout.
-              check    check the state of each checkout matches the requested toolchain revision
-              clone    checkout each repository as needed for the requested toolchian revision
-              freeze   print a YAML description of the current repositories state
-
-            '''))
+        epilog='\n'
+               'Actions:\n'
+               '  list     list available versions.\n'
+               '  status   report the status of each checkout.\n'
+               '  check    check the state of each checkout matches the '
+               'requested toolchain revision\n'
+               '  clone    checkout each repository as needed for the '
+               'requested toolchain revision\n'
+               '  freeze   print a YAML description of the current '
+               'repositories state\n')
     parser.add_argument('-v',
                         '--verbose',
                         action='store_true',
@@ -344,8 +343,8 @@ def main():
         ret_val = check_repositories_status(args.repositories,
                                             versions[args.revision])
     elif args.action == 'clone':
-        ret_val = clone_repositories(args.repositories, versions[args.revision],
-                                     args.patches)
+        ret_val = clone_repositories(args.repositories,
+                                     versions[args.revision], args.patches)
     else:
         die('unsupported command: "{}"'.format(args.action))
 

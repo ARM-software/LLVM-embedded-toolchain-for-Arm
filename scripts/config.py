@@ -216,14 +216,15 @@ class Config:  # pylint: disable=too-many-instance-attributes
         self.package_dir = os.path.abspath(args.package_dir)
         # According to
         # https://docs.python.org/3.6/library/enum.html#using-a-custom-new:
-        # "The __new__() method, if defined, is used during creation of the Enum
-        # members; it is then replaced by Enum’s __new__() which is used after
-        # class creation for lookup of existing members."
+        # "The __new__() method, if defined, is used during creation of the
+        # Enum members; it is then replaced by Enum’s __new__() which is used
+        # after class creation for lookup of existing members."
         # This confuses pylint.
         # pylint: disable=no-value-for-parameter
         host_toolchain_kind = ToolchainKind(args.host_toolchain)
         host_toolchain_dir = os.path.abspath(args.host_toolchain_dir)
-        self.host_toolchain = Toolchain(host_toolchain_dir, host_toolchain_kind)
+        self.host_toolchain = Toolchain(host_toolchain_dir,
+                                        host_toolchain_kind)
         # pylint: disable=no-value-for-parameter
         native_toolchain_kind = ToolchainKind(args.native_toolchain)
         native_toolchain_dir = os.path.abspath(args.native_toolchain_dir)

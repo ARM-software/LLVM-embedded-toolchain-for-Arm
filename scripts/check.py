@@ -182,7 +182,8 @@ def _check_tool(cfg: config.Config, bin_name: str, name: str,
 
 
 def check_prerequisites(cfg: config.Config) -> None:
-    """Check availability and versions of all required prerequisite software."""
+    """Check availability and versions of all required prerequisite software.
+    """
     is_ok = True
     is_ok = is_ok and _check_toolchain(cfg, cfg.host_toolchain, 'host')
     if cfg.is_cross_compiling:

@@ -70,8 +70,8 @@ class RuntimeDLLs:
 
 
 class ToolchainBuild:
-    """Class for configuring/building/installing all toolchain components: LLVM,
-       newlib, compiler_rt.
+    """Class for configuring/building/installing all toolchain components:
+       LLVM, newlib, compiler_rt.
     """
     def __init__(self, cfg: config.Config):
         self.cfg = cfg
@@ -366,7 +366,8 @@ class ToolchainBuild:
         # newlib build
         cxx_flags = (cmake_common_defs.get('CMAKE_CXX_FLAGS', '')
                      + ' -D_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION')
-        install_dir = os.path.join(self.cfg.target_llvm_rt_dir, lib_spec.target)
+        install_dir = os.path.join(self.cfg.target_llvm_rt_dir,
+                                   lib_spec.target)
         cmake_common_defs.update({
             'CMAKE_BUILD_TYPE:STRING': 'MinSizeRel',
             'CMAKE_CXX_FLAGS': cxx_flags,
@@ -469,7 +470,8 @@ class ToolchainBuild:
             'CXX_FOR_TARGET': compiler_str('clang++'),
             'CFLAGS_FOR_TARGET': lib_spec.flags,
         }
-        for tool in ['ar', 'nm', 'as', 'ranlib', 'strip', 'readelf', 'objdump']:
+        for tool in ['ar', 'nm', 'as', 'ranlib',
+                     'strip', 'readelf', 'objdump']:
             var_name = '{}_FOR_TARGET'.format(tool.upper())
             tool_path = join(cfg.native_llvm_bin_dir, 'llvm-{}'.format(tool))
             config_env[var_name] = tool_path
@@ -494,7 +496,8 @@ class ToolchainBuild:
             logging.info('Configuring newlib for %s', lib_spec.name)
             self.runner.run(configure_args, cwd=newlib_build_dir,
                             env=config_env)
-            logging.info('Building and installing newlib for %s', lib_spec.name)
+            logging.info('Building and installing newlib for %s',
+                         lib_spec.name)
             self.runner.run(make_args, cwd=newlib_build_dir)
             self.runner.run(['make', 'install'], cwd=newlib_build_dir)
         except subprocess.SubprocessError as ex:
