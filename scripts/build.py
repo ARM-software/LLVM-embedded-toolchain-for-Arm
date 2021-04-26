@@ -36,7 +36,8 @@ import util
 
 
 def parse_args_to_config() -> Config:
-    """Parse command line arguments and create a Config object based on them."""
+    """Parse command line arguments and create a Config object based on them.
+    """
     cwd = os.path.abspath(os.getcwd())
     parser = argparse.ArgumentParser(
         description='Build LLVM Embedded Toolchain for Arm',
@@ -145,8 +146,8 @@ def parse_args_to_config() -> Config:
                         choices=util.values_of_enum(Action),
                         help='actions to perform, a list of:\n'
                              '  prepare - check out and patch sources\n'
-                             '  clang - build and install Clang, lld and other '
-                             'binary utilities\n'
+                             '  clang - build and install Clang, lld and '
+                             'other binary utilities\n'
                              '  newlib - build and install newlib for each '
                              'target\n'
                              '  compiler-rt - build and install compiler-rt '

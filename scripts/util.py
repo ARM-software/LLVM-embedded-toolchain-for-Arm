@@ -18,9 +18,10 @@ from typing import Any, Sequence, List
 
 
 class ToolchainBuildError(RuntimeError):
-    """A single error for all failures related to toolchain build: this includes
-       git errors, errors that occur during CMake, configure, Ninja and Make
-       runs, as well as packaging."""
+    """A single error for all failures related to toolchain build: this
+       includes git errors, errors that occur during CMake, configure, Ninja
+       and Make runs, as well as packaging.
+    """
 
 
 def values_of_enum(enum_class: Sequence[Any]) -> List[str]:
