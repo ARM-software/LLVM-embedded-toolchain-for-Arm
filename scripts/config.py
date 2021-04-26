@@ -112,6 +112,8 @@ class Action(enum.Enum):
     CONFIGURE = 'configure'
     PACKAGE = 'package'
     ALL = 'all'
+    # The 'test' phase is not part of 'all'
+    TEST = 'test'
 
 
 class Toolchain:  # pylint: disable=too-few-public-methods
@@ -221,7 +223,8 @@ class Config:  # pylint: disable=too-many-instance-attributes
 
         if not args.actions or Action.ALL.value in args.actions:
             self.actions = set(action for action in Action
-                               if action != Action.ALL)
+                               if action != Action.ALL and
+                                  action != Action.TEST)
         else:
             self.actions = set(Action(act_str) for act_str in args.actions)
 

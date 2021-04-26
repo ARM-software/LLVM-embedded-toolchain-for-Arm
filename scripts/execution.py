@@ -38,14 +38,15 @@ class Runner:
         """
         self.last_cwd = None
 
-    def run(self, args: Sequence[str], cwd: str = None,
-            env: Mapping[str, str] = None) -> None:
-        """Run a specified program with arguments, optionally change current
-           directory and change the environment. Note: env does not replace
-           parent environment, but amends it for the subprocess."""
+    def _configure_env(self,
+                       args: Sequence[str],
+                       cwd: str = None,
+                       env: Mapping[str, str] = None) -> Mapping[str, str]:
         if env is not None:
-            env_strings = ['{}={} '.format(key, shlex.quote(env[key]))
-                           for key in sorted(env.keys())]
+            env_strings = [
+                '{}={} '.format(key, shlex.quote(env[key]))
+                for key in sorted(env.keys())
+            ]
         else:
             env_strings = []
         if cwd is not None:
@@ -57,6 +58,30 @@ class Runner:
 
         if env is not None:
             env = dict(os.environ, **env)
+
+        return env
+
+    def _log_exception(self, ex: subprocess.CalledProcessError) -> None:
+        if not self.verbose:
+            lines = ex.stderr.decode('utf-8', errors='replace').split('\n')
+            if len(lines) > 30:
+                lines = ['...'] + lines[-30:]
+            logging.error('Command failed with return code %d, '
+                          'stderr:\n%s', ex.returncode, '\n'.join(lines))
+        else:
+            # In verbose mode stderr has already been copied to sys.stderr,
+            # so we only need to output the return code
+            logging.error('Command failed with return code %d',
+                          ex.returncode)
+        raise ex
+
+    def run(self, args: Sequence[str], cwd: str = None,
+            env: Mapping[str, str] = None) -> None:
+        """Run a specified program with arguments, optionally change current
+           directory and change the environment. Note: env does not replace
+           parent environment, but amends it for the subprocess."""
+        env = self._configure_env(args, cwd, env)
+
         stdout: Union[IO[Any], int] = (sys.stdout if self.verbose
                                        else subprocess.DEVNULL)
         stderr: Union[IO[Any], int] = (sys.stderr if self.verbose
@@ -65,18 +90,42 @@ class Runner:
             subprocess.run(args, stdout=stdout, stderr=stderr, check=True,
                            cwd=cwd, env=env)
         except subprocess.CalledProcessError as ex:
-            if not self.verbose:
-                lines = ex.stderr.decode('utf-8', errors='replace').split('\n')
-                if len(lines) > 30:
-                    lines = ['...'] + lines[-30:]
-                logging.error('Command failed with return code %d, '
-                              'stderr:\n%s', ex.returncode, '\n'.join(lines))
-            else:
-                # In verbose mode stderr has already been copied to sys.stderr,
-                # so we only need to output the return code
-                logging.error('Command failed with return code %d',
-                              ex.returncode)
-            raise
+            self._log_exception(ex)
+
+    def run_capture_output(self,
+                           args: Sequence[str],
+                           cwd: str = None,
+                           env: Mapping[str, str] = None,
+                           capture_stdout: [str] = None,
+                           capture_stderr: [str] = None) -> None:
+        """Run a specified program with arguments, optionally change current
+           directory and change the environment. Note: env does not replace
+           parent environment, but amends it for the subprocess.
+           The program's output is captured into capture_stdout and
+           capture_stderr arguments."""
+        env = self._configure_env(args, cwd, env)
+
+        try:
+            result = subprocess.run(args,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    check=True,
+                                    cwd=cwd,
+                                    env=env)
+        except subprocess.CalledProcessError as ex:
+            self._log_exception(ex)
+
+        if self.verbose:
+            # Note that stdout is printed strictly before stderr. In case they
+            # are redirected to the same stream, the ordering of events will
+            # be lost.
+            sys.stdout.write(result.stdout)
+            sys.stderr.write(result.stderr)
+
+        if capture_stdout is not None:
+            capture_stdout[:] = result.stdout.decode('utf-8').splitlines()
+        if capture_stderr is not None:
+            capture_stderr[:] = result.stderr.decode('utf-8').splitlines()
 
 
 def run(args: Sequence[str], cwd: str = None, env: Mapping[str, str] = None,

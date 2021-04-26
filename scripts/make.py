@@ -533,3 +533,76 @@ class ToolchainBuild:
             raise util.ToolchainBuildError from ex
         if cfg.is_cross_compiling:
             self._copy_runtime_to_native(lib_spec)
+
+    def _run_smoke_tests(self, lib_spec: config.LibrarySpec) -> None:
+        bin_path = self.cfg.target_llvm_bin_dir
+        testdir_path = os.path.join(self.cfg.source_dir, "tests/smoketests")
+        logging.info("Running smoke tests for %s", lib_spec.name)
+        # If qemu-arm is not in PATH, just build, don't run
+        if shutil.which("qemu-arm") is not None:
+            do_not_run = False
+        else:
+            logging.warning(
+                "qemu-arm is not present in your system path. Hence smoke "
+                "tests will only be built, not executed.")
+            do_not_run = True
+
+        all_tests_succeeded = True
+
+        for smoketest_dir in [
+                entry for entry in os.scandir(testdir_path) if entry.is_dir()
+        ]:
+            smoketest_path = smoketest_dir.path
+            commands = [
+                "make", "build" if do_not_run else "run",
+                f"BIN_PATH={bin_path}"
+            ]
+            stdout = []
+            stderr = []
+            try:
+                self.runner.run_capture_output(commands,
+                                               cwd=smoketest_path,
+                                               capture_stdout=stdout,
+                                               capture_stderr=stderr)
+            except subprocess.SubprocessError as ex:
+                logging.error("Failed to run test suite: smoketests")
+                raise util.ToolchainBuildError from ex
+
+            if do_not_run:
+                continue
+
+            def _check_output(output_type: str, smoketest_dir: os.DirEntry,
+                              captured_output: str) -> bool:
+                smoketest_path = smoketest_dir.path
+                expected_output_path = os.path.join(smoketest_path,
+                                                    output_type)
+                try:
+                    expected_output = open(expected_output_path)
+                    expected_output_str = [
+                        s.rstrip('\n') for s in expected_output.readlines()
+                    ]
+                except OSError as ex:
+                    logging.error("Failed to open %s", expected_output_path)
+                    raise util.ToolchainBuildError from ex
+
+                if expected_output_str != captured_output:
+                    logging.error("Smoke test %s failed: %s doesn't match",
+                                  smoketest_dir.name, output_type)
+                    logging.error("Expected:")
+                    logging.error('\n'.join(expected_output_str))
+                    logging.error("Got:")
+                    logging.error('\n'.join(captured_output))
+                    return False
+
+                return True
+
+            if not _check_output("stdout", smoketest_dir, stdout):
+                all_tests_succeeded = False
+            if not _check_output("stderr", smoketest_dir, stderr):
+                all_tests_succeeded = False
+
+        if all_tests_succeeded:
+            logging.info("Smoke tests passed")
+
+    def run_tests(self, lib_spec: config.LibrarySpec) -> None:
+        self._run_smoke_tests(lib_spec)

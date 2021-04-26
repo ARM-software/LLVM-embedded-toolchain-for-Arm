@@ -158,6 +158,7 @@ def parse_args_to_config() -> Config:
                              '  configure - write target configuration files\n'
                              '  package - create tarball\n'
                              '  all - perform all of the above\n'
+                             '  test - run tests\n'
                              'Default: all')
     args = parser.parse_args()
     return config.Config(args)
@@ -257,6 +258,21 @@ def build_all(cfg: Config) -> None:
                     'generation of config files for {}'.format(lib_spec.name))
 
 
+def run_tests(cfg: Config) -> None:
+    """Potentially run tests depending on which configuration is used
+    """
+    builder = make.ToolchainBuild(cfg)
+    # Can grow if we add support for testing of more variants.
+    # Currently, armv6m is hard coded in the smoke test's Makefile.
+    testable_variants = set(["armv6m"])
+    variants_to_test = [i for i in cfg.variants if i.arch in testable_variants]
+
+    for variant in variants_to_test:
+        run_or_skip(cfg, Action.TEST,
+                    functools.partial(builder.run_tests, variant),
+                    'tests run for {}'.format(variant.name))
+
+
 def ask_about_runtime_dlls(cfg: Config) -> Optional[bool]:
     """Ask the user if they want to copy the Mingw-w64 runtime DLLs from the
        local machine to the toolchain 'bin' directory.
@@ -319,6 +335,7 @@ def main() -> int:
                     lambda: prepare_repositories(cfg, versions[cfg.revision]),
                     'source code checkout')
         build_all(cfg)
+        run_tests(cfg)
 
         def do_package():
             tarball.write_version_file(cfg)
