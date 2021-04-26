@@ -18,7 +18,7 @@ import datetime
 import enum
 import logging
 import os
-from typing import Set
+from typing import Optional, Set, TYPE_CHECKING
 
 import execution
 
@@ -47,26 +47,48 @@ class BuildMode(enum.Enum):
     INCREMENTAL = 'incremental'
 
 
-@enum.unique
-class ToolchainKind(enum.Enum):
-    """Enumeration for the --host-toolchain and --native-toolchain options."""
-    CLANG = ('clang', 'Clang', None, 'clang', 'clang++')
-    GCC = ('gcc', 'GCC', None, 'gcc', 'g++')
-    # MINGW is only supported with --host-toolchain
-    MINGW = ('mingw', 'Mingw-w64 GCC', 'x86_64-w64-mingw32',
-             'x86_64-w64-mingw32-gcc-posix',
-             'x86_64-w64-mingw32-g++-posix')
+if TYPE_CHECKING:
+    class EnumValueStub:  # pylint: disable=too-few-public-methods
+        """Stub class for the type checker, represents a single value of an
+           enumeration
+        """
+        value = ''
 
-    def __new__(cls, option_name, pretty_name, host_triple, c_compiler,
-                cpp_compiler):
-        obj = object.__new__(cls)
-        obj._value_ = option_name
-        obj.option_name = option_name
-        obj.pretty_name = pretty_name
-        obj.host_triple = host_triple
-        obj.c_compiler = c_compiler
-        obj.cpp_compiler = cpp_compiler
-        return obj
+    class ToolchainKind:  # pylint: disable=too-few-public-methods
+        """Stub class for the type checker, replaces ToolchainKind"""
+        def __init__(self, name: str):
+            self.option_name = name
+        option_name = ''
+        pretty_name = ''
+        host_triple = ''
+        c_compiler = ''
+        cpp_compiler = ''
+        CLANG = EnumValueStub()
+        GCC = EnumValueStub()
+        MINGW = EnumValueStub()
+else:
+    @enum.unique
+    class ToolchainKind(enum.Enum):
+        """Enumeration for the --host-toolchain and --native-toolchain
+           options.
+        """
+        CLANG = ('clang', 'Clang', None, 'clang', 'clang++')
+        GCC = ('gcc', 'GCC', None, 'gcc', 'g++')
+        # MINGW is only supported with --host-toolchain
+        MINGW = ('mingw', 'Mingw-w64 GCC', 'x86_64-w64-mingw32',
+                 'x86_64-w64-mingw32-gcc-posix',
+                 'x86_64-w64-mingw32-g++-posix')
+
+        def __new__(cls, option_name, pretty_name, host_triple, c_compiler,
+                    cpp_compiler):
+            obj = object.__new__(cls)
+            obj._value_ = option_name
+            obj.option_name = option_name
+            obj.pretty_name = pretty_name
+            obj.host_triple = host_triple
+            obj.c_compiler = c_compiler
+            obj.cpp_compiler = cpp_compiler
+            return obj
 
 
 @enum.unique
@@ -187,6 +209,8 @@ def _assign_dir(arg, default, rev):
 class Config:  # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-few-public-methods
     """Configuration for the whole build process"""
+
+    _copy_runtime_dlls: Optional[bool] = None
 
     def _fill_args(self, args: argparse.Namespace):
         if 'all' in args.variants:

@@ -17,7 +17,7 @@
 # limitations under the License.
 #
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages  # type: ignore
 
 setup(name="LLVMEmbeddedToolchainForArm",
       version="0.1",

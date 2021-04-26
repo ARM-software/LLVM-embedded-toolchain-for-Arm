@@ -18,13 +18,15 @@ import os
 import shlex
 import sys
 import subprocess
-from typing import List, Mapping, Sequence
+from typing import Any, IO, List, Mapping, Optional, Sequence, Union
 
 
 class Runner:
     """Class for running external process, the class stores the last current
        working directory (for logging).
     """
+
+    last_cwd: Optional[str] = None
 
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
@@ -55,8 +57,10 @@ class Runner:
 
         if env is not None:
             env = dict(os.environ, **env)
-        stdout = sys.stdout if self.verbose else subprocess.DEVNULL
-        stderr = sys.stderr if self.verbose else subprocess.PIPE
+        stdout: Union[IO[Any], int] = (sys.stdout if self.verbose
+                                       else subprocess.DEVNULL)
+        stderr: Union[IO[Any], int] = (sys.stderr if self.verbose
+                                       else subprocess.PIPE)
         try:
             subprocess.run(args, stdout=stdout, stderr=stderr, check=True,
                            cwd=cwd, env=env)

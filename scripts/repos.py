@@ -23,7 +23,7 @@ import os
 import sys
 from typing import Dict, List, Any
 
-import git
+import git  # type: ignore
 import yaml
 
 import util
@@ -73,7 +73,7 @@ class LLVMBMTC:
         assert isinstance(data_yml['Modules'], list), (
             'Toolchains modules must be a list')
         self.revision = str(data_yml['Revision'])
-        self.modules = {}
+        self.modules: Dict[str, ModuleTC] = {}
         for module_yml in data_yml['Modules']:
             module = ModuleTC(module_yml)
             if module.name in self.modules:

@@ -87,7 +87,7 @@ def _check_compiler_version(cfg: config.Config, toolchain: config.Toolchain,
     return True
 
 
-def _parse_clang_version(c_compiler: str) -> Version:
+def _parse_clang_version(c_compiler: str) -> Optional[Version]:
     args = [c_compiler, '--version']
     ver_line = execution.run_stdout(args)[0]
     # Example output:
@@ -168,8 +168,10 @@ def _check_availability(bin_name: str, name: str = None) -> bool:
 def _check_tool(cfg: config.Config, bin_name: str, name: str,
                 min_version: Version) -> bool:
     """Check availability and version of a tool."""
-    _check_availability(bin_name, name)
+    if not _check_availability(bin_name, name):
+        return False
     bin_path = shutil.which(bin_name)
+    assert bin_path is not None
     ver_line = execution.run_stdout([bin_name, '--version'])[0]
     assert '{} version'.format(bin_name) in ver_line
     ver = _str_to_ver(ver_line.split(' ')[-1])
