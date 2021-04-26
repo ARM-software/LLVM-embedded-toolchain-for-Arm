@@ -165,8 +165,17 @@ $ clang --config armv6m-none-eabi_nosys -T device.ld -o example example.c
 
 ### Test the toolchain
 
-See the `samples` folder for sample code and instructions on building, running
-and debugging.
+Once the toolchain is built, you can build smoke tests:
+
+```
+$ build.py test
+```
+
+If QEMU is installed and present in your system path, these tests will also be
+run.
+
+Furthermore, see the `samples` folder for sample code and instructions on
+building, running and debugging.
 
 ## Cross-compiling the toolchain for Windows
 
