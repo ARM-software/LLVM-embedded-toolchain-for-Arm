@@ -15,6 +15,7 @@
 
 import logging
 import os
+import re
 from typing import Dict, List, Mapping, Tuple
 import subprocess
 import shutil
@@ -338,6 +339,27 @@ class ToolchainBuild:
         if cfg.verbose:
             logging.info('Removing %s', linux_dir)
         shutil.rmtree(linux_dir)
+
+        # Adjust compiler-rt library names. They were changed in
+        # https://reviews.llvm.org/D98452, but in our configuration Clang still
+        # uses the old name. Example names:
+        # Old: libclang_rt.builtins-armv6m.a
+        # New: libclang_rt.builtins-arm.a
+
+        # Create a regular expression which matches 'arm' or 'armhf' preceded
+        # by '-' and followed by '.'
+        rex = re.compile(r'(?<=-)(?:arm|armhf)(?=\.)')
+        for name in os.listdir(lib_dir):
+            if not name.startswith('libclang_rt'):
+                continue
+            new_name = rex.sub(lib_spec.arch, name)
+            if new_name == name:
+                continue
+            src = join(lib_dir, name)
+            dest = join(lib_dir, new_name)
+            if cfg.verbose:
+                logging.info('Renaming %s to %s', src, dest)
+            shutil.move(src, dest)
 
     def _create_dummy_libunwind(self, lib_spec: config.LibrarySpec) -> None:
         """Create an empty libunwind.a library. It is needed because the Clang
