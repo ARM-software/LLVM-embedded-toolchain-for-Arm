@@ -20,19 +20,19 @@ include ../../Makefile.conf
 build: hello.elf
 
 hello.elf: *.c
-	$(BIN_PATH)clang --config armv6m-none-eabi_rdimon_baremetal -g -T ../../ldscripts/microbit.ld -o hello.elf ../../startup/startup_ARMCM0.S $^
+	$(BIN_PATH)/clang --config armv6m-none-eabi_rdimon_baremetal -g -T ../../ldscripts/microbit.ld -o hello.elf ../../startup/startup_ARMCM0.S $^
 
 %.hex: %.elf
-	$(BIN_PATH)llvm-objcopy -O ihex $< $@
+	$(BIN_PATH)/llvm-objcopy -O ihex $< $@
 
+# -m option is a workaround to ensure correct initialization of semihosting
 run: hello.hex
-	# -m option is a workaround to ensure correct initialization of semihosting
 	qemu-system-arm -M microbit -semihosting -nographic -device loader,file=$< -m 1073741824k
 
 debug: hello.hex
 	qemu-system-arm -M microbit -semihosting -nographic -device loader,file=$< -m 1073741824k -s -S
 
 clean:
-	rm *.elf *.hex
+	rm -f *.elf *.hex
 
 .PHONY: clean run debug
