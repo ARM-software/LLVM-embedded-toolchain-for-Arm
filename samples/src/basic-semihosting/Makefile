@@ -20,7 +20,7 @@ include ../../Makefile.conf
 build: hello.elf
 
 hello.elf: *.c
-	$(BIN_PATH)clang --config armv6m-none-eabi_rdimon -g -o hello.elf $^
+	$(BIN_PATH)/clang --config armv6m-none-eabi_rdimon -g -o hello.elf $^
 
 run: hello.elf
 	qemu-arm -cpu cortex-m0 $<
@@ -29,6 +29,6 @@ debug: hello.elf
 	qemu-arm -cpu cortex-m0 -g 1234 $<
 
 clean:
-	rm *.elf
+	rm -f *.elf
 
 .PHONY: clean run debug
