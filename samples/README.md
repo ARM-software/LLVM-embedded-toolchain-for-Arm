@@ -4,4 +4,5 @@ Samples of LLVM Embedded Toolchain for Arm
 
 * `ldscripts` - Linker scripts used by samples.
 * `startup` - Startup code used by samples.
-* `src` - Sample source code, Makefile and description, each sub-directory is a separate sample.
+* `src` - Sample source code, Makefile and description, each sub-directory is a
+  separate sample.
