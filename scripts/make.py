@@ -487,10 +487,17 @@ class ToolchainBuild:
             return '{} -target {} -ffreestanding'.format(bin_path,
                                                          lib_spec.target)
 
+        # __USES_INITFINI__ and HAVE_INIT_FINI are related to the .init_array
+        # mechanism implementation: __USES_INITFINI__ enables the call to
+        # __libc_init_array in crt0.S. Undefining HAVE_INIT_FINI disables the
+        # call to _init in __libc_init_array (the _init function was used in an
+        # old initialization mechanism, and in the LLVM toolchain it is not
+        # defined)
         config_env = {
             'CC_FOR_TARGET': compiler_str('clang'),
             'CXX_FOR_TARGET': compiler_str('clang++'),
-            'CFLAGS_FOR_TARGET': lib_spec.flags,
+            'CFLAGS_FOR_TARGET': lib_spec.flags + ' -D__USES_INITFINI__'
+                                                  ' -UHAVE_INIT_FINI',
         }
         for tool in ['ar', 'nm', 'as', 'ranlib',
                      'strip', 'readelf', 'objdump']:
