@@ -1,0 +1,47 @@
+name: Lint
+
+on:
+  # Triggers the workflow on push or pull request events but only for the main
+  # branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch: ~
+
+jobs:
+  lint:
+    # Check with the minumum required Python version and with the latest version
+    strategy:
+      matrix:
+        python-version: [3.6, 3.9]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      # Cache installed packages
+      - name: pip cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ matrix.python-version }}-${{ hashFiles('lint-requirements.txt') }}
+      # Install dependencies for python scripts and linters
+      - name: Install python packages
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install pyyaml gitpython
+          python -m pip install -r lint-requirements.txt
+      - name: Lint with flake8
+        run: flake8 scripts
+      - name: Lint with pylint
+        run: pylint --rcfile=scripts/.pylintrc --score=n scripts
+      - name: Typecheck with mypy
+        run: mypy scripts
+      - name: Check packaging
+        run: python -m pip install -e scripts --no-cache-dir

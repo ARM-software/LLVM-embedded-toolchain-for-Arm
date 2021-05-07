@@ -59,12 +59,15 @@ you have authored all of the code.
 ### Coding style
 
 The project uses the [PEP 8](https://www.python.org/dev/peps/pep-0008) style
-guide for all Python scripts. The scripts also must pass pylint checks. Use the
-following command to check the scripts before submitting a pull request
-(assuming that pylint is installed):
+guide for all Python scripts. The scripts also must pass pylint and flake8
+checks as well as type-checking with mypy.
+
+Use the following commands to check the scripts before submitting a pull
+request:
 
 ```
-$ pylint --rcfile=scripts/.pylintrc scripts
+$ ./setup.sh
+$ ./run-precommit-checks.sh
 ```
 
 ## How to provide feedback/report an issue
