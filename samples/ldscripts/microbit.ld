@@ -170,7 +170,7 @@ SECTIONS
 		__bss_end__ = .;
 	} > RAM
 	
-	.heap (COPY):
+	.heap (NOLOAD):
 	{
 		__end__ = .;
 		PROVIDE(end = .);
@@ -181,7 +181,7 @@ SECTIONS
 	/* .stack_dummy section doesn't contains any symbols. It is only
 	 * used for linker to calculate size of stack sections, and assign
 	 * values to stack symbols later */
-	.stack_dummy (COPY):
+	.stack_dummy (NOLOAD):
 	{
 		*(.stack*)
 	} > RAM
