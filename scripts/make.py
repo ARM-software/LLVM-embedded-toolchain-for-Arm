@@ -275,7 +275,9 @@ class ToolchainBuild:
         cfg = self.cfg
         join = os.path.join
         flags = (lib_spec.flags
-                 + ' -ffunction-sections -fdata-sections -fno-ident')
+                 + ' -ffunction-sections -fdata-sections -fno-ident'
+                 + ' --sysroot {}'.format(join(cfg.target_llvm_rt_dir,
+                                               lib_spec.name)))
         defs = {
             'CMAKE_TRY_COMPILE_TARGET_TYPE': 'STATIC_LIBRARY',
             'CMAKE_C_COMPILER': join(cfg.native_llvm_bin_dir, 'clang'),
@@ -303,7 +305,7 @@ class ToolchainBuild:
         rt_source_dir = join(cfg.llvm_repo_dir, 'compiler-rt')
         rt_build_dir = join(cfg.build_dir, 'compiler-rt', lib_spec.name)
         self._prepare_build_dir(rt_build_dir)
-        rt_install_dir = join(cfg.target_llvm_rt_dir, lib_spec.target)
+        rt_install_dir = join(cfg.target_llvm_rt_dir, lib_spec.name)
         cmake_defs = self._get_common_cmake_defs(lib_spec)
         cmake_defs.update({
             'CMAKE_BUILD_TYPE:STRING': 'Release',
@@ -367,7 +369,7 @@ class ToolchainBuild:
            "-fno-exceptions" is specified on the command line.
         """
         dummy_unwind = os.path.join(self.cfg.target_llvm_rt_dir,
-                                    lib_spec.target, 'lib', 'libunwind.a')
+                                    lib_spec.name, 'lib', 'libunwind.a')
         logging.info('Creating dummy libunwind for %s', lib_spec.name)
         self.runner.run([
             os.path.join(self.cfg.native_llvm_bin_dir, 'llvm-ar'),
@@ -389,7 +391,7 @@ class ToolchainBuild:
         cxx_flags = (cmake_common_defs.get('CMAKE_CXX_FLAGS', '')
                      + ' -D_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION')
         install_dir = os.path.join(self.cfg.target_llvm_rt_dir,
-                                   lib_spec.target)
+                                   lib_spec.name)
         cmake_common_defs.update({
             'CMAKE_BUILD_TYPE:STRING': 'MinSizeRel',
             'CMAKE_CXX_FLAGS': cxx_flags,
@@ -474,12 +476,47 @@ class ToolchainBuild:
         except shutil.Error as ex:
             raise util.ToolchainBuildError from ex
 
+    def _copy_newlib_headers_and_libs(self, source_dir: str,
+                                      destination_dir: str) -> None:
+        """ Copying newlib headers and libraries from
+            lib_spec_name/target/{lib|include} to
+            lib_spec_name/{lib|include} """
+        cfg = self.cfg
+        join = os.path.join
+        # pylint: disable=too-many-nested-blocks
+        try:
+            if os.path.exists(source_dir):
+                if cfg.verbose:
+                    logging.info('Copying %s to %s', source_dir,
+                                 destination_dir)
+                for root, _, files in os.walk(source_dir):
+                    dst_dir = root.replace(source_dir, destination_dir, 1)
+                    if not os.path.exists(dst_dir):
+                        os.makedirs(dst_dir)
+                    for file_ in files:
+                        src_file = join(root, file_)
+                        dst_file = join(dst_dir, file_)
+                        if os.path.exists(dst_file):
+                            if os.path.samefile(src_file, dst_file):
+                                continue
+                            os.remove(dst_file)
+                        shutil.copy(src_file, dst_dir)
+            else:
+                logging.error('Does not exist: %s', source_dir)
+                raise util.ToolchainBuildError
+        except shutil.Error as ex:
+            raise util.ToolchainBuildError from ex
+
     def build_newlib(self, lib_spec: config.LibrarySpec) -> None:
         """Build and install a single variant of newlib."""
         self.runner.reset_cwd()
         cfg = self.cfg
         join = os.path.join
         newlib_build_dir = join(cfg.build_dir, 'newlib', lib_spec.name)
+        # Newlib install is placed in build directory; later on it is copied
+        # into installation directory.
+        newlib_install_dir = join(cfg.build_dir, 'newlib', lib_spec.name,
+                                  'install')
         self._prepare_build_dir(newlib_build_dir)
 
         def compiler_str(bin_name: str) -> str:
@@ -496,8 +533,13 @@ class ToolchainBuild:
         config_env = {
             'CC_FOR_TARGET': compiler_str('clang'),
             'CXX_FOR_TARGET': compiler_str('clang++'),
-            'CFLAGS_FOR_TARGET': lib_spec.flags + ' -D__USES_INITFINI__'
-                                                  ' -UHAVE_INIT_FINI',
+            'CFLAGS_FOR_TARGET': lib_spec.flags +
+            ' -D__USES_INITFINI__' +
+            ' -UHAVE_INIT_FINI' +
+            ' --sysroot {}'.format(
+                join(cfg.target_llvm_rt_dir,
+                     lib_spec.name,
+                     lib_spec.target)),
         }
         for tool in ['ar', 'nm', 'as', 'ranlib',
                      'strip', 'readelf', 'objdump']:
@@ -509,7 +551,7 @@ class ToolchainBuild:
             join(cfg.newlib_repo_dir, 'configure'),
             '--target={}'.format(lib_spec.target),
             '--prefix={}'.format(cfg.target_llvm_dir),
-            '--exec-prefix={}'.format(cfg.target_llvm_rt_dir),
+            '--exec-prefix={}'.format(newlib_install_dir),
             '--enable-newlib-io-long-long',
             '--enable-newlib-register-fini',
             '--disable-newlib-supplied-syscalls',
@@ -533,6 +575,22 @@ class ToolchainBuild:
             raise util.ToolchainBuildError from ex
         if cfg.is_cross_compiling:
             self._copy_runtime_to_native(lib_spec)
+
+            logging.info('Copying newlib include and lib directories to'
+                         ' installation directory')
+
+        self._copy_newlib_headers_and_libs(join(newlib_install_dir,
+                                                lib_spec.target,
+                                                'lib'),
+                                           join(cfg.target_llvm_rt_dir,
+                                                lib_spec.name,
+                                                'lib'))
+        self._copy_newlib_headers_and_libs(join(newlib_install_dir,
+                                                lib_spec.target,
+                                                'include'),
+                                           join(cfg.target_llvm_rt_dir,
+                                                lib_spec.name,
+                                                'include'))
 
     def _run_smoke_tests(self, lib_spec: config.LibrarySpec) -> bool:
         bin_path = self.cfg.target_llvm_bin_dir
