@@ -21,10 +21,10 @@ import config
 import util
 
 
-def copy_base_ld_script(cfg: config.Config, target: str) -> None:
+def copy_base_ld_script(cfg: config.Config, lib_spec_name: str) -> None:
     """Copy the linker script to target-specific directory."""
     base_ld_src = os.path.join(cfg.source_dir, 'ldscript', 'base.ld')
-    base_ld_dest = os.path.join(cfg.target_llvm_rt_dir, target, 'base.ld')
+    base_ld_dest = os.path.join(cfg.target_llvm_rt_dir, lib_spec_name, 'base.ld')
     if cfg.verbose:
         logging.info('Copying %s to %s', base_ld_src, base_ld_dest)
     shutil.copy(base_ld_src, base_ld_dest)
@@ -43,19 +43,25 @@ def write_cfg_files(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
 
     # No semihosting and no linker script
     nosys_lines = base_cfg_lines + [
-        '$@/../lib/clang-runtimes/{}/lib/crt0.o'.format(target),
+        '$@/../lib/clang-runtimes/{}/lib/crt0.o'.format(lib_spec.name),
+        '-L$@/../lib/clang-runtimes/{}/lib'.format(lib_spec.name),
+        '-isystem $@/../lib/clang-runtimes/{}/include'.format(lib_spec.name),
         '-lnosys',
     ]
     # Semihosting and linker script provided
     rdimon_lines = base_cfg_lines + [
-        '-Wl,-T$@/../lib/clang-runtimes/{}/base.ld'.format(target),
-        '$@/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(target),
+        '-Wl,-T$@/../lib/clang-runtimes/{}/base.ld'.format(lib_spec.name),
+        '$@/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(lib_spec.name),
+        '-L$@/../lib/clang-runtimes/{}/lib'.format(lib_spec.name),
+        '-isystem $@/../lib/clang-runtimes/{}/include'.format(lib_spec.name),
         '-lrdimon',
     ]
     # Semihosting, but no linker script, e.g. to use with QEMU Arm System
     # emulator
     rdimon_baremetal_lines = base_cfg_lines + [
-        '$@/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(target),
+        '$@/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(lib_spec.name),
+        '-L$@/../lib/clang-runtimes/{}/lib'.format(lib_spec.name),
+        '-isystem $@/../lib/clang-runtimes/{}/include'.format(lib_spec.name),
         '-lrdimon',
     ]
 
@@ -66,7 +72,7 @@ def write_cfg_files(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
     ]
 
     for name, lines in cfg_files:
-        file_name = '{}_{}.cfg'.format(target, name)
+        file_name = '{}_{}.cfg'.format(lib_spec.name, name)
         file_path = os.path.join(cfg.target_llvm_bin_dir, file_name)
         if cfg.verbose:
             logging.info('Writing %s', file_path)
@@ -77,5 +83,5 @@ def configure_target(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
     """Create linker script and configuration files for a single library
        variant."""
     logging.info('Creating toolchain configuration files')
-    copy_base_ld_script(cfg, lib_spec.target)
+    copy_base_ld_script(cfg, lib_spec.name)
     write_cfg_files(cfg, lib_spec)
