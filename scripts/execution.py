@@ -41,7 +41,8 @@ class Runner:
     def _configure_env(self,
                        args: Sequence[str],
                        cwd: str = None,
-                       env: Mapping[str, str] = None) -> Mapping[str, str]:
+                       env: Mapping[str, str] = None) -> \
+            Optional[Mapping[str, str]]:
         if env is not None:
             env_strings = [
                 '{}={} '.format(key, shlex.quote(env[key]))
@@ -96,8 +97,8 @@ class Runner:
                            args: Sequence[str],
                            cwd: str = None,
                            env: Mapping[str, str] = None,
-                           capture_stdout: [str] = None,
-                           capture_stderr: [str] = None) -> None:
+                           capture_stdout: List[str] = None,
+                           capture_stderr: List[str] = None) -> None:
         """Run a specified program with arguments, optionally change current
            directory and change the environment. Note: env does not replace
            parent environment, but amends it for the subprocess.
@@ -119,8 +120,8 @@ class Runner:
             # Note that stdout is printed strictly before stderr. In case they
             # are redirected to the same stream, the ordering of events will
             # be lost.
-            sys.stdout.write(result.stdout)
-            sys.stderr.write(result.stderr)
+            sys.stdout.write(result.stdout.decode('utf-8'))
+            sys.stderr.write(result.stderr.decode('utf-8'))
 
         if capture_stdout is not None:
             capture_stdout[:] = result.stdout.decode('utf-8').splitlines()

@@ -224,7 +224,9 @@ class Config:  # pylint: disable=too-many-instance-attributes
         if not args.actions or Action.ALL.value in args.actions:
             self.actions = set(action for action in Action
                                if action != Action.ALL and
-                                  action != Action.TEST)
+                               action != Action.TEST)
+            if Action.TEST.value in args.actions:
+                self.actions.add(Action.TEST)
         else:
             self.actions = set(Action(act_str) for act_str in args.actions)
 
