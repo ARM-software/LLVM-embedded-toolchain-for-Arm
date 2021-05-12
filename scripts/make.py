@@ -557,8 +557,8 @@ class ToolchainBuild:
                 "make", "build" if do_not_run else "run",
                 f"BIN_PATH={bin_path}"
             ]
-            stdout = []
-            stderr = []
+            stdout: List[str] = []
+            stderr: List[str] = []
             try:
                 self.runner.run_capture_output(commands,
                                                cwd=smoketest_path,
@@ -572,7 +572,7 @@ class ToolchainBuild:
                 continue
 
             def _check_output(output_type: str, smoketest_dir: os.DirEntry,
-                              captured_output: str) -> bool:
+                              captured_output: List[str]) -> bool:
                 smoketest_path = smoketest_dir.path
                 expected_output_path = os.path.join(smoketest_path,
                                                     output_type)
