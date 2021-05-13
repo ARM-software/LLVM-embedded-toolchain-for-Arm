@@ -159,7 +159,7 @@ class LibrarySpec:
         self.float_abi = float_abi
         self.arch_options = arch_options
         self.other_flags = other_flags
-        self.name = '{}_{}_{}'.format(arch,  float_abi.value, name_suffix)
+        self.name = '{}_{}_{}'.format(arch, float_abi.value, name_suffix)
 
     @property
     def target(self):
@@ -223,8 +223,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
 
         if not args.actions or Action.ALL.value in args.actions:
             self.actions = set(action for action in Action
-                               if action != Action.ALL and
-                               action != Action.TEST)
+                               if action not in (Action.ALL, Action.TEST))
             if Action.TEST.value in args.actions:
                 self.actions.add(Action.TEST)
         else:

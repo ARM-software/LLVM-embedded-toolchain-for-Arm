@@ -159,7 +159,7 @@ def print_repositories_status(checkout_path: str) -> int:
         else:
             branch_str = 'Detached'
         print(' - {}: {}, Revision: {}, Dirty: {}'.format(
-              repo, branch_str, status['SHA1'], status['Dirty']))
+            repo, branch_str, status['SHA1'], status['Dirty']))
 
     return 0
 

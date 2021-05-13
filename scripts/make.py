@@ -577,10 +577,10 @@ class ToolchainBuild:
                 expected_output_path = os.path.join(smoketest_path,
                                                     output_type)
                 try:
-                    expected_output = open(expected_output_path)
-                    expected_output_str = [
-                        s.rstrip('\n') for s in expected_output.readlines()
-                    ]
+                    with open(expected_output_path) as expected_output:
+                        expected_output_str = [
+                            s.rstrip('\n') for s in expected_output.readlines()
+                        ]
                 except OSError as ex:
                     logging.error("Failed to open %s", expected_output_path)
                     raise util.ToolchainBuildError from ex
@@ -607,6 +607,7 @@ class ToolchainBuild:
         return all_tests_succeeded
 
     def run_tests(self, lib_spec: config.LibrarySpec) -> None:
+        """Runs smoke tests."""
         result = self._run_smoke_tests(lib_spec)
         if not result:
             raise util.ToolchainBuildError
