@@ -57,7 +57,7 @@ def parse_args_to_config() -> Config:
     parser.add_argument('--source-dir', type=str, metavar='PATH', default=cwd,
                         help='location of the LLVM Embedded '
                              'Toolchain for Arm source checkout (default: .)')
-    parser.add_argument('--build-dir', type=str,  metavar='PATH',
+    parser.add_argument('--build-dir', type=str, metavar='PATH',
                         help='directory to use for build '
                              '(default: ./build-<revision>)')
     parser.add_argument('--install-dir', type=str, metavar='PATH',
@@ -143,7 +143,7 @@ def parse_args_to_config() -> Config:
                         help='number of parallel threads to use in Make/Ninja '
                         '(default: number of CPUs, {})'.format(cpu_count),
                         default=cpu_count)
-    parser.add_argument('actions',  nargs=argparse.REMAINDER,
+    parser.add_argument('actions', nargs=argparse.REMAINDER,
                         choices=util.values_of_enum(Action),
                         help='actions to perform, a list of:\n'
                              '  prepare - check out and patch sources\n'
