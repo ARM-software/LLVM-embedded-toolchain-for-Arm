@@ -7,3 +7,6 @@
 /*LLVMEmbeddedToolchainForArm*
 __pycache__
 *.egg-info
+
+# IDEs
+.vscode
