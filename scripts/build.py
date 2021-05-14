@@ -267,10 +267,22 @@ def run_tests(cfg: Config) -> None:
     testable_variants = set(["armv6m"])
     variants_to_test = [i for i in cfg.variants if i.arch in testable_variants]
 
+    # Each tested variant throws an exception if any of its tests fails.
+    # Here these exceptions are caught so that all variants tests are run.
+    # Finally, if any test across all variants has failed, this failure is
+    # propagated upwards via an exception.
+    success = True
+
     for variant in variants_to_test:
-        run_or_skip(cfg, Action.TEST,
-                    functools.partial(builder.run_tests, variant),
-                    'tests run for {}'.format(variant.name))
+        try:
+            run_or_skip(cfg, Action.TEST,
+                        functools.partial(builder.run_tests, variant),
+                        'tests run for {}'.format(variant.name))
+        except util.ToolchainBuildError:
+            success = False
+
+    if not success:
+        raise util.ToolchainBuildError
 
 
 def ask_about_runtime_dlls(cfg: Config) -> Optional[bool]:

@@ -534,7 +534,7 @@ class ToolchainBuild:
         if cfg.is_cross_compiling:
             self._copy_runtime_to_native(lib_spec)
 
-    def _run_smoke_tests(self, lib_spec: config.LibrarySpec) -> None:
+    def _run_smoke_tests(self, lib_spec: config.LibrarySpec) -> bool:
         bin_path = self.cfg.target_llvm_bin_dir
         testdir_path = os.path.join(self.cfg.source_dir, "tests/smoketests")
         logging.info("Running smoke tests for %s", lib_spec.name)
@@ -604,5 +604,9 @@ class ToolchainBuild:
         if all_tests_succeeded:
             logging.info("Smoke tests passed")
 
+        return all_tests_succeeded
+
     def run_tests(self, lib_spec: config.LibrarySpec) -> None:
-        self._run_smoke_tests(lib_spec)
+        result = self._run_smoke_tests(lib_spec)
+        if not result:
+            raise util.ToolchainBuildError
