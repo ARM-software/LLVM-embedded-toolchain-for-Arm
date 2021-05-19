@@ -463,8 +463,8 @@ class ToolchainBuild:
         cfg = self.cfg
         logging.info('Copying newlib libraries and headers to the native '
                      'toolchain directory')
-        from_path = os.path.join(cfg.target_llvm_rt_dir, lib_spec.target)
-        to_path = os.path.join(cfg.native_llvm_rt_dir, lib_spec.target)
+        from_path = os.path.join(cfg.target_llvm_rt_dir, lib_spec.name)
+        to_path = os.path.join(cfg.native_llvm_rt_dir, lib_spec.name)
         try:
             if os.path.exists(to_path):
                 if cfg.verbose:
@@ -573,11 +573,9 @@ class ToolchainBuild:
             self.runner.run(['make', 'install'], cwd=newlib_build_dir)
         except subprocess.SubprocessError as ex:
             raise util.ToolchainBuildError from ex
-        if cfg.is_cross_compiling:
-            self._copy_runtime_to_native(lib_spec)
 
-            logging.info('Copying newlib include and lib directories to'
-                         ' installation directory')
+        logging.info('Copying newlib include and lib directories to'
+                     ' installation directory')
 
         self._copy_newlib_headers_and_libs(join(newlib_install_dir,
                                                 lib_spec.target,
@@ -591,6 +589,9 @@ class ToolchainBuild:
                                            join(cfg.target_llvm_rt_dir,
                                                 lib_spec.name,
                                                 'include'))
+
+        if cfg.is_cross_compiling:
+            self._copy_runtime_to_native(lib_spec)
 
     def _run_smoke_tests(self, lib_spec: config.LibrarySpec) -> bool:
         bin_path = self.cfg.target_llvm_bin_dir
