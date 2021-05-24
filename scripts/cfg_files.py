@@ -40,8 +40,7 @@ def write_cfg_files(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
         lib_spec.flags,
         '-fuse-ld=lld',
         '-fno-exceptions -fno-rtti',
-        '-L$@/../lib/clang-runtimes/{}/lib'.format(lib_spec.name),
-        '-isystem $@/../lib/clang-runtimes/{}/include'.format(lib_spec.name)
+        '--sysroot $@/../lib/clang-runtimes/{}'.format(lib_spec.name)
     ]
 
     # No semihosting and no linker script
