@@ -174,6 +174,8 @@ class ToolchainBuild:
             'CC': cfg.native_toolchain.c_compiler,
             'CXX': cfg.native_toolchain.cpp_compiler,
         }
+        if cfg.use_ccache:
+            cmake_defs['LLVM_CCACHE_BUILD:BOOL'] = 'ON'
 
         self._cmake_configure('Native LLVM',
                               os.path.join(cfg.llvm_repo_dir, 'llvm'),
