@@ -49,6 +49,6 @@ if exist hello.hex del /q hello.hex
 @exit /B 1
 
 :build_fn
-%BIN_PATH%\clang.exe --config armv6m-none-eabi_rdimon_baremetal -g -T ..\..\ldscripts\microbit.ld -o hello.elf ..\..\startup\startup_ARMCM0.S hello.c
+%BIN_PATH%\clang.exe --config armv6m_soft_nofp_rdimon_baremetal -g -T ..\..\ldscripts\microbit.ld -o hello.elf ..\..\startup\startup_ARMCM0.S hello.c
 %BIN_PATH%\llvm-objcopy.exe -O ihex hello.elf hello.hex
 @exit /B

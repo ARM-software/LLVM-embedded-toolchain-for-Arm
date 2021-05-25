@@ -27,7 +27,7 @@
 
 :build
 @if [%BIN_PATH%]==[] goto :bin_path_empty
-%BIN_PATH%\clang.exe --config armv6m-none-eabi_rdimon -g -o hello.elf hello.c
+%BIN_PATH%\clang.exe --config armv6m_soft_nofp_rdimon -g -o hello.elf hello.c
 @exit /B
 
 :clean
