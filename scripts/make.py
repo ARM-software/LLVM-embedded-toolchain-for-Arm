@@ -521,8 +521,10 @@ class ToolchainBuild:
                                   'install')
         self._prepare_build_dir(newlib_build_dir)
 
-        def compiler_str(bin_name: str) -> str:
+        def compiler_str(bin_name: str, cfg: config.Config) -> str:
             bin_path = join(cfg.native_llvm_bin_dir, bin_name)
+            if cfg.use_ccache:
+                bin_path = 'ccache ' + bin_path
             return '{} -target {} -ffreestanding'.format(bin_path,
                                                          lib_spec.target)
 
@@ -533,8 +535,8 @@ class ToolchainBuild:
         # old initialization mechanism, and in the LLVM toolchain it is not
         # defined)
         config_env = {
-            'CC_FOR_TARGET': compiler_str('clang'),
-            'CXX_FOR_TARGET': compiler_str('clang++'),
+            'CC_FOR_TARGET': compiler_str('clang', cfg),
+            'CXX_FOR_TARGET': compiler_str('clang++', cfg),
             'CFLAGS_FOR_TARGET': lib_spec.flags +
             ' -D__USES_INITFINI__' +
             ' -UHAVE_INIT_FINI' +
