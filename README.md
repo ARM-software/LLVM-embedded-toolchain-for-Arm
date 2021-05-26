@@ -28,6 +28,16 @@ Component  | Link
 LLVM       | https://github.com/llvm/llvm-project
 newlib     | https://sourceware.org/newlib
 
+## C++ support
+
+C++ is partially supported with the use of libc++ and libc++abi from LLVM. Features
+that are not supported include:
+ - Exceptions
+ - RTTI
+ - Multithreading
+ - Locales and input/output streams
+ - C++17's aligned operator new
+
 ## License
 
 Content of this repository is licensed under Apache-2.0. See ``LICENSE.txt``.
