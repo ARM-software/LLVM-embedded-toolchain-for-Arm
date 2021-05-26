@@ -9,15 +9,20 @@ bare-metal LLVM based toolchain targeting Arm based on:
 * compiler-rt
 * newlib
 
-Currently, only Armv6-M can be targeted, and only one library variant is
-provided targeting the Armv6-M architecture without any optional features.
-
 ## Goal
 
 The goal is to provide an LLVM based bare-metal toolchain that can target the
 Arm architecture family from Armv6-M and newer. The toolchain follows the ABI
 for the Arm Architecture and attempts to provide typical features needed for
 embedded and realtime operating systems.
+
+## Supported architectures
+
+- Armv6-M
+- Armv7-M
+- Armv7E-M
+- Armv8-M Mainline
+- Armv8.1-M Mainline
 
 ## Components
 
@@ -155,15 +160,15 @@ correctly. The available config files can be listed with
 
 ```
 $ PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
-$ clang --config armv6m-none-eabi_rdimon -o example example.c
+$ clang --config armv6m_soft_nofp_rdimon -o example example.c
 ```
 
-Note that `armv6m-none-eabi_nosys` and `armv6m-none-eabi_rdimon_baremetal`
+Note that configurations under the `nosys` or `rdimon_baremetal` categories
 require the linker script to be specified with `-T`:
 
 ```
 $ PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
-$ clang --config armv6m-none-eabi_nosys -T device.ld -o example example.c
+$ clang --config armv6m_soft_nofp_nosys -T device.ld -o example example.c
 ```
 
 ### Test the toolchain
