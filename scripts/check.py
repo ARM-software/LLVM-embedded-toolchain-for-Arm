@@ -94,11 +94,14 @@ def _parse_clang_version(c_compiler: str) -> Optional[Version]:
     # Ubuntu 20.04: clang version 10.0.0-4ubuntu1
     # Ubuntu 18.04: clang version 6.0.0-1ubuntu2 (tags/RELEASE_600/final)
     # Ubuntu 16.04: clang version 3.8.0-2ubuntu4 (tags/RELEASE_380/final)
+    # Debian testing (bullseye): Debian clang version 11.0.1-2
     # Built from source: clang version 9.0.1
-    assert ver_line.startswith('clang version ')
-    ver_str = ver_line.split(' ')[2]
     # Remove distribution suffix (if any) and convert to a tuple
-    return _str_to_ver(ver_str.split('-')[0])
+    assert ver_line.startswith('clang version ') \
+        or ver_line.startswith('Debian clang version')
+    ver_match = re.search(r'version ([0-9.]+)', ver_line)
+    assert ver_match is not None
+    return _str_to_ver(ver_match.group(1))
 
 
 def _parse_gcc_version(c_compiler: str) -> Optional[Version]:
