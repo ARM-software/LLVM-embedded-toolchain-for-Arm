@@ -282,6 +282,10 @@ class ToolchainBuild:
                                                lib_spec.name)))
         defs = {
             'CMAKE_TRY_COMPILE_TARGET_TYPE': 'STATIC_LIBRARY',
+            # Set the cmake system name to Generic so that no host system
+            # include files are searched. At least on OSX this problem
+            # occurs.
+            'CMAKE_SYSTEM_NAME': 'Generic',
             'CMAKE_C_COMPILER': join(cfg.native_llvm_bin_dir, 'clang'),
             'CMAKE_C_COMPILER_TARGET': lib_spec.target,
             'CMAKE_C_FLAGS': flags,
@@ -332,17 +336,17 @@ class ToolchainBuild:
 
         # Move the libraries from lib/linux to lib
         lib_dir = join(rt_install_dir, 'lib')
-        linux_dir = join(lib_dir, 'linux')
-        for name in os.listdir(linux_dir):
-            assert name != 'linux'
-            src = join(linux_dir, name)
+        generic_dir = join(lib_dir, 'generic')
+        for name in os.listdir(generic_dir):
+            assert name != 'generic'
+            src = join(generic_dir, name)
             dest = join(lib_dir, name)
             if cfg.verbose:
                 logging.info('Moving %s to %s', src, dest)
             shutil.move(src, dest)
         if cfg.verbose:
-            logging.info('Removing %s', linux_dir)
-        shutil.rmtree(linux_dir)
+            logging.info('Removing %s', generic_dir)
+        shutil.rmtree(generic_dir)
 
         # Adjust compiler-rt library names. They were changed in
         # https://reviews.llvm.org/D98452, but in our configuration Clang still
