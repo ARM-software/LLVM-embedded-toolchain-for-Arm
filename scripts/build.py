@@ -265,7 +265,8 @@ def run_tests(cfg: Config) -> None:
     # Can grow if we add support for testing of more variants.
     # Currently, armv6m is hard coded in the smoke test's Makefile.
     testable_variants = set(["armv6m"])
-    variants_to_test = [i for i in cfg.variants if i.arch in testable_variants]
+    variants_to_test = [i for i in cfg.variants
+                        if i.march in testable_variants]
 
     # Each tested variant throws an exception if any of its tests fails.
     # Here these exceptions are caught so that all variants tests are run.

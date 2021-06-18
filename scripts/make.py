@@ -140,6 +140,14 @@ class ToolchainBuild:
         if not os.path.exists(build_dir):
             os.makedirs(build_dir)
 
+    def _backends_to_build(self):
+        triple_archs = set(v.triple_arch for v in self.cfg.variants)
+        backends_to_build = [{'aarch64': 'AArch64',
+                              'arm': 'ARM'}[triple_arch]
+                             for triple_arch in triple_archs]
+        assert len(backends_to_build) in (1, 2)
+        return ";".join(backends_to_build)
+
     def build_native_tools(self) -> None:
         """Build a native LLVM toolchain (relevant for Linux -> Windows
            cross-compilation): an LLVM toolchain which runs on the same
@@ -159,23 +167,19 @@ class ToolchainBuild:
         ]
         dist_comps += self.llvm_binutils
 
-        cmake_defs = {
-            'LLVM_TARGETS_TO_BUILD:STRING': 'ARM',
-            'LLVM_DEFAULT_TARGET_TRIPLE:STRING': cfg.default_target,
-            'CMAKE_BUILD_TYPE:STRING': 'Release',
+        cmake_defs = self._get_common_cmake_defs_for_llvm()
+        cmake_defs.update({
             'CMAKE_INSTALL_PREFIX:STRING': cfg.native_llvm_dir,
             'LLVM_ENABLE_PROJECTS:STRING': ';'.join(projects),
             'LLVM_DISTRIBUTION_COMPONENTS:STRING': ';'.join(dist_comps),
             'LLVM_INCLUDE_TESTS:BOOL': 'OFF',
             'LLVM_INCLUDE_EXAMPLES:BOOL': 'OFF',
             'LLVM_INCLUDE_BENCHMARKS:BOOL': 'OFF',
-        }
+        })
         cmake_env = {
             'CC': cfg.native_toolchain.c_compiler,
             'CXX': cfg.native_toolchain.cpp_compiler,
         }
-        if cfg.use_ccache:
-            cmake_defs['LLVM_CCACHE_BUILD:BOOL'] = 'ON'
 
         self._cmake_configure('Native LLVM',
                               os.path.join(cfg.llvm_repo_dir, 'llvm'),
@@ -220,16 +224,12 @@ class ToolchainBuild:
             'LTO',
         ]
 
-        cmake_defs = {
-            'LLVM_TARGETS_TO_BUILD:STRING': 'ARM',
-            'LLVM_DEFAULT_TARGET_TRIPLE:STRING': cfg.default_target,
-            'CMAKE_BUILD_TYPE:STRING': 'Release',
+        cmake_defs = self._get_common_cmake_defs_for_llvm()
+        cmake_defs.update({
             'CMAKE_INSTALL_PREFIX:STRING': cfg.target_llvm_dir,
             'LLVM_ENABLE_PROJECTS:STRING': ';'.join(projects),
             'LLVM_DISTRIBUTION_COMPONENTS:STRING': ';'.join(dist_comps),
-        }
-        if cfg.use_ccache:
-            cmake_defs['LLVM_CCACHE_BUILD:BOOL'] = 'ON'
+        })
         if cfg.is_cross_compiling:
             native_tools_dir = join(cfg.native_llvm_build_dir, 'bin')
             cmake_defs['CMAKE_CROSSCOMPILING:BOOL'] = 'ON'
@@ -269,8 +269,22 @@ class ToolchainBuild:
         if cfg.release_mode:
             self._write_llvm_index()
 
-    def _get_common_cmake_defs(self, lib_spec: config.LibrarySpec,
-                               need_cxx: bool = False) -> Dict[str, str]:
+    def _get_common_cmake_defs_for_llvm(self) -> Dict[str, str]:
+        """Return common CMake definitions used for building LLVM."""
+        cfg = self.cfg
+        cmake_defs = {
+            'LLVM_TARGETS_TO_BUILD:STRING': self._backends_to_build(),
+            'CMAKE_BUILD_TYPE:STRING': 'Release',
+        }
+        if cfg.default_target is not None:
+            cmake_defs['LLVM_DEFAULT_TARGET_TRIPLE:STRING'] = \
+                cfg.default_target
+        if cfg.use_ccache:
+            cmake_defs['LLVM_CCACHE_BUILD:BOOL'] = 'ON'
+        return cmake_defs
+
+    def _get_common_cmake_defs_for_libs(self, lib_spec: config.LibrarySpec) \
+            -> Dict[str, str]:
         """Return common CMake definitions used for runtime libraries
            (compiler-rt, libc++abi, libc++).
         """
@@ -293,14 +307,10 @@ class ToolchainBuild:
             'CMAKE_NM': join(cfg.native_llvm_bin_dir, 'llvm-nm'),
             'CMAKE_RANLIB': join(cfg.native_llvm_bin_dir, 'llvm-ranlib'),
             'CMAKE_EXE_LINKER_FLAGS': '-fuse-ld=lld',
+            'CMAKE_CXX_COMPILER': join(cfg.native_llvm_bin_dir, 'clang++'),
+            'CMAKE_CXX_COMPILER_TARGET': lib_spec.target,
+            'CMAKE_CXX_FLAGS': flags,
         }
-        if need_cxx:
-            cxx_defs = {
-                'CMAKE_CXX_COMPILER': join(cfg.native_llvm_bin_dir, 'clang++'),
-                'CMAKE_CXX_COMPILER_TARGET': lib_spec.target,
-                'CMAKE_CXX_FLAGS': flags,
-            }
-            defs.update(cxx_defs)
         return defs
 
     def build_compiler_rt(self, lib_spec: config.LibrarySpec) -> None:
@@ -312,7 +322,7 @@ class ToolchainBuild:
         rt_build_dir = join(cfg.build_dir, 'compiler-rt', lib_spec.name)
         self._prepare_build_dir(rt_build_dir)
         rt_install_dir = join(cfg.target_llvm_rt_dir, lib_spec.name)
-        cmake_defs = self._get_common_cmake_defs(lib_spec)
+        cmake_defs = self._get_common_cmake_defs_for_libs(lib_spec)
         cmake_defs.update({
             'CMAKE_BUILD_TYPE:STRING': 'Release',
             'CMAKE_ASM_COMPILER_TARGET': lib_spec.target,
@@ -360,7 +370,7 @@ class ToolchainBuild:
         for name in os.listdir(lib_dir):
             if not name.startswith('libclang_rt'):
                 continue
-            new_name = rex.sub(lib_spec.arch, name)
+            new_name = rex.sub(lib_spec.march, name)
             if new_name == name:
                 continue
             src = join(lib_dir, name)
@@ -390,7 +400,7 @@ class ToolchainBuild:
             result.update(dict2)
             return result
 
-        cmake_common_defs = self._get_common_cmake_defs(lib_spec, True)
+        cmake_common_defs = self._get_common_cmake_defs_for_libs(lib_spec)
         # Disable C++17 aligned allocation feature because its implementation
         # in libc++ relies on posix_memalign() which is not available in our
         # newlib build
