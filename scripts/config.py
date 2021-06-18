@@ -152,25 +152,38 @@ class Toolchain:  # pylint: disable=too-few-public-methods
 
 class LibrarySpec:
     """Configuration for a single runtime library variant."""
-    def __init__(self, arch: str, float_abi: FloatABI, name_suffix: str,
+    def __init__(self, triple_arch: str, march: str,
+                 float_abi: FloatABI, name_suffix: str,
                  arch_options: str, other_flags: str = ''):
         # pylint: disable=too-many-arguments
-        self.arch = arch
+        assert triple_arch in ('aarch64', 'arm')
+        self.triple_arch = triple_arch
+        self.march = march
         self.float_abi = float_abi
         self.arch_options = arch_options
         self.other_flags = other_flags
-        self.name = '{}_{}_{}'.format(arch, float_abi.value, name_suffix)
+        if self.triple_arch == 'arm':
+            self.name = '{}_{}_{}'.format(self.march, float_abi.value,
+                                          name_suffix)
+        else:
+            self.name = '{}_{}'.format(self.triple_arch, name_suffix)
 
     @property
     def target(self):
         """Target triple"""
-        return self.arch + '-none-eabi'
+        if self.triple_arch == 'arm':
+            return self.march + '-none-eabi'
+        assert self.triple_arch == 'aarch64'
+        return 'aarch64-none-elf'
 
     @property
     def flags(self):
         """Compiler and assembler flags."""
-        res = '-mfloat-abi={} -march={}{}'.format(self.float_abi.value,
-                                                  self.arch, self.arch_options)
+        res = '--target={}'.format(self.target)
+        if self.float_abi is not None:
+            res += ' -mfloat-abi={} '.format(self.float_abi.value)
+
+        res += ' -march={}{}'.format(self.march, self.arch_options)
         if self.other_flags:
             res += ' ' + self.other_flags
         return res
@@ -181,22 +194,28 @@ def _make_library_specs():
     hard = FloatABI.HARD_FP
     soft = FloatABI.SOFT_FP
     lib_specs = [
-        LibrarySpec('armv8.1m.main', hard, 'fp', '+fp'),
-        LibrarySpec('armv8.1m.main', hard, 'nofp_mve', '+nofp+mve'),
-        LibrarySpec('armv8.1m.main', soft, 'nofp_nomve', '+nofp+nomve'),
-        LibrarySpec('armv8m.main', hard, 'fp', '+fp'),
-        LibrarySpec('armv8m.main', soft, 'nofp', '+nofp'),
-        LibrarySpec('armv7em', hard, 'fpv4_sp_d16', '', '-mfpu=fpv4-sp-d16'),
-        LibrarySpec('armv7em', hard, 'fpv5_d16', '', '-mfpu=fpv5-d16'),
-        LibrarySpec('armv7em', soft, 'nofp', '', '-mfpu=none'),
-        LibrarySpec('armv7m', soft, 'nofp', '+nofp'),
-        LibrarySpec('armv6m', soft, 'nofp', '')
+        LibrarySpec('aarch64', 'armv8-a', None, '', ''),
+        LibrarySpec('arm', 'armv8.1m.main', hard, 'fp', '+fp'),
+        LibrarySpec('arm', 'armv8.1m.main', hard, 'nofp_mve', '+nofp+mve'),
+        LibrarySpec('arm', 'armv8.1m.main', soft, 'nofp_nomve', '+nofp+nomve'),
+        LibrarySpec('arm', 'armv8m.main', hard, 'fp', '+fp'),
+        LibrarySpec('arm', 'armv8m.main', soft, 'nofp', '+nofp'),
+        LibrarySpec('arm', 'armv7em', hard, 'fpv4_sp_d16', '',
+                    '-mfpu=fpv4-sp-d16'),
+        LibrarySpec('arm', 'armv7em', hard, 'fpv5_d16', '', '-mfpu=fpv5-d16'),
+        LibrarySpec('arm', 'armv7em', soft, 'nofp', '', '-mfpu=none'),
+        LibrarySpec('arm', 'armv7m', soft, 'nofp', '+nofp'),
+        LibrarySpec('arm', 'armv6m', soft, 'nofp', '')
     ]
     return {lib_spec.name: lib_spec for lib_spec in lib_specs}
 
 
 LIBRARY_SPECS = _make_library_specs()
-ARCH_ORDER = ['armv6m', 'armv7m', 'armv7em', 'armv8m.main', 'armv8.1m.main']
+ARCH_ARCHVERSION_ORDER = \
+    [('aarch64', 'armv8-a')] + \
+    [('arm', arch)
+     for arch in ('armv6m', 'armv7m', 'armv7em', 'armv8m.main',
+                  'armv8.1m.main')]
 
 
 def _assign_dir(arg, default, rev):
@@ -214,6 +233,22 @@ class Config:  # pylint: disable=too-many-instance-attributes
 
     _copy_runtime_dlls: Optional[bool] = None
 
+    def _default_target(self):
+        # Default value for the -target option:
+        # * Do not set a default if both ARM and AArch64 support is requested.
+        # * Otherwise, use the minimum architecture version among the ones
+        #   listed in self.variants
+        archs = set((v.triple_arch, v.march) for v in self.variants)
+        triple_archs = set(v.triple_arch for v in self.variants)
+        if len(triple_archs) == 1:
+            min_variant = min(archs, key=ARCH_ARCHVERSION_ORDER.index)
+            min_arch_triple, min_march = min_variant
+            if min_arch_triple == 'arm':
+                return '{}-none-eabi'.format(min_march)
+            assert min_arch_triple == 'aarch64'
+            return 'aarch64-none-elf'
+        return None
+
     def _fill_args(self, args: argparse.Namespace):
         if 'all' in args.variants:
             variant_names = LIBRARY_SPECS.keys()
@@ -229,11 +264,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
         else:
             self.actions = set(Action(act_str) for act_str in args.actions)
 
-        # Default value for the -target option: use the minimum architecture
-        # version among the ones listed in self.variants
-        archs = set(v.arch for v in self.variants)
-        min_arch = min(archs, key=ARCH_ORDER.index)
-        self.default_target = '{}-none-eabi'.format(min_arch)
+        self.default_target = self._default_target()
 
         rev = args.revision
         self.revision = rev
