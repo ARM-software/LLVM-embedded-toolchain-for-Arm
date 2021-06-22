@@ -80,6 +80,135 @@ index 7c23c7a0a..2fc584169 100755
          $as_echo "#define HAVE_ELF 1" >>confdefs.h
  
  
+diff --git a/newlib/libc/machine/aarch64/memchr.S b/newlib/libc/machine/aarch64/memchr.S
+index 53f5d6bc0..81fcecccd 100644
+--- a/newlib/libc/machine/aarch64/memchr.S
++++ b/newlib/libc/machine/aarch64/memchr.S
+@@ -110,7 +110,7 @@ def_fn memchr
+ 	and	vhas_chr2.16b, vhas_chr2.16b, vrepmask.16b
+ 	addp	vend.16b, vhas_chr1.16b, vhas_chr2.16b		/* 256->128 */
+ 	addp	vend.16b, vend.16b, vend.16b			/* 128->64 */
+-	mov	synd, vend.2d[0]
++	mov	synd, vend.d[0]
+ 	/* Clear the soff*2 lower bits */
+ 	lsl	tmp, soff, #1
+ 	lsr	synd, synd, tmp
+@@ -130,7 +130,7 @@ def_fn memchr
+ 	/* Use a fast check for the termination condition */
+ 	orr	vend.16b, vhas_chr1.16b, vhas_chr2.16b
+ 	addp	vend.2d, vend.2d, vend.2d
+-	mov	synd, vend.2d[0]
++	mov	synd, vend.d[0]
+ 	/* We're not out of data, loop if we haven't found the character */
+ 	cbz	synd, .Lloop
+ 
+@@ -140,7 +140,7 @@ def_fn memchr
+ 	and	vhas_chr2.16b, vhas_chr2.16b, vrepmask.16b
+ 	addp	vend.16b, vhas_chr1.16b, vhas_chr2.16b		/* 256->128 */
+ 	addp	vend.16b, vend.16b, vend.16b			/* 128->64 */
+-	mov	synd, vend.2d[0]
++	mov	synd, vend.d[0]
+ 	/* Only do the clear for the last possible block */
+ 	b.hi	.Ltail
+ 
+diff --git a/newlib/libc/machine/aarch64/strchr.S b/newlib/libc/machine/aarch64/strchr.S
+index 2448dbc7d..706107836 100644
+--- a/newlib/libc/machine/aarch64/strchr.S
++++ b/newlib/libc/machine/aarch64/strchr.S
+@@ -117,7 +117,7 @@ def_fn strchr
+ 	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
+ 	lsr	tmp1, tmp3, tmp1
+ 
+-	mov	tmp3, vend1.2d[0]
++	mov	tmp3, vend1.d[0]
+ 	bic	tmp1, tmp3, tmp1	// Mask padding bits.
+ 	cbnz	tmp1, .Ltail
+ 
+@@ -132,7 +132,7 @@ def_fn strchr
+ 	orr	vend2.16b, vhas_nul2.16b, vhas_chr2.16b
+ 	orr	vend1.16b, vend1.16b, vend2.16b
+ 	addp	vend1.2d, vend1.2d, vend1.2d
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ 	cbz	tmp1, .Lloop
+ 
+ 	/* Termination condition found.  Now need to establish exactly why
+@@ -146,7 +146,7 @@ def_fn strchr
+ 	addp	vend1.16b, vend1.16b, vend2.16b		// 256->128
+ 	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
+ 
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ .Ltail:
+ 	/* Count the trailing zeros, by bit reversing...  */
+ 	rbit	tmp1, tmp1
+diff --git a/newlib/libc/machine/aarch64/strchrnul.S b/newlib/libc/machine/aarch64/strchrnul.S
+index a0ac13b7f..fd2002f0d 100644
+--- a/newlib/libc/machine/aarch64/strchrnul.S
++++ b/newlib/libc/machine/aarch64/strchrnul.S
+@@ -109,7 +109,7 @@ def_fn strchrnul
+ 	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
+ 	lsr	tmp1, tmp3, tmp1
+ 
+-	mov	tmp3, vend1.2d[0]
++	mov	tmp3, vend1.d[0]
+ 	bic	tmp1, tmp3, tmp1	// Mask padding bits.
+ 	cbnz	tmp1, .Ltail
+ 
+@@ -124,7 +124,7 @@ def_fn strchrnul
+ 	orr	vhas_chr2.16b, vhas_nul2.16b, vhas_chr2.16b
+ 	orr	vend1.16b, vhas_chr1.16b, vhas_chr2.16b
+ 	addp	vend1.2d, vend1.2d, vend1.2d
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ 	cbz	tmp1, .Lloop
+ 
+ 	/* Termination condition found.  Now need to establish exactly why
+@@ -134,7 +134,7 @@ def_fn strchrnul
+ 	addp	vend1.16b, vhas_chr1.16b, vhas_chr2.16b		// 256->128
+ 	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
+ 
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ .Ltail:
+ 	/* Count the trailing zeros, by bit reversing...  */
+ 	rbit	tmp1, tmp1
+diff --git a/newlib/libc/machine/aarch64/strrchr.S b/newlib/libc/machine/aarch64/strrchr.S
+index d64fc09b1..1b6f07562 100644
+--- a/newlib/libc/machine/aarch64/strrchr.S
++++ b/newlib/libc/machine/aarch64/strrchr.S
+@@ -120,10 +120,10 @@ def_fn strrchr
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr2.16b	// 256->128
+ 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul1.16b	// 128->64
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr1.16b	// 128->64
+-	mov	nul_match, vhas_nul1.2d[0]
++	mov	nul_match, vhas_nul1.d[0]
+ 	lsl	tmp1, tmp1, #1
+ 	mov	const_m1, #~0
+-	mov	chr_match, vhas_chr1.2d[0]
++	mov	chr_match, vhas_chr1.d[0]
+ 	lsr	tmp3, const_m1, tmp1
+ 
+ 	bic	nul_match, nul_match, tmp3	// Mask padding bits.
+@@ -146,15 +146,15 @@ def_fn strrchr
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr2.16b	// 256->128
+ 	addp	vend1.16b, vend1.16b, vend1.16b	// 128->64
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr1.16b	// 128->64
+-	mov	nul_match, vend1.2d[0]
+-	mov	chr_match, vhas_chr1.2d[0]
++	mov	nul_match, vend1.d[0]
++	mov	chr_match, vhas_chr1.d[0]
+ 	cbz	nul_match, .Lloop
+ 
+ 	and	vhas_nul1.16b, vhas_nul1.16b, vrepmask_0.16b
+ 	and	vhas_nul2.16b, vhas_nul2.16b, vrepmask_0.16b
+ 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul2.16b
+ 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul1.16b
+-	mov	nul_match, vhas_nul1.2d[0]
++	mov	nul_match, vhas_nul1.d[0]
+ 
+ .Ltail:
+ 	/* Work out exactly where the string ends.  */
 diff --git a/newlib/libc/sys/arm/crt0.S b/newlib/libc/sys/arm/crt0.S
 index 5e677a23c..6faf74096 100644
 --- a/newlib/libc/sys/arm/crt0.S
