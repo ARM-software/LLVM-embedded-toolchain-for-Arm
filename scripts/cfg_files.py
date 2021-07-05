@@ -21,11 +21,19 @@ import config
 import util
 
 
-def copy_base_ld_script(cfg: config.Config, lib_spec_name: str) -> None:
+def _get_base_ld_name(lib_spec: config.LibrarySpec) -> str:
+    ld_name = {'arm': 'base_arm.ld',
+               'aarch64': 'base_aarch64.ld'}[lib_spec.triple_arch]
+    return ld_name
+
+
+def copy_base_ld_script(cfg: config.Config, lib_spec: config.LibrarySpec) \
+        -> None:
     """Copy the linker script to target-specific directory."""
-    base_ld_src = os.path.join(cfg.source_dir, 'ldscript', 'base.ld')
-    base_ld_dest = os.path.join(cfg.target_llvm_rt_dir, lib_spec_name,
-                                'base.ld')
+    ld_name = _get_base_ld_name(lib_spec)
+    base_ld_src = os.path.join(cfg.source_dir, 'ldscript', ld_name)
+    base_ld_dest = os.path.join(cfg.target_llvm_rt_dir, lib_spec.name,
+                                ld_name)
     if cfg.verbose:
         logging.info('Copying %s to %s', base_ld_src, base_ld_dest)
     shutil.copy(base_ld_src, base_ld_dest)
@@ -50,7 +58,9 @@ def write_cfg_files(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
     ]
     # Semihosting and linker script provided
     rdimon_lines = base_cfg_lines + [
-        '-Wl,-T$@/../lib/clang-runtimes/{}/base.ld'.format(lib_spec.name),
+        '-Wl,-T$@/../lib/clang-runtimes/{}/{}'.format(
+            lib_spec.name,
+            _get_base_ld_name(lib_spec)),
         '$@/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(lib_spec.name),
         '-lrdimon',
     ]
@@ -79,5 +89,5 @@ def configure_target(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
     """Create linker script and configuration files for a single library
        variant."""
     logging.info('Creating toolchain configuration files')
-    copy_base_ld_script(cfg, lib_spec.name)
+    copy_base_ld_script(cfg, lib_spec)
     write_cfg_files(cfg, lib_spec)
