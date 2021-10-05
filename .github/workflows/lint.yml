@@ -30,13 +30,13 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: pip-${{ matrix.python-version }}-${{ hashFiles('lint-requirements.txt') }}
+          key: pip-${{ matrix.python-version }}-${{ hashFiles('requirements*.txt') }}
       # Install dependencies for python scripts and linters
       - name: Install python packages
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          python -m pip install pyyaml gitpython
-          python -m pip install -r lint-requirements.txt
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-lint.txt
       - name: Lint with flake8
         run: flake8 scripts
       - name: Lint with pylint

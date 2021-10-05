@@ -6,7 +6,7 @@ if [ ! -d ./venv ]; then
 fi
 
 . ./venv/bin/activate
-pip3 -q install -r lint-requirements.txt
+pip3 -q install -r requirements-lint.txt
 
 echo "Checking with flake8"
 flake8 scripts && echo 'No issues found'
