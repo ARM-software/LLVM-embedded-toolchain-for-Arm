@@ -37,9 +37,10 @@ fi
 
 . venv/bin/activate
 
+cd "$(dirname "$0")"
+
 pip install --upgrade pip
 pip install --upgrade wheel
 pip install --upgrade setuptools
-pip install pyyaml
-pip install gitpython
+pip install -r requirements.txt
 pip install -e scripts

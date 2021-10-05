@@ -1,0 +1,5 @@
+# Dependencies of build scripts
+gitdb==4.0.7
+GitPython==3.1.18
+PyYAML==5.4.1
+smmap==4.0.0
