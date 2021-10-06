@@ -20,7 +20,7 @@
 from setuptools import setup, find_packages  # type: ignore
 
 setup(name="LLVMEmbeddedToolchainForArm",
-      version="0.1",
+      version="13.0.0",
       packages=find_packages(),
       scripts=[
           'build.py',

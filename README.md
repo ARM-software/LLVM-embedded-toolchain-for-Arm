@@ -139,12 +139,18 @@ $ build.py -h
 ```
 Some notable options include:
 * ``--revision`` the LLVM Embedded Toolchain for Arm version. Default version
-  is ``0.1``. The available toolchain versions can be listed with:
+  is ``13.0.0``. The available toolchain versions can be listed with:
 ```
 $ repos.py list
 0.1
+13.0.0
+branch-13
 HEAD
 ```
+  * 0.1 - to be removed
+  * 13.0.0 - based on LLVM 13.0.0 and newlib 4.1.0
+  * branch-13 - based on the tip of the LLVM 13 branch and newlib 4.1.0
+  * HEAD - based on the latest commits in the LLVM and newlib repositories
 * ``--host-toolchain`` the toolchain type. The supported values are:
   * ``clang`` Clang (the default)
   * ``gcc`` GCC
