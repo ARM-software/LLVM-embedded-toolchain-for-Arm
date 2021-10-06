@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020, Arm Limited and affiliates.
+# Copyright (c) 2020-2021, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,32 @@
       URL:  https://github.com/mirror/newlib-cygwin.git
       Revision: 7b1416c3abe890c8058001d6bb795802f80270af
       Patch: newlib-0.1.patch
+
+- Revision: "13.0.0"
+  Modules:
+    - Name: llvm.git
+      URL:  https://github.com/llvm/llvm-project.git
+      Branch: release/13.x
+      Revision: llvmorg-13.0.0
+      Patch: llvm-13.patch
+    - Name: newlib.git
+      URL:  https://github.com/mirror/newlib-cygwin.git
+      Branch: master
+      Revision: newlib-4.1.0
+      Patch: newlib-4.1.0-llvm-13.patch
+
+- Revision: branch-13
+  Modules:
+    - Name: llvm.git
+      URL:  https://github.com/llvm/llvm-project.git
+      Branch: release/13.x
+      Revision: HEAD
+      Patch: llvm-13.patch
+    - Name: newlib.git
+      URL:  https://github.com/mirror/newlib-cygwin.git
+      Branch: master
+      Revision: newlib-4.1.0
+      Patch: newlib-4.1.0-llvm-13.patch
 
 - Revision: HEAD
   Modules:

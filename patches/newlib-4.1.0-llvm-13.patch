@@ -1,0 +1,315 @@
+diff --git a/libgloss/arm/crt0.S b/libgloss/arm/crt0.S
+index 8490bde2f..8b85b28f4 100644
+--- a/libgloss/arm/crt0.S
++++ b/libgloss/arm/crt0.S
+@@ -565,7 +565,7 @@ change_back:
+ 
+ 	/* For Thumb, constants must be after the code since only 
+ 	   positive offsets are supported for PC relative addresses.  */
+-	.align 0
++	.p2align 2
+ .LC0:
+ #ifdef ARM_RDI_MONITOR
+ 	.word	HeapBase
+diff --git a/libgloss/arm/linux-crt0.c b/libgloss/arm/linux-crt0.c
+index 6b2d62a9b..000a2c728 100644
+--- a/libgloss/arm/linux-crt0.c
++++ b/libgloss/arm/linux-crt0.c
+@@ -29,7 +29,7 @@ asm("\n"
+ __attribute__((naked, used))
+ static void _start_thumb(void)
+ #else
+-__attribute__((naked))
++//__attribute__((naked))
+ void _start(void)
+ #endif
+ {
+diff --git a/libgloss/arm/syscalls.c b/libgloss/arm/syscalls.c
+index fc394f94b..0b3287df4 100644
+--- a/libgloss/arm/syscalls.c
++++ b/libgloss/arm/syscalls.c
+@@ -180,7 +180,7 @@ initialise_monitor_handles (void)
+   const char * name;
+ 
+   name = ":tt";
+-  asm ("mov r0,%2; mov r1, #0; swi %a1; mov %0, r0"
++  asm ("movs r0,%2; movs r1, #0; swi %a1; mov %0, r0"
+        : "=r"(fh)
+        : "i" (SWI_Open),"r"(name)
+        : "r0","r1");
+@@ -189,14 +189,14 @@ initialise_monitor_handles (void)
+   if (_has_ext_stdout_stderr ())
+   {
+     name = ":tt";
+-    asm ("mov r0,%2; mov r1, #4; swi %a1; mov %0, r0"
++    asm ("movs r0,%2; movs r1, #4; swi %a1; mov %0, r0"
+ 	 : "=r"(fh)
+ 	 : "i" (SWI_Open),"r"(name)
+ 	 : "r0","r1");
+     monitor_stdout = fh;
+ 
+     name = ":tt";
+-    asm ("mov r0,%2; mov r1, #8; swi %a1; mov %0, r0"
++    asm ("movs r0,%2; movs r1, #8; swi %a1; mov %0, r0"
+ 	 : "=r"(fh)
+ 	 : "i" (SWI_Open),"r"(name)
+ 	 : "r0","r1");
+diff --git a/libgloss/arm/trap.S b/libgloss/arm/trap.S
+index 845ad0173..2056c2adf 100644
+--- a/libgloss/arm/trap.S
++++ b/libgloss/arm/trap.S
+@@ -5,7 +5,7 @@
+ 
+ /* .text is used instead of .section .text so it works with arm-aout too.  */
+ 	.text
+-        .align 0
++        .p2align 2
+         .global __rt_stkovf_split_big
+         .global __rt_stkovf_split_small
+ 
+diff --git a/libgloss/libnosys/configure b/libgloss/libnosys/configure
+index 7c23c7a0a..2fc584169 100755
+--- a/libgloss/libnosys/configure
++++ b/libgloss/libnosys/configure
+@@ -2058,7 +2058,7 @@ case "${target}" in
+ esac
+ 
+ case "${target}" in
+-  *-*-elf)
++  *-*-elf|*-*-eabi*)
+         $as_echo "#define HAVE_ELF 1" >>confdefs.h
+ 
+ 
+diff --git a/newlib/libc/machine/aarch64/memchr.S b/newlib/libc/machine/aarch64/memchr.S
+index 53f5d6bc0..81fcecccd 100644
+--- a/newlib/libc/machine/aarch64/memchr.S
++++ b/newlib/libc/machine/aarch64/memchr.S
+@@ -110,7 +110,7 @@ def_fn memchr
+ 	and	vhas_chr2.16b, vhas_chr2.16b, vrepmask.16b
+ 	addp	vend.16b, vhas_chr1.16b, vhas_chr2.16b		/* 256->128 */
+ 	addp	vend.16b, vend.16b, vend.16b			/* 128->64 */
+-	mov	synd, vend.2d[0]
++	mov	synd, vend.d[0]
+ 	/* Clear the soff*2 lower bits */
+ 	lsl	tmp, soff, #1
+ 	lsr	synd, synd, tmp
+@@ -130,7 +130,7 @@ def_fn memchr
+ 	/* Use a fast check for the termination condition */
+ 	orr	vend.16b, vhas_chr1.16b, vhas_chr2.16b
+ 	addp	vend.2d, vend.2d, vend.2d
+-	mov	synd, vend.2d[0]
++	mov	synd, vend.d[0]
+ 	/* We're not out of data, loop if we haven't found the character */
+ 	cbz	synd, .Lloop
+ 
+@@ -140,7 +140,7 @@ def_fn memchr
+ 	and	vhas_chr2.16b, vhas_chr2.16b, vrepmask.16b
+ 	addp	vend.16b, vhas_chr1.16b, vhas_chr2.16b		/* 256->128 */
+ 	addp	vend.16b, vend.16b, vend.16b			/* 128->64 */
+-	mov	synd, vend.2d[0]
++	mov	synd, vend.d[0]
+ 	/* Only do the clear for the last possible block */
+ 	b.hi	.Ltail
+ 
+diff --git a/newlib/libc/machine/aarch64/strchr.S b/newlib/libc/machine/aarch64/strchr.S
+index 2448dbc7d..706107836 100644
+--- a/newlib/libc/machine/aarch64/strchr.S
++++ b/newlib/libc/machine/aarch64/strchr.S
+@@ -117,7 +117,7 @@ def_fn strchr
+ 	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
+ 	lsr	tmp1, tmp3, tmp1
+ 
+-	mov	tmp3, vend1.2d[0]
++	mov	tmp3, vend1.d[0]
+ 	bic	tmp1, tmp3, tmp1	// Mask padding bits.
+ 	cbnz	tmp1, .Ltail
+ 
+@@ -132,7 +132,7 @@ def_fn strchr
+ 	orr	vend2.16b, vhas_nul2.16b, vhas_chr2.16b
+ 	orr	vend1.16b, vend1.16b, vend2.16b
+ 	addp	vend1.2d, vend1.2d, vend1.2d
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ 	cbz	tmp1, .Lloop
+ 
+ 	/* Termination condition found.  Now need to establish exactly why
+@@ -146,7 +146,7 @@ def_fn strchr
+ 	addp	vend1.16b, vend1.16b, vend2.16b		// 256->128
+ 	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
+ 
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ .Ltail:
+ 	/* Count the trailing zeros, by bit reversing...  */
+ 	rbit	tmp1, tmp1
+diff --git a/newlib/libc/machine/aarch64/strchrnul.S b/newlib/libc/machine/aarch64/strchrnul.S
+index a0ac13b7f..fd2002f0d 100644
+--- a/newlib/libc/machine/aarch64/strchrnul.S
++++ b/newlib/libc/machine/aarch64/strchrnul.S
+@@ -109,7 +109,7 @@ def_fn strchrnul
+ 	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
+ 	lsr	tmp1, tmp3, tmp1
+ 
+-	mov	tmp3, vend1.2d[0]
++	mov	tmp3, vend1.d[0]
+ 	bic	tmp1, tmp3, tmp1	// Mask padding bits.
+ 	cbnz	tmp1, .Ltail
+ 
+@@ -124,7 +124,7 @@ def_fn strchrnul
+ 	orr	vhas_chr2.16b, vhas_nul2.16b, vhas_chr2.16b
+ 	orr	vend1.16b, vhas_chr1.16b, vhas_chr2.16b
+ 	addp	vend1.2d, vend1.2d, vend1.2d
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ 	cbz	tmp1, .Lloop
+ 
+ 	/* Termination condition found.  Now need to establish exactly why
+@@ -134,7 +134,7 @@ def_fn strchrnul
+ 	addp	vend1.16b, vhas_chr1.16b, vhas_chr2.16b		// 256->128
+ 	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
+ 
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ .Ltail:
+ 	/* Count the trailing zeros, by bit reversing...  */
+ 	rbit	tmp1, tmp1
+diff --git a/newlib/libc/machine/aarch64/strrchr.S b/newlib/libc/machine/aarch64/strrchr.S
+index d64fc09b1..1b6f07562 100644
+--- a/newlib/libc/machine/aarch64/strrchr.S
++++ b/newlib/libc/machine/aarch64/strrchr.S
+@@ -120,10 +120,10 @@ def_fn strrchr
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr2.16b	// 256->128
+ 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul1.16b	// 128->64
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr1.16b	// 128->64
+-	mov	nul_match, vhas_nul1.2d[0]
++	mov	nul_match, vhas_nul1.d[0]
+ 	lsl	tmp1, tmp1, #1
+ 	mov	const_m1, #~0
+-	mov	chr_match, vhas_chr1.2d[0]
++	mov	chr_match, vhas_chr1.d[0]
+ 	lsr	tmp3, const_m1, tmp1
+ 
+ 	bic	nul_match, nul_match, tmp3	// Mask padding bits.
+@@ -146,15 +146,15 @@ def_fn strrchr
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr2.16b	// 256->128
+ 	addp	vend1.16b, vend1.16b, vend1.16b	// 128->64
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr1.16b	// 128->64
+-	mov	nul_match, vend1.2d[0]
+-	mov	chr_match, vhas_chr1.2d[0]
++	mov	nul_match, vend1.d[0]
++	mov	chr_match, vhas_chr1.d[0]
+ 	cbz	nul_match, .Lloop
+ 
+ 	and	vhas_nul1.16b, vhas_nul1.16b, vrepmask_0.16b
+ 	and	vhas_nul2.16b, vhas_nul2.16b, vrepmask_0.16b
+ 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul2.16b
+ 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul1.16b
+-	mov	nul_match, vhas_nul1.2d[0]
++	mov	nul_match, vhas_nul1.d[0]
+ 
+ .Ltail:
+ 	/* Work out exactly where the string ends.  */
+diff --git a/newlib/libc/sys/arm/crt0.S b/newlib/libc/sys/arm/crt0.S
+index 5e677a23c..6faf74096 100644
+--- a/newlib/libc/sys/arm/crt0.S
++++ b/newlib/libc/sys/arm/crt0.S
+@@ -556,7 +556,7 @@ change_back:
+ 
+ 	/* For Thumb, constants must be after the code since only 
+ 	   positive offsets are supported for PC relative addresses.  */
+-	.align 0
++	.p2align 2
+ .LC0:
+ #ifdef ARM_RDI_MONITOR
+ 	.word	HeapBase
+diff --git a/newlib/libc/sys/arm/trap.S b/newlib/libc/sys/arm/trap.S
+index 681b3dbe0..8a49f39f3 100644
+--- a/newlib/libc/sys/arm/trap.S
++++ b/newlib/libc/sys/arm/trap.S
+@@ -4,7 +4,7 @@
+ 
+ /* .text is used instead of .section .text so it works with arm-aout too.  */
+ 	.text
+-        .align 0
++        .p2align 2
+         .global __rt_stkovf_split_big
+         .global __rt_stkovf_split_small
+ 
+diff --git a/newlib/libm/machine/arm/sf_ceil.c b/newlib/libm/machine/arm/sf_ceil.c
+index b6efbff0b..44fdf834a 100644
+--- a/newlib/libm/machine/arm/sf_ceil.c
++++ b/newlib/libm/machine/arm/sf_ceil.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_floor.c b/newlib/libm/machine/arm/sf_floor.c
+index 7bc95808c..44c38c42c 100644
+--- a/newlib/libm/machine/arm/sf_floor.c
++++ b/newlib/libm/machine/arm/sf_floor.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_nearbyint.c b/newlib/libm/machine/arm/sf_nearbyint.c
+index c70d84442..126673e97 100644
+--- a/newlib/libm/machine/arm/sf_nearbyint.c
++++ b/newlib/libm/machine/arm/sf_nearbyint.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_rint.c b/newlib/libm/machine/arm/sf_rint.c
+index d9c383a7e..5def21009 100644
+--- a/newlib/libm/machine/arm/sf_rint.c
++++ b/newlib/libm/machine/arm/sf_rint.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_round.c b/newlib/libm/machine/arm/sf_round.c
+index 232fc0848..88c53ba13 100644
+--- a/newlib/libm/machine/arm/sf_round.c
++++ b/newlib/libm/machine/arm/sf_round.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_trunc.c b/newlib/libm/machine/arm/sf_trunc.c
+index 64e4aeb9a..c08fa6fed 100644
+--- a/newlib/libm/machine/arm/sf_trunc.c
++++ b/newlib/libm/machine/arm/sf_trunc.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
