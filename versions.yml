@@ -15,17 +15,6 @@
 # limitations under the License.
 #
 
-- Revision: "0.1"
-  Modules:
-    - Name: llvm.git
-      URL:  https://github.com/llvm/llvm-project.git
-      Revision: llvmorg-12.0.0-rc3
-      Patch: llvm-0.1.patch
-    - Name: newlib.git
-      URL:  https://github.com/mirror/newlib-cygwin.git
-      Revision: 7b1416c3abe890c8058001d6bb795802f80270af
-      Patch: newlib-0.1.patch
-
 - Revision: "13.0.0"
   Modules:
     - Name: llvm.git
