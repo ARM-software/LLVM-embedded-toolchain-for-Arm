@@ -57,7 +57,7 @@ depending on the environment. The following option works in all environments:
 
 The following two options work on Linux and MSYS2:
 * Set the environment variable ``VERSION`` to the revision of the built
-  toolchain (e.g. ``0.1`` or ``HEAD``). The sample Makefiles will assume that
+  toolchain (e.g. ``13.0.0`` or ``HEAD``). The sample Makefiles will assume that
   the toolchain is installed in the default directory used by the
   ``build.py`` script (i.e.
   ``install-<revision>/LLVMEmbeddedToolchainForArm-<revision>``

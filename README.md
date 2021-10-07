@@ -139,18 +139,10 @@ $ build.py -h
 ```
 Some notable options include:
 * ``--revision`` the LLVM Embedded Toolchain for Arm version. Default version
-  is ``13.0.0``. The available toolchain versions can be listed with:
-```
-$ repos.py list
-0.1
-13.0.0
-branch-13
-HEAD
-```
-  * 0.1 - to be removed
-  * 13.0.0 - based on LLVM 13.0.0 and newlib 4.1.0
-  * branch-13 - based on the tip of the LLVM 13 branch and newlib 4.1.0
-  * HEAD - based on the latest commits in the LLVM and newlib repositories
+  is ``13.0.0``. The available versions are:
+  * ``13.0.0`` - based on LLVM 13.0.0 and newlib 4.1.0
+  * ``branch-13`` - based on the tip of the LLVM 13 branch and newlib 4.1.0
+  * ``HEAD`` - based on the latest commits in the LLVM and newlib repositories
 * ``--host-toolchain`` the toolchain type. The supported values are:
   * ``clang`` Clang (the default)
   * ``gcc`` GCC
@@ -256,8 +248,6 @@ $ build.py --host-toolchain mingw --copy-runtime-dlls no
 * Clang does not support the ``naked`` attribute on C functions, breaking the
   Linux startup (out of scope).
 * Target triple ending with eabi is not considered an ELF target.
-* Revision 0.1 only: set the correct floating-point endianness when building
-  with Clang.
 
 ### LLVM:
 * Recognize $@ in a config file argument to mean the directory of the config
