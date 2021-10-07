@@ -30,12 +30,10 @@
   Modules:
     - Name: llvm.git
       URL:  https://github.com/llvm/llvm-project.git
-      Branch: release/13.x
       Revision: llvmorg-13.0.0
       Patch: llvm-13.patch
     - Name: newlib.git
       URL:  https://github.com/mirror/newlib-cygwin.git
-      Branch: master
       Revision: newlib-4.1.0
       Patch: newlib-4.1.0-llvm-13.patch
 
@@ -48,7 +46,6 @@
       Patch: llvm-13.patch
     - Name: newlib.git
       URL:  https://github.com/mirror/newlib-cygwin.git
-      Branch: master
       Revision: newlib-4.1.0
       Patch: newlib-4.1.0-llvm-13.patch
 
