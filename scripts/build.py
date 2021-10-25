@@ -29,10 +29,11 @@ from typing import Callable, Optional
 import cfg_files
 import check
 import config
-from config import Action, BuildMode, CheckoutMode, CopyRuntime, Config
+from config import Action, BuildMode, CheckoutMode, CopyRuntime, \
+    PackageFormat, Config
 import make
 import repos
-import tarball
+import package
 import util
 
 
@@ -138,6 +139,11 @@ def parse_args_to_config() -> Config:
                              '  yes - copy runtime DLLs from the local '
                              'machine\n'
                              '  ask - ask the user before starting the build')
+    parser.add_argument('--package-format', type=str,
+                        choices=util.values_of_enum(PackageFormat),
+                        help='specifies the binary package format:\n'
+                             '  tgz - tar.gz (default for Linux builds)\n'
+                             '  zip - zip (default for Windows builds)')
     cpu_count = multiprocessing.cpu_count()
     parser.add_argument('-j', '--parallel', type=int, metavar='N',
                         help='number of parallel threads to use in Make/Ninja '
@@ -156,7 +162,7 @@ def parse_args_to_config() -> Config:
                              '  libcxx - build and install libc++abi and '
                              'libc++ for each target\n'
                              '  configure - write target configuration files\n'
-                             '  package - create tarball\n'
+                             '  package - create binary package\n'
                              '  all - perform all of the above\n'
                              '  test - run tests\n'
                              'Default: all')
@@ -351,8 +357,8 @@ def main() -> int:
         run_tests(cfg)
 
         def do_package():
-            tarball.write_version_file(cfg)
-            tarball.package_toolchain(cfg)
+            package.write_version_file(cfg)
+            package.package_toolchain(cfg)
         run_or_skip(cfg, Action.PACKAGE, do_package, 'packaging')
     except util.ToolchainBuildError:
         # By this time the error must have already been logged
