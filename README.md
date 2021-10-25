@@ -59,9 +59,9 @@ The LLVM Embedded Toolchain for Arm has been built and tested on Linux/Ubuntu
 
 ## Getting started
 
-Download a release of the toolchain for you platform using [Github
-releases](/ARM-software/LLVM-embedded-toolchain-for-Arm/releases) and extract
-the archive into an arbitrary directory.
+Download a release of the toolchain for your platform from [Github
+releases](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases)
+and extract the archive into an arbitrary directory.
 
 ### Downloading runtime libraries (Windows only)
 
