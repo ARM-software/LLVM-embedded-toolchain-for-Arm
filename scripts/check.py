@@ -199,7 +199,7 @@ def check_prerequisites(cfg: config.Config) -> None:
                                       MIN_CCACHE_VERSION)
     if cfg.use_ninja:
         is_ok = is_ok and _check_availability('ninja', 'Ninja')
-    for tool in ['git', 'make', 'find', 'sort', 'tar', 'sed']:
+    for tool in ['git', 'make', 'find', 'sort', 'sed']:
         is_ok = is_ok and _check_availability(tool)
     if not is_ok:
         logging.error('Prerequisites check failed')

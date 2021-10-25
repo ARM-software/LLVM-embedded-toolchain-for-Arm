@@ -116,6 +116,13 @@ class Action(enum.Enum):
     TEST = 'test'
 
 
+@enum.unique
+class PackageFormat(enum.Enum):
+    """Binary package format."""
+    TGZ = 'tgz'
+    ZIP = 'zip'
+
+
 class Toolchain:  # pylint: disable=too-few-public-methods
     """This class is used for representing toolchains that run on the build
        machine (the one where build.py is run). In case of cross-compilation
@@ -292,9 +299,12 @@ class Config:  # pylint: disable=too-many-instance-attributes
         self.checkout_mode = CheckoutMode(args.checkout_mode)
         self.build_mode = BuildMode(args.build_mode)
 
+        is_using_mingw = self.host_toolchain.kind == ToolchainKind.MINGW
+        is_windows = is_using_mingw
+
         copy_runtime = CopyRuntime(args.copy_runtime_dlls)
         self.ask_copy_runtime_dlls = True
-        if self.host_toolchain.kind == ToolchainKind.MINGW:
+        if is_using_mingw:
             self.ask_copy_runtime_dlls = (copy_runtime == CopyRuntime.ASK)
             if not self.ask_copy_runtime_dlls:
                 self._copy_runtime_dlls = (copy_runtime == CopyRuntime.YES)
@@ -304,6 +314,12 @@ class Config:  # pylint: disable=too-many-instance-attributes
                                 'during cross-compilation')
             self.ask_copy_runtime = False
             self._copy_runtime_dlls = False
+
+        if args.package_format is None:
+            self.package_format = (PackageFormat.ZIP if is_windows else
+                                   PackageFormat.TGZ)
+        else:
+            self.package_format = PackageFormat(args.package_format)
 
         self.use_ninja = args.use_ninja
         self.use_ccache = args.use_ccache
@@ -341,7 +357,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
             self.version_string = now.strftime('%Y-%m-%d-%H:%M:%S')
         self.skip_reconfigure = self.build_mode == BuildMode.INCREMENTAL
         product_name = 'LLVMEmbeddedToolchainForArm'
-        self.tarball_base_name = product_name + version_suffix
+        self.package_base_name = product_name + version_suffix
         self.target_llvm_dir = join(
             self.install_dir,
             '{}-{}'.format(product_name, self.revision))
