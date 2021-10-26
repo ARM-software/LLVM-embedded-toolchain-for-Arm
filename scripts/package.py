@@ -15,6 +15,7 @@
 
 import logging
 import os
+import shutil
 from typing import FrozenSet
 import tarfile
 import zipfile
@@ -39,6 +40,25 @@ def write_version_file(cfg: config.Config, version: repos.LLVMBMTC) -> None:
     util.write_lines(lines, dest)
 
 
+def copy_samples(cfg: config.Config) -> None:
+    """Copy code samples, filter out files that are not usable on the target
+       platform."""
+    src = os.path.join(cfg.source_dir, 'samples')
+    dest = os.path.join(cfg.target_llvm_dir, 'samples')
+    if os.path.exists(dest):
+        shutil.rmtree(dest)
+
+    if cfg.is_windows:
+        # We don't filter out Makefile and Makefile.conf because we support
+        # using Windows+MSYS2
+        ignore = shutil.ignore_patterns('.gitignore')
+    else:
+        # make.bat is useless on Linux/Mac
+        ignore = shutil.ignore_patterns('.gitignore', 'make.bat')
+    logging.info('Copying "%s" to "%s"', src, dest)
+    shutil.copytree(src, dest, ignore=ignore)
+
+
 def _get_excluded_symlinks(cfg: config.Config) -> FrozenSet[str]:
     """Get a list of symlinks that should be excluded when symlinks are
        converted to copies (i.e. when targeting Windows or using zip as archive
@@ -51,7 +71,7 @@ def _get_excluded_symlinks(cfg: config.Config) -> FrozenSet[str]:
         'lld-link',  # Windows (COFF) linker
         'wasm-ld',   # WebAssembly linker
     ]
-    if cfg.is_cross_compiling:
+    if cfg.is_windows:
         excludes = [name + '.exe' for name in excludes]
     return frozenset(excludes)
 
@@ -64,7 +84,7 @@ def _create_tarball(cfg: config.Config, dest_pkg: str) -> None:
         return tarinfo
     exclude_set: FrozenSet[str] = frozenset()
     dereference = False
-    if cfg.is_cross_compiling:
+    if cfg.is_windows:
         exclude_set = _get_excluded_symlinks(cfg)
         dereference = True
     with tarfile.open(dest_pkg, 'w:gz') as dest:
