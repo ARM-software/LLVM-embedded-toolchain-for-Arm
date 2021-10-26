@@ -21,7 +21,7 @@ import argparse
 import logging
 import os
 import sys
-from typing import Dict, List, Any
+from typing import List, Mapping, Any
 
 import git  # type: ignore
 import yaml
@@ -35,9 +35,28 @@ def die(msg: str, ret_val=1) -> None:
     sys.exit(ret_val)
 
 
+class RepositoryStatus:
+    """Status of a checked out git repository"""
+    def __init__(self, repo_path):
+        repo = git.Repo(repo_path)
+        self.sha1 = repo.head.commit.hexsha
+        self.is_dirty = repo.is_dirty()
+        self.url = repo.git.config('--get', 'remote.origin.url')
+        self.branch = None
+        if not repo.head.is_detached:
+            self.branch = repo.active_branch.name
+
+    def __repr__(self):
+        branch_str = ('Branch: {}'.format(self.branch)
+                      if self.branch is not None else 'Detached')
+        return '{}, Revision: {}, Dirty: {}'.format(branch_str,
+                                                    self.sha1,
+                                                    self.is_dirty)
+
+
 class ModuleTC:
     """A building block of the LLVM Embedded Toolchain for Arm."""
-    def __init__(self, module_yml: Dict[str, str]):
+    def __init__(self, module_yml: Mapping[str, str]):
         for key in ['Name', 'URL', 'Revision']:
             assert key in module_yml, (
                 'ModuleTC is missing mandatory key "{}"'.format(key))
@@ -67,13 +86,13 @@ class ModuleTC:
 
 class LLVMBMTC:
     """An LLVM Embedded Toolchain for Arm package."""
-    def __init__(self, data_yml: Dict[str, Any]):
+    def __init__(self, data_yml: Mapping[str, Any]):
         assert 'Revision' in data_yml, 'Toolchain is missing a revision'
         assert 'Modules' in data_yml, 'Toolchain is missing a modules list'
         assert isinstance(data_yml['Modules'], list), (
             'Toolchains modules must be a list')
         self.revision = str(data_yml['Revision'])
-        self.modules: Dict[str, ModuleTC] = {}
+        self.modules: Mapping[str, ModuleTC] = {}
         for module_yml in data_yml['Modules']:
             module = ModuleTC(module_yml)
             if module.name in self.modules:
@@ -86,7 +105,7 @@ class LLVMBMTC:
             self.__class__.__name__, self.revision, modules)
 
 
-def get_all_versions(filename: str) -> Dict[str, Any]:
+def get_all_versions(filename: str) -> Mapping[str, LLVMBMTC]:
     """Build the database containing all releases from a YAML file."""
     versions = {}
     with open(filename, 'r') as stream:
@@ -104,7 +123,7 @@ def get_all_versions(filename: str) -> Dict[str, Any]:
     return versions
 
 
-def print_versions(versions: Dict[str, Any], verbose: bool) -> None:
+def print_versions(versions: Mapping[str, LLVMBMTC], verbose: bool) -> None:
     """Print releases (as parsed from a YAML file)."""
     if verbose:
         for version, toolchain in versions.items():
@@ -128,22 +147,14 @@ def find_all_git_repositories(checkout_path: str) -> List[str]:
     return repos
 
 
-def get_repositories_status(checkout_path: str) -> Dict[str, Any]:
+def get_repositories_status(checkout_path: str) -> \
+        Mapping[str, RepositoryStatus]:
     """Get the state of each git repository."""
     status = {}
     repos = find_all_git_repositories(checkout_path)
     for repo_path in repos:
-        repo = git.Repo(repo_path)
         rel_path = os.path.relpath(repo_path, checkout_path)
-        status[rel_path] = {
-            'SHA1': repo.head.commit.hexsha,
-            'Dirty': repo.is_dirty(),
-            'URL': repo.git.config('--get', 'remote.origin.url')
-        }
-        if repo.head.is_detached:
-            status[rel_path]['Branch'] = None
-        else:
-            status[rel_path]['Branch'] = repo.active_branch.name
+        status[rel_path] = RepositoryStatus(checkout_path)
     return status
 
 
@@ -152,12 +163,7 @@ def print_repositories_status(checkout_path: str) -> None:
     statuses = get_repositories_status(checkout_path)
     print('Status (in directory "{}"):'.format(checkout_path))
     for repo, status in statuses.items():
-        if status['Branch'] is not None:
-            branch_str = 'Branch: {}'.format(status['Branch'])
-        else:
-            branch_str = 'Detached'
-        print(' - {}: {}, Revision: {}, Dirty: {}'.format(
-            repo, branch_str, status['SHA1'], status['Dirty']))
+        print(' - {}: {}'.format(repo, status))
 
 
 def check_repositories_status(checkout_path: str, tc_version: LLVMBMTC) -> int:
@@ -178,14 +184,14 @@ def check_repositories_status(checkout_path: str, tc_version: LLVMBMTC) -> int:
         if repo not in tc_version.modules:
             die('{} was not found in the revision database'.format(repo))
         module = tc_version.modules[repo]
-        if status['Dirty']:
+        if status.is_dirty:
             msg.append('Dirty')
-        if status['Branch'] != module.branch:
-            msg.append('Branch mismatch ({}, {})'.format(
-                status['Branch'], module.branch))
-        if module.revision != 'HEAD' and status['SHA1'] != module.revision:
-            msg.append('Commit mismatch ({}, {})'.format(
-                status['SHA1'], module.revision))
+        if status.branch != module.branch:
+            msg.append('Branch mismatch ({}, {})'.format(status.branch,
+                                                         module.branch))
+        if module.revision != 'HEAD' and status.sha1 != module.revision:
+            msg.append('Commit mismatch ({}, {})'.format(status.sha1,
+                                                         module.revision))
         if len(msg) == 0:
             msg.append('OK')
         else:
@@ -260,14 +266,14 @@ def freeze_repositories(checkout_path: str, version: str) -> None:
     """Print a YAML compatible output of the repositories state."""
     statuses = get_repositories_status(checkout_path)
     for repo, status in statuses.items():
-        if status['Dirty']:
+        if status.is_dirty:
             die('"{}" is in a dirty state. Refusing to freeze.'.format(repo))
     print('- Revision: {}'.format(version))
     print('  Modules:')
     for repo, status in statuses.items():
         print('    - Name: {}'.format(repo))
-        print('      URL: {}'.format(status['URL']))
-        print('      Revision: {}'.format(status['SHA1']))
+        print('      URL: {}'.format(status.url))
+        print('      Revision: {}'.format(status.sha1))
 
 
 def main():
