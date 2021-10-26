@@ -350,11 +350,11 @@ def main() -> int:
         run_or_skip(cfg, Action.PREPARE,
                     lambda: prepare_repositories(cfg, version),
                     'source code checkout')
-        version.poplulate_commits(cfg.repos_dir)
         build_all(cfg)
         run_tests(cfg)
 
         def do_package():
+            version.poplulate_commits(cfg.repos_dir)
             package.write_version_file(cfg, version)
             package.copy_samples(cfg)
             package.package_toolchain(cfg)
