@@ -21,7 +21,7 @@ import argparse
 import logging
 import os
 import sys
-from typing import List, Mapping, Any
+from typing import List, Mapping, Optional, Any
 
 import git  # type: ignore
 import yaml
@@ -57,20 +57,34 @@ class RepositoryStatus:
 class ModuleTC:
     """A building block of the LLVM Embedded Toolchain for Arm."""
     def __init__(self, module_yml: Mapping[str, str]):
-        for key in ['Name', 'URL', 'Revision']:
+        for key in ['Name', 'FriendlyName', 'URL', 'Revision']:
             assert key in module_yml, (
                 'ModuleTC is missing mandatory key "{}"'.format(key))
         self.name = module_yml['Name']
+        self.friendly_name = module_yml['FriendlyName']
         self.url = module_yml['URL']
         self.branch = module_yml['Branch'] if 'Branch' in module_yml else None
         self.revision = module_yml['Revision']
         self.patch = module_yml['Patch'] if 'Patch' in module_yml else None
+        self.status: Optional[RepositoryStatus] = None
         if self.revision == 'HEAD' and self.branch is None:
             die('for repository {}, HEAD needs a branch name'.format(
                 self.name))
 
     def __repr__(self):
         return ', '.join(self.yamlize())
+
+    @property
+    def checkout_info(self):
+        """Returns description of a checked out commit of the module."""
+        commit = (self.status.sha1 if self.status is not None else
+                  '<unknown commit>')
+        tag_or_branch = ('Tip of the branch {}'.format(self.branch)
+                         if self.revision == 'HEAD' else self.revision)
+        return '{}: {}, {} (commit {})'.format(self.friendly_name,
+                                               self.url,
+                                               tag_or_branch,
+                                               commit)
 
     def yamlize(self) -> List[str]:
         """Convert to YAML represented as a list of lines."""
@@ -82,6 +96,29 @@ class ModuleTC:
             res.append('Branch: {}'.format(self.branch))
         res.append('Revision: {}'.format(self.revision))
         return res
+
+
+def find_all_git_repositories(checkout_path: str) -> List[str]:
+    """Walk repositories to find all GIT checkouts."""
+    if not os.path.isdir(checkout_path):
+        die("repositories location '{}' does not exists!".format(
+            checkout_path))
+    repos = []
+    for root, sub_dirs, _ in os.walk(checkout_path):
+        if '.git' in sub_dirs:
+            repos.append(root)
+    return repos
+
+
+def get_repositories_status(checkout_path: str) -> \
+        Mapping[str, RepositoryStatus]:
+    """Get the state of each git repository."""
+    status = {}
+    repos = find_all_git_repositories(checkout_path)
+    for repo_path in repos:
+        rel_path = os.path.relpath(repo_path, checkout_path)
+        status[rel_path] = RepositoryStatus(repo_path)
+    return status
 
 
 class LLVMBMTC:
@@ -103,6 +140,15 @@ class LLVMBMTC:
         modules = ', '.join(map(repr, list(self.modules.values())))
         return '{} (revision:"{}", modules:[{}])'.format(
             self.__class__.__name__, self.revision, modules)
+
+    def poplulate_commits(self, repos_dir: str) -> None:
+        """Populate commit hashes from checked out repositoties."""
+        status = get_repositories_status(repos_dir)
+        for name, module in self.modules.items():
+            if name not in status:
+                logging.warning('Could not get status for %s', name)
+                continue
+            module.status = status[name]
 
 
 def get_all_versions(filename: str) -> Mapping[str, LLVMBMTC]:
@@ -133,29 +179,6 @@ def print_versions(versions: Mapping[str, LLVMBMTC], verbose: bool) -> None:
                 print('    - {}'.format(module))
     else:
         print('\n'.join(versions.keys()))
-
-
-def find_all_git_repositories(checkout_path: str) -> List[str]:
-    """Walk repositories to find all GIT checkouts."""
-    if not os.path.isdir(checkout_path):
-        die("repositories location '{}' does not exists!".format(
-            checkout_path))
-    repos = []
-    for root, sub_dirs, _ in os.walk(checkout_path):
-        if '.git' in sub_dirs:
-            repos.append(root)
-    return repos
-
-
-def get_repositories_status(checkout_path: str) -> \
-        Mapping[str, RepositoryStatus]:
-    """Get the state of each git repository."""
-    status = {}
-    repos = find_all_git_repositories(checkout_path)
-    for repo_path in repos:
-        rel_path = os.path.relpath(repo_path, checkout_path)
-        status[rel_path] = RepositoryStatus(checkout_path)
-    return status
 
 
 def print_repositories_status(checkout_path: str) -> None:

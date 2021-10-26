@@ -335,6 +335,8 @@ def main() -> int:
         logging.error('Invalid revision %s', cfg.revision)
         return 1
 
+    version = versions[cfg.revision]
+
     try:
         if (cfg.host_toolchain.kind == config.ToolchainKind.MINGW
                 and cfg.ask_copy_runtime_dlls):
@@ -346,13 +348,14 @@ def main() -> int:
         if not cfg.skip_checks:
             check.check_prerequisites(cfg)
         run_or_skip(cfg, Action.PREPARE,
-                    lambda: prepare_repositories(cfg, versions[cfg.revision]),
+                    lambda: prepare_repositories(cfg, version),
                     'source code checkout')
+        version.poplulate_commits(cfg.repos_dir)
         build_all(cfg)
         run_tests(cfg)
 
         def do_package():
-            package.write_version_file(cfg)
+            package.write_version_file(cfg, version)
             package.package_toolchain(cfg)
         run_or_skip(cfg, Action.PACKAGE, do_package, 'packaging')
     except util.ToolchainBuildError:
