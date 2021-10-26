@@ -206,20 +206,15 @@ def prepare_repositories(cfg: config.Config,
                                   'mode {}'.format(cfg.checkout_mode))
 
     # Perform selected action
-    ret = 0
     if do_remove_and_clone:
         if os.path.exists(cfg.repos_dir):
             logging.info('Deleting checked out repositories')
             shutil.rmtree(cfg.repos_dir)
         logging.info('Cloning repositories and applying patches')
-        ret = repos.clone_repositories(cfg.repos_dir, toolchain_ver,
-                                       patches_dir)
+        repos.clone_repositories(cfg.repos_dir, toolchain_ver, patches_dir)
     elif do_reset_and_patch:
         logging.info('Resetting repositories and applying patches')
-        ret = repos.patch_repositories(cfg.repos_dir, toolchain_ver,
-                                       patches_dir)
-    if ret != 0:
-        raise util.ToolchainBuildError
+        repos.patch_repositories(cfg.repos_dir, toolchain_ver, patches_dir)
 
 
 def run_or_skip(cfg: Config, action: Action, func: Callable[[], None],
