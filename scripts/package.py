@@ -21,15 +21,22 @@ import zipfile
 
 import config
 from config import PackageFormat
+import repos
 import util
 
 
-def write_version_file(cfg: config.Config) -> None:
+def write_version_file(cfg: config.Config, version: repos.LLVMBMTC) -> None:
     """Create VERSION.txt in the install directory."""
     dest = os.path.join(cfg.target_llvm_dir, 'VERSION.txt')
     if cfg.verbose:
         logging.info('Writing "%s" to %s', cfg.version_string, dest)
-    util.write_lines([cfg.version_string], dest)
+    lines = [cfg.version_string, '', 'Components:']
+    for name in sorted(version.modules.keys()):
+        comp_info = version.modules[name].checkout_info
+        lines.append('* {}'.format(comp_info))
+        if cfg.verbose:
+            logging.info('Writing component %s info: "%s"', name, comp_info)
+    util.write_lines(lines, dest)
 
 
 def _get_excluded_symlinks(cfg: config.Config) -> FrozenSet[str]:
