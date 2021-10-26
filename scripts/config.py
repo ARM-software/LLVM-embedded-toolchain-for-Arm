@@ -346,6 +346,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
         self.newlib_repo_dir = join(self.repos_dir, 'newlib.git')
         is_using_mingw = self.host_toolchain.kind == ToolchainKind.MINGW
         self.is_cross_compiling = (os.name == 'posix' and is_using_mingw)
+        self.is_windows = is_using_mingw
         self.cmake_generator = 'Ninja' if self.use_ninja else 'Unix Makefiles'
         self.release_mode = self.revision != 'HEAD'
         if self.release_mode:

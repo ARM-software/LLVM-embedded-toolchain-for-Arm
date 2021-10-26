@@ -356,6 +356,7 @@ def main() -> int:
 
         def do_package():
             package.write_version_file(cfg, version)
+            package.copy_samples(cfg)
             package.package_toolchain(cfg)
         run_or_skip(cfg, Action.PACKAGE, do_package, 'packaging')
     except util.ToolchainBuildError:

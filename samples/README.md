@@ -50,21 +50,14 @@ Debugging is only supported on Linux.
 ## Specifying the location of the installed toolchain
 
 The Makefiles of the code samples need the location of the installed LLVM
-Embedded Toolchain for Arm. There are several ways to specify the location,
-depending on the environment. The following option works in all environments:
-* Set the environment variable ``BIN_PATH`` to point to the ``bin`` directory
-  of the toolchain.
+Embedded Toolchain for Arm.
 
-The following two options work on Linux and MSYS2:
-* Set the environment variable ``VERSION`` to the revision of the built
-  toolchain (e.g. ``13.0.0`` or ``HEAD``). The sample Makefiles will assume that
-  the toolchain is installed in the default directory used by the
-  ``build.py`` script (i.e.
-  ``install-<revision>/LLVMEmbeddedToolchainForArm-<revision>``
-  in the root of the ``LLVM-embedded-toolchain-for-Arm`` repository
-  checkout), or
-* Don't set any of the above variables. This will have the same effect as
-  setting ``VERSION=0.1``.
+If you are using Linux or MSYS2 and running the samples directly from the
+installation directory the Makefiles will determine the correct location
+automatically.
+
+Otherwise you will need to set the environment variable ``BIN_PATH`` to point
+to the ``bin`` directory of the toolchain.
 
 ## Compiling, running and debugging the samples
 
@@ -87,12 +80,6 @@ use the following commands to build, run or debug the sample:
   (gdb) target remote :1234
   ```
 * ``$ make clean`` to delete the generated ``.elf`` and ``.hex`` files
-
-Note: you can set an environment variable for a command using the following
-syntax:
-```
-$ VERSION=HEAD make run
-```
 
 ### Windows
 
