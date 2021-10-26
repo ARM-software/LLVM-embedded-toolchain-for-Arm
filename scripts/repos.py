@@ -104,7 +104,7 @@ def get_all_versions(filename: str) -> Dict[str, Any]:
     return versions
 
 
-def print_versions(versions: Dict[str, Any], verbose: bool) -> int:
+def print_versions(versions: Dict[str, Any], verbose: bool) -> None:
     """Print releases (as parsed from a YAML file)."""
     if verbose:
         for version, toolchain in versions.items():
@@ -114,8 +114,6 @@ def print_versions(versions: Dict[str, Any], verbose: bool) -> int:
                 print('    - {}'.format(module))
     else:
         print('\n'.join(versions.keys()))
-
-    return 0
 
 
 def find_all_git_repositories(checkout_path: str) -> List[str]:
@@ -149,7 +147,7 @@ def get_repositories_status(checkout_path: str) -> Dict[str, Any]:
     return status
 
 
-def print_repositories_status(checkout_path: str) -> int:
+def print_repositories_status(checkout_path: str) -> None:
     """Report the state of each git repository."""
     statuses = get_repositories_status(checkout_path)
     print('Status (in directory "{}"):'.format(checkout_path))
@@ -160,8 +158,6 @@ def print_repositories_status(checkout_path: str) -> int:
             branch_str = 'Detached'
         print(' - {}: {}, Revision: {}, Dirty: {}'.format(
             repo, branch_str, status['SHA1'], status['Dirty']))
-
-    return 0
 
 
 def check_repositories_status(checkout_path: str, tc_version: LLVMBMTC) -> int:
@@ -200,7 +196,7 @@ def check_repositories_status(checkout_path: str, tc_version: LLVMBMTC) -> int:
 
 
 def patch_repositories(checkout_path: str, tc_version: LLVMBMTC,
-                       patches: str) -> int:
+                       patches: str) -> None:
     """Reset checked out repositories and apply patches."""
     for repo_name, module in tc_version.modules.items():
         if not module.patch:
@@ -219,11 +215,10 @@ def patch_repositories(checkout_path: str, tc_version: LLVMBMTC,
             die('could not patch "{}" with "{}".\n'
                 'Git command failed with:\n{}'
                 .format(repo_path, patch_file, ex))
-    return 0
 
 
 def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
-                       patches: str) -> int:
+                       patches: str) -> None:
     """Checkout each git repository for tc_version in the directory
        checkout_path.
     """
@@ -258,10 +253,10 @@ def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
                     'Git command failed with:\n{}'
                     .format(repo_path, module.revision, ex))
 
-    return patch_repositories(checkout_path, tc_version, patches)
+    patch_repositories(checkout_path, tc_version, patches)
 
 
-def freeze_repositories(checkout_path: str, version: str) -> int:
+def freeze_repositories(checkout_path: str, version: str) -> None:
     """Print a YAML compatible output of the repositories state."""
     statuses = get_repositories_status(checkout_path)
     for repo, status in statuses.items():
@@ -273,8 +268,6 @@ def freeze_repositories(checkout_path: str, version: str) -> int:
         print('    - Name: {}'.format(repo))
         print('      URL: {}'.format(status['URL']))
         print('      Revision: {}'.format(status['SHA1']))
-
-    return 0
 
 
 def main():
@@ -323,14 +316,14 @@ def main():
     args = parser.parse_args()
     args.action = args.action[0]
 
-    ret_val = 0
     if args.action == 'status':
-        ret_val = print_repositories_status(args.repositories)
-        sys.exit(ret_val)
+        print_repositories_status(args.repositories)
+        sys.exit(0)
     elif args.action == 'freeze':
-        ret_val = freeze_repositories(args.repositories, args.revision)
-        sys.exit(ret_val)
+        freeze_repositories(args.repositories, args.revision)
+        sys.exit(0)
 
+    ret_val = 0
     versions = get_all_versions(args.versions)
 
     # Make sure the requested version actually exists
@@ -338,13 +331,13 @@ def main():
         die('revision "{}" is unknown'.format(args.revision))
 
     if args.action == 'list':
-        ret_val = print_versions(versions, args.verbose)
+        print_versions(versions, args.verbose)
     elif args.action == 'check':
         ret_val = check_repositories_status(args.repositories,
                                             versions[args.revision])
     elif args.action == 'clone':
-        ret_val = clone_repositories(args.repositories,
-                                     versions[args.revision], args.patches)
+        clone_repositories(args.repositories, versions[args.revision],
+                           args.patches)
     else:
         die('unsupported command: "{}"'.format(args.action))
 
