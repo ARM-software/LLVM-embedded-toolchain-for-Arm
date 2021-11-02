@@ -20,6 +20,7 @@
 import argparse
 import logging
 import os
+import shutil
 import sys
 from typing import List, Mapping, Optional, Any
 
@@ -143,6 +144,9 @@ class LLVMBMTC:
 
     def poplulate_commits(self, repos_dir: str) -> None:
         """Populate commit hashes from checked out repositoties."""
+        # Check if commit hashes have already been set
+        if all(module.status is not None for module in self.modules.values()):
+            return
         status = get_repositories_status(repos_dir)
         for name, module in self.modules.items():
             if name not in status:
@@ -283,6 +287,34 @@ def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
                     .format(repo_path, module.revision, ex))
 
     patch_repositories(checkout_path, tc_version, patches)
+
+
+def export_repository(src_repo_path: str, dest_repo_path: str,
+                      copy_untracked: bool = False) -> None:
+    """Copy the files of a checked out repository to a new directory. The copy
+       will include unstaged changes and optionally untracked files if
+       copy_untracked is True."""
+    logging.info('Exporting "%s" to "%s"', src_repo_path, dest_repo_path)
+    git_cmd = git.cmd.Git(src_repo_path)
+    args = ['--cached']
+    if copy_untracked:
+        args.append('--other')
+    for fname in git_cmd.ls_files(*args).splitlines():
+        src_path = os.path.join(src_repo_path, fname)
+        dest_path = os.path.join(dest_repo_path, fname)
+        dest_dir = os.path.dirname(dest_path)
+        if not os.path.exists(dest_dir):
+            os.makedirs(dest_dir)
+        shutil.copy2(src_path, dest_path, follow_symlinks=False)
+
+
+def export_toolchain_repositories(checkout_path: str, tc_version: LLVMBMTC,
+                                  dest_path: str) -> None:
+    """Export all checked out repositories."""
+    for repo_dir in tc_version.modules.keys():
+        export_repository(os.path.join(checkout_path, repo_dir),
+                          os.path.join(dest_path, repo_dir),
+                          True)
 
 
 def freeze_repositories(checkout_path: str, version: str) -> None:

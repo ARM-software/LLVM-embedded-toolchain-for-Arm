@@ -112,8 +112,9 @@ class Action(enum.Enum):
     CONFIGURE = 'configure'
     PACKAGE = 'package'
     ALL = 'all'
-    # The 'test' phase is not part of 'all'
+    # The 'test' and 'package-src' phases are not part of 'all'
     TEST = 'test'
+    PACKAGE_SRC = 'package-src'
 
 
 @enum.unique
@@ -256,30 +257,19 @@ class Config:  # pylint: disable=too-many-instance-attributes
             return 'aarch64-none-elf'
         return None
 
-    def _fill_args(self, args: argparse.Namespace):
-        if 'all' in args.variants:
-            variant_names = LIBRARY_SPECS.keys()
-        else:
-            variant_names = set(args.variants)
-        self.variants = [LIBRARY_SPECS[v] for v in sorted(variant_names)]
-
+    def _configure_actions(self, args: argparse.Namespace):
         if not args.actions or Action.ALL.value in args.actions:
+            # Actions that are not part of the "ALL" action:
+            exclude_from_all = [Action.ALL, Action.TEST, Action.PACKAGE_SRC]
             self.actions = set(action for action in Action
-                               if action not in (Action.ALL, Action.TEST))
-            if Action.TEST.value in args.actions:
-                self.actions.add(Action.TEST)
+                               if action not in exclude_from_all)
+            for action in [Action.TEST, Action.PACKAGE_SRC]:
+                if action.value in args.actions:
+                    self.actions.add(action)
         else:
             self.actions = set(Action(act_str) for act_str in args.actions)
 
-        self.default_target = self._default_target()
-
-        rev = args.revision
-        self.revision = rev
-        self.source_dir = os.path.abspath(args.source_dir)
-        self.repos_dir = _assign_dir(args.repositories_dir, 'repos', rev)
-        self.build_dir = _assign_dir(args.build_dir, 'build', rev)
-        self.install_dir = _assign_dir(args.install_dir, 'install', rev)
-        self.package_dir = os.path.abspath(args.package_dir)
+    def _configure_toolchains(self, args: argparse.Namespace):
         # According to
         # https://docs.python.org/3.6/library/enum.html#using-a-custom-new:
         # "The __new__() method, if defined, is used during creation of the
@@ -296,15 +286,33 @@ class Config:  # pylint: disable=too-many-instance-attributes
         native_toolchain_dir = os.path.abspath(args.native_toolchain_dir)
         self.native_toolchain = Toolchain(native_toolchain_dir,
                                           native_toolchain_kind)
+
+        self.is_using_mingw = self.host_toolchain.kind == ToolchainKind.MINGW
+        self.is_windows = self.is_using_mingw
+        self.is_cross_compiling = (os.name == 'posix' and self.is_windows)
+
+    def _fill_args(self, args: argparse.Namespace):
+        if 'all' in args.variants:
+            variant_names = LIBRARY_SPECS.keys()
+        else:
+            variant_names = set(args.variants)
+        self.variants = [LIBRARY_SPECS[v] for v in sorted(variant_names)]
+
+        self.default_target = self._default_target()
+
+        rev = args.revision
+        self.revision = rev
+        self.source_dir = os.path.abspath(args.source_dir)
+        self.repos_dir = _assign_dir(args.repositories_dir, 'repos', rev)
+        self.build_dir = _assign_dir(args.build_dir, 'build', rev)
+        self.install_dir = _assign_dir(args.install_dir, 'install', rev)
+        self.package_dir = os.path.abspath(args.package_dir)
         self.checkout_mode = CheckoutMode(args.checkout_mode)
         self.build_mode = BuildMode(args.build_mode)
 
-        is_using_mingw = self.host_toolchain.kind == ToolchainKind.MINGW
-        is_windows = is_using_mingw
-
         copy_runtime = CopyRuntime(args.copy_runtime_dlls)
         self.ask_copy_runtime_dlls = True
-        if is_using_mingw:
+        if self.is_using_mingw:
             self.ask_copy_runtime_dlls = (copy_runtime == CopyRuntime.ASK)
             if not self.ask_copy_runtime_dlls:
                 self._copy_runtime_dlls = (copy_runtime == CopyRuntime.YES)
@@ -316,7 +324,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
             self._copy_runtime_dlls = False
 
         if args.package_format is None:
-            self.package_format = (PackageFormat.ZIP if is_windows else
+            self.package_format = (PackageFormat.ZIP if self.is_windows else
                                    PackageFormat.TGZ)
         else:
             self.package_format = PackageFormat(args.package_format)
@@ -344,9 +352,6 @@ class Config:  # pylint: disable=too-many-instance-attributes
         join = os.path.join
         self.llvm_repo_dir = join(self.repos_dir, 'llvm.git')
         self.newlib_repo_dir = join(self.repos_dir, 'newlib.git')
-        is_using_mingw = self.host_toolchain.kind == ToolchainKind.MINGW
-        self.is_cross_compiling = (os.name == 'posix' and is_using_mingw)
-        self.is_windows = is_using_mingw
         self.cmake_generator = 'Ninja' if self.use_ninja else 'Unix Makefiles'
         self.release_mode = self.revision != 'HEAD'
         if self.release_mode:
@@ -358,10 +363,14 @@ class Config:  # pylint: disable=too-many-instance-attributes
             self.version_string = now.strftime('%Y-%m-%d-%H:%M:%S')
         self.skip_reconfigure = self.build_mode == BuildMode.INCREMENTAL
         product_name = 'LLVMEmbeddedToolchainForArm'
-        self.package_base_name = product_name + version_suffix
+        self.bin_package_base_name = product_name + version_suffix
+        self.src_package_base_name = product_name + version_suffix + '-src'
         self.target_llvm_dir = join(
             self.install_dir,
             '{}-{}'.format(product_name, self.revision))
+        self.install_src_subdir = join(
+            self.install_dir,
+            '{}-{}-src'.format(product_name, self.revision))
         if self.is_cross_compiling:
             self.native_llvm_build_dir = join(self.build_dir, 'native-llvm')
             self.native_llvm_dir = join(self.install_dir, 'native-llvm')
@@ -377,5 +386,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, args: argparse.Namespace):
         self._copy_runtime_dlls = None
+        self._configure_actions(args)
+        self._configure_toolchains(args)
         self._fill_args(args)
         self._fill_inferred()
