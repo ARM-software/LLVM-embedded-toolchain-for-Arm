@@ -164,6 +164,7 @@ def parse_args_to_config() -> Config:
                              '  configure - write target configuration files\n'
                              '  package - create binary package\n'
                              '  all - perform all of the above\n'
+                             '  package-src - create source package\n'
                              '  test - run tests\n'
                              'Default: all')
     args = parser.parse_args()
@@ -353,12 +354,17 @@ def main() -> int:
         build_all(cfg)
         run_tests(cfg)
 
-        def do_package():
+        def do_source_package():
             version.poplulate_commits(cfg.repos_dir)
-            package.write_version_file(cfg, version)
-            package.copy_samples(cfg)
-            package.package_toolchain(cfg)
-        run_or_skip(cfg, Action.PACKAGE, do_package, 'packaging')
+            package.create_source_package(cfg, version)
+        run_or_skip(cfg, Action.PACKAGE_SRC, do_source_package,
+                    'source package')
+
+        def do_binary_package():
+            version.poplulate_commits(cfg.repos_dir)
+            package.create_binary_package(cfg, version)
+        run_or_skip(cfg, Action.PACKAGE, do_binary_package, 'binary package')
+
     except util.ToolchainBuildError:
         # By this time the error must have already been logged
         return 1
