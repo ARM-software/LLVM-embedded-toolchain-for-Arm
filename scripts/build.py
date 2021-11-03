@@ -47,8 +47,9 @@ def parse_args_to_config() -> Config:
     )
     parser.add_argument('-v', '--verbose', help='log more information',
                         action='store_true')
-    parser.add_argument('-r', '--revision', metavar='R', default='13.0.0',
-                        help='revision to build (default: 13.0.0)')
+    parser.add_argument('-r', '--revision', metavar='R',
+                        help='revision to build '
+                             '(default: {})'.format(config.DEFAULT_REVISION))
     variant_names = sorted(config.LIBRARY_SPECS.keys())
     parser.add_argument('--variants', metavar='VAR', nargs='+',
                         choices=variant_names + ['all'], default=['all'],
@@ -176,6 +177,7 @@ def prepare_repositories(cfg: config.Config,
     """Prepare source repositories according to the selected --checkout-mode
        option and the current state of repositories.
     """
+    assert not cfg.is_source_package
     patches_dir = os.path.join(cfg.source_dir, 'patches')
 
     # Determine which git action to perform
@@ -330,13 +332,15 @@ def ask_about_runtime_dlls(cfg: Config) -> Optional[bool]:
 def main() -> int:
     util.configure_logging()
     cfg = parse_args_to_config()
-    versions = repos.get_all_versions(os.path.join(cfg.source_dir,
-                                                   'versions.yml'))
-    if cfg.revision not in versions:
-        logging.error('Invalid revision %s', cfg.revision)
-        return 1
-
-    version = versions[cfg.revision]
+    if cfg.is_source_package:
+        version = None
+    else:
+        versions = repos.get_all_versions(os.path.join(cfg.source_dir,
+                                                       'versions.yml'))
+        if cfg.revision not in versions:
+            logging.error('Invalid revision %s', cfg.revision)
+            return 1
+        version = versions[cfg.revision]
 
     try:
         if (cfg.host_toolchain.kind == config.ToolchainKind.MINGW
@@ -348,8 +352,11 @@ def main() -> int:
 
         if not cfg.skip_checks:
             check.check_prerequisites(cfg)
-        run_or_skip(cfg, Action.PREPARE,
-                    lambda: prepare_repositories(cfg, version),
+
+        def do_prepare_repositories():
+            assert version is not None
+            prepare_repositories(cfg, version)
+        run_or_skip(cfg, Action.PREPARE, do_prepare_repositories,
                     'source code checkout')
         build_all(cfg)
         run_tests(cfg)
@@ -361,7 +368,8 @@ def main() -> int:
                     'source package')
 
         def do_binary_package():
-            version.poplulate_commits(cfg.repos_dir)
+            if version is not None:
+                version.poplulate_commits(cfg.repos_dir)
             package.create_binary_package(cfg, version)
         run_or_skip(cfg, Action.PACKAGE, do_binary_package, 'binary package')
 

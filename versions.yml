@@ -15,44 +15,47 @@
 # limitations under the License.
 #
 
-- Revision: "13.0.0"
-  Modules:
-    - Name: llvm.git
-      FriendlyName: LLVM
-      URL:  https://github.com/llvm/llvm-project.git
-      Revision: llvmorg-13.0.0
-      Patch: llvm-13.patch
-    - Name: newlib.git
-      FriendlyName: Newlib
-      URL:  https://github.com/mirror/newlib-cygwin.git
-      Revision: newlib-4.1.0
-      Patch: newlib-4.1.0-llvm-13.patch
+---
+SourceType: "standalone-build-scripts"
+Revisions:
+  - Revision: "13.0.0"
+    Modules:
+      - Name: llvm.git
+        FriendlyName: LLVM
+        URL:  https://github.com/llvm/llvm-project.git
+        Revision: llvmorg-13.0.0
+        Patch: llvm-13.patch
+      - Name: newlib.git
+        FriendlyName: Newlib
+        URL:  https://github.com/mirror/newlib-cygwin.git
+        Revision: newlib-4.1.0
+        Patch: newlib-4.1.0-llvm-13.patch
 
-- Revision: branch-13
-  Modules:
-    - Name: llvm.git
-      FriendlyName: LLVM
-      URL:  https://github.com/llvm/llvm-project.git
-      Branch: release/13.x
-      Revision: HEAD
-      Patch: llvm-13.patch
-    - Name: newlib.git
-      FriendlyName: Newlib
-      URL:  https://github.com/mirror/newlib-cygwin.git
-      Revision: newlib-4.1.0
-      Patch: newlib-4.1.0-llvm-13.patch
+  - Revision: branch-13
+    Modules:
+      - Name: llvm.git
+        FriendlyName: LLVM
+        URL:  https://github.com/llvm/llvm-project.git
+        Branch: release/13.x
+        Revision: HEAD
+        Patch: llvm-13.patch
+      - Name: newlib.git
+        FriendlyName: Newlib
+        URL:  https://github.com/mirror/newlib-cygwin.git
+        Revision: newlib-4.1.0
+        Patch: newlib-4.1.0-llvm-13.patch
 
-- Revision: HEAD
-  Modules:
-    - Name: llvm.git
-      FriendlyName: LLVM
-      URL:  https://github.com/llvm/llvm-project.git
-      Branch: main
-      Revision: HEAD
-      Patch: llvm-HEAD.patch
-    - Name: newlib.git
-      FriendlyName: Newlib
-      URL:  https://github.com/mirror/newlib-cygwin.git
-      Branch: master
-      Revision: HEAD
-      Patch: newlib-HEAD.patch
+  - Revision: HEAD
+    Modules:
+      - Name: llvm.git
+        FriendlyName: LLVM
+        URL:  https://github.com/llvm/llvm-project.git
+        Branch: main
+        Revision: HEAD
+        Patch: llvm-HEAD.patch
+      - Name: newlib.git
+        FriendlyName: Newlib
+        URL:  https://github.com/mirror/newlib-cygwin.git
+        Branch: master
+        Revision: HEAD
+        Patch: newlib-HEAD.patch
