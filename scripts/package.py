@@ -16,7 +16,7 @@
 import logging
 import os
 import shutil
-from typing import FrozenSet
+from typing import FrozenSet, Optional
 import tarfile
 import zipfile
 
@@ -30,15 +30,27 @@ def _write_version_file(cfg: config.Config, version: repos.LLVMBMTC,
                         target_dir: str) -> None:
     """Create VERSION.txt in the install directory."""
     dest = os.path.join(target_dir, 'VERSION.txt')
+    toolchain_ver = 'LLVM Embedded Toolchain for Arm ' + cfg.version_string
     if cfg.verbose:
-        logging.info('Writing "%s" to %s', cfg.version_string, dest)
-    lines = [cfg.version_string, '', 'Components:']
+        logging.info('Writing "%s" to %s', toolchain_ver, dest)
+    lines = [toolchain_ver, '', 'Components:']
     for name in sorted(version.modules.keys()):
         comp_info = version.modules[name].checkout_info
         lines.append('* {}'.format(comp_info))
         if cfg.verbose:
             logging.info('Writing component %s info: "%s"', name, comp_info)
     util.write_lines(lines, dest)
+
+
+def _write_versions_yml(cfg: config.Config, dest_dir: str) -> None:
+    """Create versions.yml for a source package."""
+    dest_file = os.path.join(dest_dir, 'versions.yml')
+    logging.info('Creating %s', dest_file)
+    with open(dest_file, 'wt') as out_f:
+        source_type = config.SourceType.SOURCE_PACKAGE.value
+        out_f.write('---\n'
+                    'SourceType: "{}"\n'
+                    'Revision: "{}"\n'.format(source_type, cfg.revision))
 
 
 def _copy_samples(cfg: config.Config) -> None:
@@ -136,9 +148,18 @@ def _create_archive(cfg: config.Config, pkg_src_dir, pkg_dest_name) -> None:
         raise util.ToolchainBuildError from ex
 
 
-def create_binary_package(cfg: config.Config, version: repos.LLVMBMTC) -> None:
+def create_binary_package(cfg: config.Config,
+                          version: Optional[repos.LLVMBMTC]) -> None:
     """Create a binary package with a newly built toolchain."""
-    _write_version_file(cfg, version, cfg.target_llvm_dir)
+    if cfg.is_source_package:
+        ver_file_src = os.path.join(cfg.source_dir, 'VERSION.txt')
+        ver_file_dest = os.path.join(cfg.target_llvm_dir, 'VERSION.txt')
+        logging.info('Copying version file from %s to %s', ver_file_src,
+                     ver_file_dest)
+        shutil.copy2(ver_file_src, ver_file_dest)
+    else:
+        assert version is not None
+        _write_version_file(cfg, version, cfg.target_llvm_dir)
     _copy_samples(cfg)
     _create_archive(cfg, cfg.target_llvm_dir, cfg.bin_package_base_name)
 
@@ -153,4 +174,5 @@ def create_source_package(cfg: config.Config, version: repos.LLVMBMTC) -> None:
     repos.export_toolchain_repositories(cfg.repos_dir, version,
                                         cfg.install_src_subdir)
     _write_version_file(cfg, version, cfg.install_src_subdir)
+    _write_versions_yml(cfg, cfg.install_src_subdir)
     _create_archive(cfg, cfg.install_src_subdir, cfg.src_package_base_name)

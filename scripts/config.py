@@ -21,6 +21,20 @@ import os
 from typing import Optional, Set, TYPE_CHECKING
 
 import execution
+import util
+
+DEFAULT_REVISION = '13.0.0'
+
+
+@enum.unique
+class SourceType(enum.Enum):
+    """Enumeration for the SourceType value in versions.yml:
+       STANDALONE - the source contains just the build scripts, LLVM and newlib
+                    need to be checked out separately
+       SOURCE_PACKAGE - the source contains LLVM and newlib bundled with the
+                        build scripts"""
+    STANDALONE = 'standalone-build-scripts'
+    SOURCE_PACKAGE = 'source-package'
 
 
 @enum.unique
@@ -235,6 +249,11 @@ def _assign_dir(arg, default, rev):
     return os.path.abspath(res)
 
 
+def _warn_source_package_unsupported(feature: str) -> None:
+    logging.warning('%s is not supported when building from '
+                    'source package, ignoring', feature)
+
+
 class Config:  # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-few-public-methods
     """Configuration for the whole build process"""
@@ -257,10 +276,20 @@ class Config:  # pylint: disable=too-many-instance-attributes
             return 'aarch64-none-elf'
         return None
 
+    def _configure_source_type(self, args: argparse.Namespace):
+        self.source_dir = os.path.abspath(args.source_dir)
+        source_yaml = util.read_yaml(os.path.join(self.source_dir,
+                                                  'versions.yml'))
+        self.source_type = SourceType(source_yaml['SourceType'])
+        if self.source_type == SourceType.SOURCE_PACKAGE:
+            self.revision = source_yaml['Revision']
+
     def _configure_actions(self, args: argparse.Namespace):
         if not args.actions or Action.ALL.value in args.actions:
             # Actions that are not part of the "ALL" action:
             exclude_from_all = [Action.ALL, Action.TEST, Action.PACKAGE_SRC]
+            if self.is_source_package:
+                exclude_from_all.append(Action.PREPARE)
             self.actions = set(action for action in Action
                                if action not in exclude_from_all)
             for action in [Action.TEST, Action.PACKAGE_SRC]:
@@ -268,6 +297,13 @@ class Config:  # pylint: disable=too-many-instance-attributes
                     self.actions.add(action)
         else:
             self.actions = set(Action(act_str) for act_str in args.actions)
+
+        if self.is_source_package:
+            for action in [Action.PREPARE, Action.PACKAGE_SRC]:
+                if action.value in args.actions:
+                    _warn_source_package_unsupported(
+                        'action "{}"'.format(action.value))
+                    self.actions.remove(action)
 
     def _configure_toolchains(self, args: argparse.Namespace):
         # According to
@@ -292,18 +328,27 @@ class Config:  # pylint: disable=too-many-instance-attributes
         self.is_cross_compiling = (os.name == 'posix' and self.is_windows)
 
     def _fill_args(self, args: argparse.Namespace):
-        if 'all' in args.variants:
-            variant_names = LIBRARY_SPECS.keys()
-        else:
-            variant_names = set(args.variants)
+        variant_names = (LIBRARY_SPECS.keys() if 'all' in args.variants
+                         else set(args.variants))
         self.variants = [LIBRARY_SPECS[v] for v in sorted(variant_names)]
 
         self.default_target = self._default_target()
 
-        rev = args.revision
-        self.revision = rev
-        self.source_dir = os.path.abspath(args.source_dir)
-        self.repos_dir = _assign_dir(args.repositories_dir, 'repos', rev)
+        if self.is_source_package:
+            # For SOURCE_PACKAGE self.revision is set in _configure_source_type
+            assert self.revision is not None
+            rev = self.revision
+            self.repos_dir = self.source_dir
+            if args.repositories_dir is not None:
+                _warn_source_package_unsupported('--repositories-dir')
+            if args.revision is not None:
+                _warn_source_package_unsupported('--revision')
+        else:
+            rev = (args.revision if args.revision is not None
+                   else DEFAULT_REVISION)
+            self.revision = rev
+            self.repos_dir = _assign_dir(args.repositories_dir, 'repos', rev)
+
         self.build_dir = _assign_dir(args.build_dir, 'build', rev)
         self.install_dir = _assign_dir(args.install_dir, 'install', rev)
         self.package_dir = os.path.abspath(args.package_dir)
@@ -346,6 +391,14 @@ class Config:  # pylint: disable=too-many-instance-attributes
     def copy_runtime_dlls(self, value: bool) -> None:
         self._copy_runtime_dlls = value
 
+    @property
+    def is_source_package(self) -> bool:
+        """True iff building from a bundled source (i.e. build scripts, LLVM
+           and newlib) rather than a repository containing just the build
+           scripts."""
+        assert self.source_type is not None
+        return self.source_type == SourceType.SOURCE_PACKAGE
+
     def _fill_inferred(self):
         """Fill in additional fields that can be inferred from the
            configuration, but are still useful for convenience."""
@@ -386,6 +439,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, args: argparse.Namespace):
         self._copy_runtime_dlls = None
+        self._configure_source_type(args)
         self._configure_actions(args)
         self._configure_toolchains(args)
         self._fill_args(args)

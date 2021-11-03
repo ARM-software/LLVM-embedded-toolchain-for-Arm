@@ -25,7 +25,6 @@ import sys
 from typing import List, Mapping, Optional, Any
 
 import git  # type: ignore
-import yaml
 
 import util
 
@@ -158,17 +157,13 @@ class LLVMBMTC:
 def get_all_versions(filename: str) -> Mapping[str, LLVMBMTC]:
     """Build the database containing all releases from a YAML file."""
     versions = {}
-    with open(filename, 'r') as stream:
-        try:
-            yml = yaml.load(stream, Loader=yaml.FullLoader)
-            for value in yml:
-                toolchain = LLVMBMTC(value)
-                if toolchain.revision in versions:
-                    die('toolchain revision {} previously defined'.format(
-                        toolchain.revision))
-                versions[toolchain.revision] = toolchain
-        except yaml.YAMLError as ex:
-            logging.error(ex)
+    yml = util.read_yaml(filename)
+    for value in yml['Revisions']:
+        toolchain = LLVMBMTC(value)
+        if toolchain.revision in versions:
+            die('toolchain revision {} previously defined'.format(
+                toolchain.revision))
+        versions[toolchain.revision] = toolchain
 
     return versions
 

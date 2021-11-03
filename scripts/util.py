@@ -16,6 +16,8 @@
 import logging
 from typing import Any, Sequence, List
 
+import yaml
+
 
 class ToolchainBuildError(RuntimeError):
     """A single error for all failures related to toolchain build: this
@@ -39,3 +41,13 @@ def configure_logging() -> None:
     """Set logging format and level threshold for the default logger."""
     log_format = '%(levelname)s: %(message)s'
     logging.basicConfig(format=log_format, level=logging.INFO)
+
+
+def read_yaml(path: str) -> Any:
+    """Read a YAML file and return its contents as a Python dict or list."""
+    with open(path, 'rt') as in_f:
+        try:
+            return yaml.load(in_f, Loader=yaml.FullLoader)
+        except yaml.YAMLError as ex:
+            logging.error(ex)
+            raise
