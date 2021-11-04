@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import argparse
-import datetime
 import enum
 import logging
 import os
@@ -406,24 +405,14 @@ class Config:  # pylint: disable=too-many-instance-attributes
         self.llvm_repo_dir = join(self.repos_dir, 'llvm.git')
         self.newlib_repo_dir = join(self.repos_dir, 'newlib.git')
         self.cmake_generator = 'Ninja' if self.use_ninja else 'Unix Makefiles'
-        self.release_mode = self.revision != 'HEAD'
-        if self.release_mode:
-            version_suffix = '-' + self.revision
-            self.version_string = self.revision
-        else:
-            version_suffix = ''
-            now = datetime.datetime.now()
-            self.version_string = now.strftime('%Y-%m-%d-%H:%M:%S')
+        self.version_string = self.revision
         self.skip_reconfigure = self.build_mode == BuildMode.INCREMENTAL
-        product_name = 'LLVMEmbeddedToolchainForArm'
-        self.bin_package_base_name = product_name + version_suffix
-        self.src_package_base_name = product_name + version_suffix + '-src'
-        self.target_llvm_dir = join(
-            self.install_dir,
-            '{}-{}'.format(product_name, self.revision))
-        self.install_src_subdir = join(
-            self.install_dir,
-            '{}-{}-src'.format(product_name, self.revision))
+        bin_name = 'LLVMEmbeddedToolchainForArm-{}'.format(self.revision)
+        src_name = bin_name + '-src'
+        self.bin_package_base_name = bin_name
+        self.src_package_base_name = src_name
+        self.target_llvm_dir = join(self.install_dir, bin_name)
+        self.install_src_subdir = join(self.install_dir, src_name)
         if self.is_cross_compiling:
             self.native_llvm_build_dir = join(self.build_dir, 'native-llvm')
             self.native_llvm_dir = join(self.install_dir, 'native-llvm')
