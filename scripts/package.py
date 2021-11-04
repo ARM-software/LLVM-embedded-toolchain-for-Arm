@@ -53,14 +53,25 @@ def _write_versions_yml(cfg: config.Config, dest_dir: str) -> None:
                     'Revision: "{}"\n'.format(source_type, cfg.revision))
 
 
+def _force_copy(src: str, dest: str, name: str, ignore=None) -> None:
+    """Remove 'dest/name' if it exists and copy 'src/name' to 'dest/name'."""
+    src = os.path.join(src, name)
+    dest = os.path.join(dest, name)
+    logging.info('Copying "%s" to "%s"', src, dest)
+    if os.path.exists(dest):
+        if os.path.isdir(dest):
+            shutil.rmtree(dest)
+        else:
+            os.remove(dest)
+    if os.path.isdir(src):
+        shutil.copytree(src, dest, ignore=ignore)
+    else:
+        shutil.copy2(src, dest)
+
+
 def _copy_samples(cfg: config.Config) -> None:
     """Copy code samples, filter out files that are not usable on the target
        platform."""
-    src = os.path.join(cfg.source_dir, 'samples')
-    dest = os.path.join(cfg.target_llvm_dir, 'samples')
-    if os.path.exists(dest):
-        shutil.rmtree(dest)
-
     if cfg.is_windows:
         # We don't filter out Makefile and Makefile.conf because we support
         # using Windows+MSYS2
@@ -68,8 +79,13 @@ def _copy_samples(cfg: config.Config) -> None:
     else:
         # make.bat is useless on Linux/Mac
         ignore = shutil.ignore_patterns('.gitignore', 'make.bat')
-    logging.info('Copying "%s" to "%s"', src, dest)
-    shutil.copytree(src, dest, ignore=ignore)
+    _force_copy(cfg.source_dir, cfg.target_llvm_dir, 'samples', ignore)
+
+
+def _copy_docs(cfg: config.Config) -> None:
+    """Copy documentation."""
+    _force_copy(cfg.source_dir, cfg.target_llvm_dir, 'docs')
+    _force_copy(cfg.source_dir, cfg.target_llvm_dir, 'README.md')
 
 
 def _get_excluded_symlinks(cfg: config.Config) -> FrozenSet[str]:
@@ -152,15 +168,12 @@ def create_binary_package(cfg: config.Config,
                           version: Optional[repos.LLVMBMTC]) -> None:
     """Create a binary package with a newly built toolchain."""
     if cfg.is_source_package:
-        ver_file_src = os.path.join(cfg.source_dir, 'VERSION.txt')
-        ver_file_dest = os.path.join(cfg.target_llvm_dir, 'VERSION.txt')
-        logging.info('Copying version file from %s to %s', ver_file_src,
-                     ver_file_dest)
-        shutil.copy2(ver_file_src, ver_file_dest)
+        _force_copy(cfg.source_dir, cfg.target_llvm_dir, 'VERSION.txt')
     else:
         assert version is not None
         _write_version_file(cfg, version, cfg.target_llvm_dir)
     _copy_samples(cfg)
+    _copy_docs(cfg)
     _create_archive(cfg, cfg.target_llvm_dir, cfg.bin_package_base_name)
 
 
