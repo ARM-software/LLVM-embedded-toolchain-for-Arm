@@ -286,6 +286,7 @@ class ToolchainBuild:
             'CMAKE_C_COMPILER': join(cfg.native_llvm_bin_dir, 'clang'),
             'CMAKE_C_COMPILER_TARGET': lib_spec.target,
             'CMAKE_C_FLAGS': flags,
+            'CMAKE_ASM_FLAGS': flags,
             'CMAKE_AR': join(cfg.native_llvm_bin_dir, 'llvm-ar'),
             'CMAKE_NM': join(cfg.native_llvm_bin_dir, 'llvm-nm'),
             'CMAKE_RANLIB': join(cfg.native_llvm_bin_dir, 'llvm-ranlib'),
@@ -366,21 +367,10 @@ class ToolchainBuild:
                 logging.info('Renaming %s to %s', src, dest)
             shutil.move(src, dest)
 
-    def _create_dummy_libunwind(self, lib_spec: config.LibrarySpec) -> None:
-        """Create an empty libunwind.a library. It is needed because the Clang
-           driver always adds -lunwind to the linker command line even when
-           "-fno-exceptions" is specified on the command line.
-        """
-        dummy_unwind = os.path.join(self.cfg.target_llvm_rt_dir,
-                                    lib_spec.name, 'lib', 'libunwind.a')
-        logging.info('Creating dummy libunwind for %s', lib_spec.name)
-        self.runner.run([
-            os.path.join(self.cfg.native_llvm_bin_dir, 'llvm-ar'),
-            '-rc', dummy_unwind,
-        ])
-
     def build_cxx_libraries(self, lib_spec: config.LibrarySpec) -> None:
-        """Build and install a single variant of lib++abi and libc++"""
+        """
+        Build and install a single variant of lib++abi, libc++ & libunwind
+        """
         cmake_defs = self._get_common_cmake_defs_for_libs(lib_spec)
         # Disable C++17 aligned allocation feature because its implementation
         # in libc++ relies on posix_memalign() which is not available in our
@@ -393,7 +383,7 @@ class ToolchainBuild:
             'CMAKE_BUILD_TYPE:STRING': 'MinSizeRel',
             'CMAKE_CXX_FLAGS': cxx_flags,
             'CMAKE_INSTALL_PREFIX': install_dir,
-            'LLVM_ENABLE_RUNTIMES': 'libcxxabi;libcxx',
+            'LLVM_ENABLE_RUNTIMES': 'libcxxabi;libcxx;libunwind',
 
             'LIBCXXABI_ENABLE_SHARED:BOOL': 'OFF',
             'LIBCXXABI_ENABLE_STATIC:BOOL': 'ON',
@@ -403,6 +393,7 @@ class ToolchainBuild:
             'LIBCXXABI_USE_COMPILER_RT:BOOL': 'ON',
             'LIBCXXABI_ENABLE_THREADS:BOOL': 'OFF',
             'LIBCXXABI_BAREMETAL:BOOL': 'ON',
+            'LIBCXXABI_USE_LLVM_UNWINDER': 'ON',
             'LIBCXXABI_LIBCXX_INCLUDES:PATH':
                 os.path.join(install_dir, 'include', 'c++', 'v1'),
 
@@ -425,6 +416,13 @@ class ToolchainBuild:
             'LIBCXX_ENABLE_MONOTONIC_CLOCK:BOOL': 'OFF',
             'LIBCXX_INCLUDE_BENCHMARKS:BOOL': 'OFF',
             'LIBCXX_CXX_ABI:STRING': 'libcxxabi',
+
+            'LIBUNWIND_ENABLE_SHARED:BOOL': 'OFF',
+            'LIBUNWIND_ENABLE_STATIC:BOOL': 'ON',
+            'LIBUNWIND_ENABLE_THREADS:BOOL': 'OFF',
+            'LIBUNWIND_USE_COMPILER_RT:BOOL': 'ON',
+            'LIBUNWIND_IS_BAREMETAL:BOOL': 'ON',
+            'LIBUNWIND_REMEMBER_HEAP_ALLOC:BOOL': 'ON',
         })
 
         src_dir = os.path.join(self.cfg.llvm_repo_dir, 'runtimes')
@@ -436,8 +434,6 @@ class ToolchainBuild:
         logging.info('Building and installing %s', full_name)
         self._cmake_build(build_dir)
         self._cmake_build(build_dir, target='install')
-
-        self._create_dummy_libunwind(lib_spec)
 
     def _copy_runtime_to_native(self, lib_spec: config.LibrarySpec) -> None:
         """Copy runtime libraries and headers from target LLVM to
