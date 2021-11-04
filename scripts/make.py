@@ -119,18 +119,6 @@ class ToolchainBuild:
         except subprocess.CalledProcessError as ex:
             raise util.ToolchainBuildError from ex
 
-    def _write_llvm_index(self) -> None:
-        """Record the list of files and links installed by Clang."""
-        flist = []
-        install_dir = self.cfg.target_llvm_dir
-        for root, _, files in os.walk(install_dir):
-            for fname in files:
-                full_path = os.path.abspath(os.path.join(root, fname))
-                if os.path.isfile(full_path) or os.path.islink(full_path):
-                    flist.append(os.path.relpath(full_path, install_dir))
-        util.write_lines(sorted(flist),
-                         os.path.join(self.cfg.build_dir, 'llvm-index.txt'))
-
     def _prepare_build_dir(self, build_dir):
         if (self.cfg.build_mode == config.BuildMode.REBUILD
                 and os.path.exists(build_dir)):
@@ -265,9 +253,6 @@ class ToolchainBuild:
             else:
                 if cfg.verbose:
                     logging.info('Skipping the copying Mingw-w64 runtime DLLs')
-        # Record the list of files and links installed by clang
-        if cfg.release_mode:
-            self._write_llvm_index()
 
     def _get_common_cmake_defs_for_llvm(self) -> Dict[str, str]:
         """Return common CMake definitions used for building LLVM."""
