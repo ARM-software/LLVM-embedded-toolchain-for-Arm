@@ -263,23 +263,21 @@ def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
         logging.info(' - %s: %s @ %s%s', repo_path, module.branch,
                      module.revision,
                      ' (detached)' if module.revision != 'HEAD' else '')
+        refspec = (module.branch if module.revision == 'HEAD'
+                   else module.revision)
+
         repo = git.Repo.clone_from(module.url,
-                                   os.path.join(checkout_path, module.name))
-        if module.revision == 'HEAD':
-            try:
-                repo.git.checkout(module.branch)
-            except git.exc.GitCommandError as ex:  # pylint: disable=no-member
-                die('could not checkout "{}" @ "{}/{}"\n'
-                    'Git command failed with:\n{}'
-                    .format(repo_path, module.branch, module.revision, ex))
-        else:
-            # Detached state
-            try:
-                repo.git.checkout(module.revision)
-            except git.exc.GitCommandError as ex:  # pylint: disable=no-member
-                die('could not checkout "{}" @ "{}".\n'
-                    'Git command failed with:\n{}'
-                    .format(repo_path, module.revision, ex))
+                                   os.path.join(checkout_path, module.name),
+                                   multi_options=[
+                                       "--branch %s" % (refspec),
+                                       "--depth 1"
+                                       ])
+        try:
+            repo.git.checkout(module.revision)
+        except git.exc.GitCommandError as ex:  # pylint: disable=no-member
+            die('could not checkout "{}" @ "{}".\n'
+                'Git command failed with:\n{}'
+                .format(repo_path, refspec, ex))
 
     patch_repositories(checkout_path, tc_version, patches)
 
