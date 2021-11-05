@@ -88,6 +88,68 @@ def _copy_docs(cfg: config.Config) -> None:
     _force_copy(cfg.source_dir, cfg.target_llvm_dir, 'README.md')
 
 
+def _copy_licenses(cfg: config.Config) -> None:
+    """Copy licenses, including third-party licenses; create
+       THIRD-PARTY-LICENSES.txt."""
+    logging.info('Copying license files')
+    _force_copy(cfg.source_dir, cfg.target_llvm_dir, 'LICENSE.txt')
+    # Contents of THIRD-PARTY-LICENSES.txt:
+    tp_lic_lines = [
+        'This product embeds and uses the following pieces of software which '
+        'have',
+        'additional or alternate licenses:',
+    ]
+    tp_license_dir = os.path.join(cfg.target_llvm_dir, 'third-party-licenses')
+    if os.path.exists(tp_license_dir):
+        shutil.rmtree(tp_license_dir)
+    os.makedirs(tp_license_dir)
+
+    def add_license(comp_name, src_path, dest_name):
+        tp_lic_lines.append(' - {}: third-party-licenses/{}'.format(comp_name,
+                            dest_name))
+        dest_path = os.path.join(tp_license_dir, dest_name)
+        if cfg.verbose:
+            logging.info('Copying %s to %s', src_path, dest_path)
+        shutil.copy2(src_path, dest_path)
+
+    llvm_components = [
+        ('LLVM', 'llvm'),
+        ('Clang', 'clang'),
+        ('lld', 'lld'),
+        ('compiler-rt', 'compiler-rt'),
+        ('libc++', 'libcxx'),
+        ('libc++abi', 'libcxxabi'),
+    ]
+    for comp_name, comp_dir in llvm_components:
+        src_path = os.path.join(cfg.llvm_repo_dir, comp_dir, 'LICENSE.TXT')
+        dest_name = '{}-LICENSE.txt'.format(comp_dir.upper())
+        add_license(comp_name, src_path, dest_name)
+
+    newlib_components = [
+        ('newlib', 'COPYING.NEWLIB'),
+        ('libgloss', 'COPYING.LIBGLOSS'),
+    ]
+    for comp_name, lic_name in newlib_components:
+        src_path = os.path.join(cfg.newlib_repo_dir, lic_name)
+        add_license(comp_name, src_path, lic_name)
+
+    tp_lic_lines += [
+        '',
+        'Newlib and libgloss licenses refer to the source files of the '
+        'corresponding',
+        'libraries. To examine the source code please download the source '
+        'package of ',
+        'the LLVM Embedded Toolchain for Arm {} from'.format(cfg.revision),
+        'https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/'
+        'releases.',
+    ]
+
+    tp_lic_file = os.path.join(cfg.target_llvm_dir, 'THIRD-PARTY-LICENSES.txt')
+    if cfg.verbose:
+        logging.info('Creating %s', tp_lic_file)
+    util.write_lines(tp_lic_lines, tp_lic_file)
+
+
 def _get_excluded_symlinks(cfg: config.Config) -> FrozenSet[str]:
     """Get a list of symlinks that should be excluded when symlinks are
        converted to copies (i.e. when targeting Windows or using zip as archive
@@ -174,6 +236,7 @@ def create_binary_package(cfg: config.Config,
         _write_version_file(cfg, version, cfg.target_llvm_dir)
     _copy_samples(cfg)
     _copy_docs(cfg)
+    _copy_licenses(cfg)
     _create_archive(cfg, cfg.target_llvm_dir, cfg.bin_package_base_name)
 
 
