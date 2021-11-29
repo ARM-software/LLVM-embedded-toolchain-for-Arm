@@ -170,6 +170,14 @@ class Toolchain:  # pylint: disable=too-few-public-methods
                         'output'.format(self.c_compiler))
         return result
 
+    def get_version_string(self) -> str:
+        """Returns full version string of the C compiler."""
+        lines = execution.run_stdout([self.c_compiler, '--version'])
+        # Example output:
+        # Ubuntu 20.04 mingw: "x86_64-w64-mingw32-gcc (GCC) 9.3-win32 20200320"
+        # Ubuntu 16.04 mingw: "x86_64-w64-mingw32-gcc (GCC) 5.3.1 20160211"
+        return lines[0].strip()
+
 
 class LibrarySpec:
     """Configuration for a single runtime library variant."""

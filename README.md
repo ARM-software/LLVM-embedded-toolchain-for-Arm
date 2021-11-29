@@ -44,6 +44,17 @@ Component  | Link
 LLVM       | https://github.com/llvm/llvm-project
 newlib     | https://sourceware.org/newlib
 
+### Windows runtime DLLs
+
+On Windows the toolchain also uses several DLLs that are part of the Mingw-w64
+project (based on GCC):
+
+Library             | Project   | Link
+--------------------|-----------|---------------------
+libstdc++-6.dll     | GCC       | https://gcc.gnu.org
+libgcc_s_seh-1.dll  | GCC       | https://gcc.gnu.org
+libwinpthread-1.dll | Mingw-w64 | http://mingw-w64.org
+
 ## License
 
 Content of this repository is licensed under Apache-2.0. See
@@ -62,25 +73,6 @@ The LLVM Embedded Toolchain for Arm has been built and tested on Linux/Ubuntu
 Download a release of the toolchain for your platform from [Github
 releases](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases)
 and extract the archive into an arbitrary directory.
-
-### Downloading runtime libraries (Windows only)
-
-We currently don't ship several Windows DLLs that are part of the GCC and
-Mingw-w64 projects due to licensing considerations.
-
-In order to use the toolchain on Windows you will need to provide the following
-three libraries manually.
-
-Library             | Project   | Link
---------------------|-----------|---------------------
-libstdc++-6.dll     | GCC       | https://gcc.gnu.org
-libgcc_s_seh-1.dll  | GCC       | https://gcc.gnu.org
-libwinpthread-1.dll | Mingw-w64 | http://mingw-w64.org
-
-1. Download the [MinGW-W64 GCC-7.3.0 x86_64-posix-seh](https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/7.3.0/threads-posix/seh/x86_64-7.3.0-release-posix-seh-rt_v5-rev0.7z) release from SourceForge
-2. Extract the archive and copy the three DLLs mentioned above from the
-   `mingw64/bin` directory to the `LLVMEmbeddedToolchainForArm-<revision>/bin`
-   directory
 
 ### Using the toolchain
 
