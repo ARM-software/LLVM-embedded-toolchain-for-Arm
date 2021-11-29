@@ -42,6 +42,18 @@ def _write_version_file(cfg: config.Config, version: repos.LLVMBMTC,
     util.write_lines(lines, dest)
 
 
+def _append_mingw_version_if_included(cfg: config.Config,
+                                      target_dir: str) -> None:
+    """Append MinGW runtime DLLs version to VERSION.txt if the DLLs are
+       included in the package."""
+    if not (cfg.is_using_mingw and cfg.copy_runtime_dlls):
+        return
+    dest = os.path.join(target_dir, 'VERSION.txt')
+    with open(dest, 'a') as out_f:
+        mingw_ver = cfg.host_toolchain.get_version_string()
+        out_f.write('* Mingw-w64 runtime DLLs: {}\n'.format(mingw_ver))
+
+
 def _write_versions_yml(cfg: config.Config, dest_dir: str) -> None:
     """Create versions.yml for a source package."""
     dest_file = os.path.join(dest_dir, 'versions.yml')
@@ -104,6 +116,8 @@ def _copy_licenses(cfg: config.Config) -> None:
         shutil.rmtree(tp_license_dir)
     os.makedirs(tp_license_dir)
 
+    # Add a component with a single license file. The file is renamed to avoid
+    # name clashes.
     def add_license(comp_name, src_path, dest_name):
         tp_lic_lines.append(' - {}: third-party-licenses/{}'.format(comp_name,
                             dest_name))
@@ -111,6 +125,20 @@ def _copy_licenses(cfg: config.Config) -> None:
         if cfg.verbose:
             logging.info('Copying %s to %s', src_path, dest_path)
         shutil.copy2(src_path, dest_path)
+
+    # Add a component with multiple license files.
+    # License files are not renamed.
+    def add_multiple_licenses(comp_name, paths):
+        lic_files = []
+        for src_path in paths:
+            fname = os.path.basename(src_path)
+            dest_path = os.path.join(tp_license_dir, fname)
+            if cfg.verbose:
+                logging.info('Copying %s to %s', src_path, dest_path)
+            shutil.copy2(src_path, dest_path)
+            lic_files.append('third-party-licenses/{}'.format(fname))
+        tp_lic_lines.append(' - {}: {}'.format(comp_name,
+                                               ', '.join(lic_files)))
 
     llvm_components = [
         ('LLVM', 'llvm'),
@@ -125,13 +153,16 @@ def _copy_licenses(cfg: config.Config) -> None:
         dest_name = '{}-LICENSE.txt'.format(comp_dir.upper())
         add_license(comp_name, src_path, dest_name)
 
-    newlib_components = [
-        ('newlib', 'COPYING.NEWLIB'),
-        ('libgloss', 'COPYING.LIBGLOSS'),
-    ]
-    for comp_name, lic_name in newlib_components:
-        src_path = os.path.join(cfg.newlib_repo_dir, lic_name)
-        add_license(comp_name, src_path, lic_name)
+    newlib_lic_names = ['COPYING.NEWLIB', 'COPYING.LIBGLOSS']
+    newlib_lic_files = [os.path.join(cfg.newlib_repo_dir, n)
+                        for n in newlib_lic_names]
+    add_multiple_licenses('Newlib', newlib_lic_files)
+
+    if cfg.is_using_mingw and cfg.copy_runtime_dlls:
+        mingw_lic_path = os.path.join(cfg.source_dir, 'mingw-licenses')
+        mingw_lic_files = [os.path.join(mingw_lic_path, n)
+                           for n in os.listdir(mingw_lic_path)]
+        add_multiple_licenses('MinGW runtime DLLs', mingw_lic_files)
 
     tp_lic_lines += [
         '',
@@ -234,6 +265,7 @@ def create_binary_package(cfg: config.Config,
     else:
         assert version is not None
         _write_version_file(cfg, version, cfg.target_llvm_dir)
+    _append_mingw_version_if_included(cfg, cfg.target_llvm_dir)
     _copy_samples(cfg)
     _copy_docs(cfg)
     _copy_licenses(cfg)
