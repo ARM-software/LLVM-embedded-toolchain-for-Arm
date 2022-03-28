@@ -20,6 +20,7 @@
 import argparse
 import logging
 import os
+import re
 import shutil
 import sys
 from typing import List, Mapping, Optional, Any
@@ -245,6 +246,12 @@ def patch_repositories(checkout_path: str, tc_version: LLVMBMTC,
                 .format(repo_path, patch_file, ex))
 
 
+def is_hash_like(refspec: str) -> bool:
+    """Return true if refspec looks like a commit hash rather than a
+       branch/tag. Does not work for abbreviated hashes."""
+    return re.match('[0-9a-f]{20}', refspec) is not None
+
+
 def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
                        patches: str) -> None:
     """Checkout each git repository for tc_version in the directory
@@ -260,24 +267,30 @@ def clone_repositories(checkout_path: str, tc_version: LLVMBMTC,
 
     logging.info('Clone (%s @ %s):', checkout_path, tc_version.revision)
     for repo_path, module in tc_version.modules.items():
-        logging.info(' - %s: %s @ %s%s', repo_path, module.branch,
+        logging.info(' - %s: %s @ %s%s', repo_path,
+                     module.branch if module.branch else '(no branch)',
                      module.revision,
                      ' (detached)' if module.revision != 'HEAD' else '')
         refspec = (module.branch if module.revision == 'HEAD'
                    else module.revision)
+        assert refspec is not None
 
-        repo = git.Repo.clone_from(module.url,
-                                   os.path.join(checkout_path, module.name),
-                                   multi_options=[
-                                       "--branch %s" % (refspec),
-                                       "--depth 1"
-                                       ])
-        try:
+        if is_hash_like(refspec):
+            # Git cannot perfom a shallow clone from a commit hash. Run full
+            # clone and then checkout.
+            repo = git.Repo.clone_from(module.url,
+                                       os.path.join(checkout_path,
+                                                    module.name))
             repo.git.checkout(module.revision)
-        except git.exc.GitCommandError as ex:  # pylint: disable=no-member
-            die('could not checkout "{}" @ "{}".\n'
-                'Git command failed with:\n{}'
-                .format(repo_path, refspec, ex))
+        else:
+            # If refspec is a branch or a tag, use shallow clone
+            repo = git.Repo.clone_from(module.url,
+                                       os.path.join(checkout_path,
+                                                    module.name),
+                                       multi_options=[
+                                           "--branch %s" % (refspec),
+                                           "--depth 1"
+                                       ])
 
     patch_repositories(checkout_path, tc_version, patches)
 
