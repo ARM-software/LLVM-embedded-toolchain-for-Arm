@@ -50,12 +50,10 @@ Revisions:
       - Name: llvm.git
         FriendlyName: LLVM
         URL:  https://github.com/llvm/llvm-project.git
-        Branch: main
-        Revision: HEAD
+        Revision: 496ccb543e21de1bbce0a7fba08ec712619034e6
         Patch: llvm-HEAD.patch
       - Name: newlib.git
         FriendlyName: Newlib
         URL:  https://github.com/mirror/newlib-cygwin.git
-        Branch: master
-        Revision: HEAD
+        Revision: 5badb8aa0a6a1a79504dc0cd4ee40df1f173060c
         Patch: newlib-HEAD.patch
