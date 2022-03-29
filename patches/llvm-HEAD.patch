@@ -1,5 +1,33 @@
+diff --git a/libcxx/include/atomic b/libcxx/include/atomic
+index cfd0e1d054a8..6e2d464638f3 100644
+--- a/libcxx/include/atomic
++++ b/libcxx/include/atomic
+@@ -7,6 +7,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// Modifications copyright (C) 2022 Arm Limited (or its affiliates).
++// All rights reserved.
++
+ #ifndef _LIBCPP_ATOMIC
+ #define _LIBCPP_ATOMIC
+ 
+@@ -2691,10 +2694,13 @@ typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, char>::typ
+ typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned char>::type      __libcpp_unsigned_lock_free;
+ #else
+     // No signed/unsigned lock-free types
++#define _LIBCPP_NO_LOCK_FREE_TYPES
+ #endif
+ 
++#if !defined(_LIBCPP_NO_LOCK_FREE_TYPES)
+ typedef atomic<__libcpp_signed_lock_free> atomic_signed_lock_free;
+ typedef atomic<__libcpp_unsigned_lock_free> atomic_unsigned_lock_free;
++#endif
+ 
+ #define ATOMIC_FLAG_INIT {false}
+ #define ATOMIC_VAR_INIT(__v) {__v}
 diff --git a/libcxx/include/cmath b/libcxx/include/cmath
-index 0a7ff083eb62..5644467e5dc9 100644
+index 3a7985f7d454..0cfaec5693dc 100644
 --- a/libcxx/include/cmath
 +++ b/libcxx/include/cmath
 @@ -7,6 +7,9 @@
@@ -34,7 +62,7 @@ index 0a7ff083eb62..5644467e5dc9 100644
  #endif // _LIBCPP_STD_VER > 17
  
 diff --git a/libcxx/include/math.h b/libcxx/include/math.h
-index 8cbbc54a623f..e65592e076a8 100644
+index 850cdcfb32f6..9774196a2da7 100644
 --- a/libcxx/include/math.h
 +++ b/libcxx/include/math.h
 @@ -7,6 +7,9 @@
