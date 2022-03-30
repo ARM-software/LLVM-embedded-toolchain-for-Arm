@@ -48,26 +48,28 @@ def write_cfg_files(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
         lib_spec.flags,
         '-fuse-ld=lld',
         '-fno-exceptions -fno-rtti',
-        '--sysroot $@/../lib/clang-runtimes/{}'.format(lib_spec.name)
+        '--sysroot <CFGDIR>/../lib/clang-runtimes/{}'.format(lib_spec.name)
     ]
 
     # No semihosting and no linker script
     nosys_lines = base_cfg_lines + [
-        '$@/../lib/clang-runtimes/{}/lib/crt0.o'.format(lib_spec.name),
+        '<CFGDIR>/../lib/clang-runtimes/{}/lib/crt0.o'.format(lib_spec.name),
         '-lnosys',
     ]
     # Semihosting and linker script provided
     rdimon_lines = base_cfg_lines + [
-        '-Wl,-T$@/../lib/clang-runtimes/{}/{}'.format(
+        '-Wl,-T<CFGDIR>/../lib/clang-runtimes/{}/{}'.format(
             lib_spec.name,
             _get_base_ld_name(lib_spec)),
-        '$@/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(lib_spec.name),
+        '<CFGDIR>/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(
+            lib_spec.name),
         '-lrdimon',
     ]
     # Semihosting, but no linker script, e.g. to use with QEMU Arm System
     # emulator
     rdimon_baremetal_lines = base_cfg_lines + [
-        '$@/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(lib_spec.name),
+        '<CFGDIR>/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(
+            lib_spec.name),
         '-lrdimon',
     ]
 
