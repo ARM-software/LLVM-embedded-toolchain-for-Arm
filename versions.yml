@@ -50,7 +50,7 @@ Revisions:
       - Name: llvm.git
         FriendlyName: LLVM
         URL:  https://github.com/llvm/llvm-project.git
-        Revision: 004ebe22f857aedb1cceb3097db95bdab28d3fba
+        Revision: d5ab243c6f79f881121a80487f0879d2ab0acc41
         Patch: llvm-HEAD.patch
       - Name: newlib.git
         FriendlyName: Newlib
