@@ -1,5 +1,5 @@
 diff --git a/libcxx/include/atomic b/libcxx/include/atomic
-index cfd0e1d054a8..6e2d464638f3 100644
+index 4b60d4d6802b..38041243c288 100644
 --- a/libcxx/include/atomic
 +++ b/libcxx/include/atomic
 @@ -7,6 +7,9 @@
@@ -27,7 +27,7 @@ index cfd0e1d054a8..6e2d464638f3 100644
  #define ATOMIC_FLAG_INIT {false}
  #define ATOMIC_VAR_INIT(__v) {__v}
 diff --git a/libcxx/include/cmath b/libcxx/include/cmath
-index 3a7985f7d454..0cfaec5693dc 100644
+index d8fb0c0d759a..a36d2f499622 100644
 --- a/libcxx/include/cmath
 +++ b/libcxx/include/cmath
 @@ -7,6 +7,9 @@
@@ -59,8 +59,8 @@ index 3a7985f7d454..0cfaec5693dc 100644
  lerp(long double __a, long double __b, long double __t) _NOEXCEPT { return __lerp(__a, __b, __t); }
 +#endif
  
- #endif // _LIBCPP_STD_VER > 17
- 
+ template <class _A1, class _A2, class _A3>
+ inline _LIBCPP_HIDE_FROM_ABI
 diff --git a/libcxx/include/math.h b/libcxx/include/math.h
 index 850cdcfb32f6..9774196a2da7 100644
 --- a/libcxx/include/math.h
