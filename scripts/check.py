@@ -96,11 +96,9 @@ def _parse_clang_version(c_compiler: str) -> Optional[Version]:
     # Ubuntu 16.04: clang version 3.8.0-2ubuntu4 (tags/RELEASE_380/final)
     # Debian testing (bullseye): Debian clang version 11.0.1-2
     # Built from source: clang version 9.0.1
+    # llvm.org: Ubuntu clang version 13.0.1-++20220120110[...]
     # Remove distribution suffix (if any) and convert to a tuple
-    assert ver_line.startswith('clang version ') \
-        or ver_line.startswith('Debian clang version') \
-        or ver_line.startswith('Apple clang version')
-    ver_match = re.search(r'version ([0-9.]+)', ver_line)
+    ver_match = re.search(r'clang version ([0-9.]+)', ver_line)
     assert ver_match is not None
     return _str_to_ver(ver_match.group(1))
 
