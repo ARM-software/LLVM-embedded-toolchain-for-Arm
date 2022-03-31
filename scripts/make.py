@@ -281,10 +281,6 @@ class ToolchainBuild:
                                                lib_spec.name)))
         defs = {
             'CMAKE_TRY_COMPILE_TARGET_TYPE': 'STATIC_LIBRARY',
-            # Set the cmake system name to Generic so that no host system
-            # include files are searched. At least on OSX this problem
-            # occurs.
-            'CMAKE_SYSTEM_NAME': 'Generic',
             'CMAKE_C_COMPILER': join(cfg.native_llvm_bin_dir, 'clang'),
             'CMAKE_C_COMPILER_TARGET': lib_spec.target,
             'CMAKE_C_FLAGS': flags,
@@ -309,6 +305,10 @@ class ToolchainBuild:
         rt_install_dir = join(cfg.target_llvm_rt_dir, lib_spec.name)
         cmake_defs = self._get_common_cmake_defs_for_libs(lib_spec)
         cmake_defs.update({
+            # Set the cmake system name to Generic so that no host system
+            # include files are searched. At least on OSX this problem
+            # occurs.
+            'CMAKE_SYSTEM_NAME': 'Generic',
             'CMAKE_BUILD_TYPE:STRING': 'Release',
             'CMAKE_ASM_COMPILER_TARGET': lib_spec.target,
             'CMAKE_ASM_FLAGS': cmake_defs.get('CMAKE_C_FLAGS', ''),
@@ -379,27 +379,20 @@ class ToolchainBuild:
 
     def build_cxx_libraries(self, lib_spec: config.LibrarySpec) -> None:
         """Build and install a single variant of lib++abi and libc++"""
-
-        def updated_dict(dict1, dict2):
-            result = dict1.copy()
-            result.update(dict2)
-            return result
-
-        cmake_common_defs = self._get_common_cmake_defs_for_libs(lib_spec)
+        cmake_defs = self._get_common_cmake_defs_for_libs(lib_spec)
         # Disable C++17 aligned allocation feature because its implementation
         # in libc++ relies on posix_memalign() which is not available in our
         # newlib build
-        cxx_flags = (cmake_common_defs.get('CMAKE_CXX_FLAGS', '')
+        cxx_flags = (cmake_defs.get('CMAKE_CXX_FLAGS', '')
                      + ' -D_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION')
         install_dir = os.path.join(self.cfg.target_llvm_rt_dir,
                                    lib_spec.name)
-        cmake_common_defs.update({
+        cmake_defs.update({
             'CMAKE_BUILD_TYPE:STRING': 'MinSizeRel',
             'CMAKE_CXX_FLAGS': cxx_flags,
             'CMAKE_INSTALL_PREFIX': install_dir,
-        })
+            'LLVM_ENABLE_RUNTIMES': 'libcxxabi;libcxx',
 
-        cmake_libcxxabi_defs = {
             'LIBCXXABI_ENABLE_SHARED:BOOL': 'OFF',
             'LIBCXXABI_ENABLE_STATIC:BOOL': 'ON',
             'LIBCXXABI_ENABLE_EXCEPTIONS:BOOL': 'OFF',
@@ -410,9 +403,7 @@ class ToolchainBuild:
             'LIBCXXABI_BAREMETAL:BOOL': 'ON',
             'LIBCXXABI_LIBCXX_INCLUDES:PATH':
                 os.path.join(install_dir, 'include', 'c++', 'v1'),
-        }
 
-        cmake_libcxx_defs = {
             # libc++ CMake files incorrectly detect that the "-GR-" flag
             # (the clang-cl analog of -fno-rtti) is supported. Manually mark it
             # as unsupported to avoid warnings.
@@ -431,29 +422,17 @@ class ToolchainBuild:
             'LIBCXX_ENABLE_MONOTONIC_CLOCK:BOOL': 'OFF',
             'LIBCXX_INCLUDE_BENCHMARKS:BOOL': 'OFF',
             'LIBCXX_CXX_ABI:STRING': 'libcxxabi',
-        }
+        })
 
-        libs = [
-            ('libc++', 'libcxx', cmake_libcxx_defs),
-            ('libc++abi', 'libcxxabi', cmake_libcxxabi_defs),
-        ]
+        src_dir = os.path.join(self.cfg.llvm_repo_dir, 'runtimes')
+        build_dir = os.path.join(self.cfg.build_dir, 'cxx', lib_spec.name)
+        self._prepare_build_dir(build_dir)
 
-        for lib_pretty_name, lib_name, cmake_defs in libs:
-            self.runner.reset_cwd()
-            build_dir = os.path.join(self.cfg.build_dir, lib_name,
-                                     lib_spec.name)
-            self._prepare_build_dir(build_dir)
-
-            full_name = '{} for {}'.format(lib_pretty_name, lib_spec.name)
-            self._cmake_configure(full_name,
-                                  os.path.join(self.cfg.llvm_repo_dir,
-                                               lib_name),
-                                  build_dir,
-                                  updated_dict(cmake_common_defs,
-                                               cmake_defs))
-            logging.info('Building and installing %s', full_name)
-            self._cmake_build(build_dir)
-            self._cmake_build(build_dir, target='install')
+        full_name = 'C++ runtime libraries for {}'.format(lib_spec.name)
+        self._cmake_configure(full_name, src_dir, build_dir, cmake_defs)
+        logging.info('Building and installing %s', full_name)
+        self._cmake_build(build_dir)
+        self._cmake_build(build_dir, target='install')
 
         self._create_dummy_libunwind(lib_spec)
 
