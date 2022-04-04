@@ -217,6 +217,8 @@ class ToolchainBuild:
             'CMAKE_INSTALL_PREFIX:STRING': cfg.target_llvm_dir,
             'LLVM_ENABLE_PROJECTS:STRING': ';'.join(projects),
             'LLVM_DISTRIBUTION_COMPONENTS:STRING': ';'.join(dist_comps),
+            'BUG_REPORT_URL': 'https://github.com/ARM-software/'
+                              'LLVM-embedded-toolchain-for-Arm/issues',
         })
         if cfg.is_cross_compiling:
             native_tools_dir = join(cfg.native_llvm_build_dir, 'bin')
