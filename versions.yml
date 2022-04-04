@@ -18,32 +18,32 @@
 ---
 SourceType: "standalone-build-scripts"
 Revisions:
-  - Revision: "13.0.0"
+  - Revision: "14.0.0"
     Modules:
       - Name: llvm.git
         FriendlyName: LLVM
         URL:  https://github.com/llvm/llvm-project.git
-        Revision: llvmorg-13.0.0
-        Patch: llvm-13.patch
+        Revision: llvmorg-14.0.0
+        Patch: llvm-14.patch
       - Name: newlib.git
         FriendlyName: Newlib
         URL:  https://github.com/mirror/newlib-cygwin.git
         Revision: newlib-4.1.0
-        Patch: newlib-4.1.0-llvm-13.patch
+        Patch: newlib-4.1.0-llvm-14.patch
 
-  - Revision: branch-13
+  - Revision: branch-14
     Modules:
       - Name: llvm.git
         FriendlyName: LLVM
         URL:  https://github.com/llvm/llvm-project.git
-        Branch: release/13.x
+        Branch: release/14.x
         Revision: HEAD
-        Patch: llvm-13.patch
+        Patch: llvm-14.patch
       - Name: newlib.git
         FriendlyName: Newlib
         URL:  https://github.com/mirror/newlib-cygwin.git
         Revision: newlib-4.1.0
-        Patch: newlib-4.1.0-llvm-13.patch
+        Patch: newlib-4.1.0-llvm-14.patch
 
   - Revision: HEAD
     Modules:
