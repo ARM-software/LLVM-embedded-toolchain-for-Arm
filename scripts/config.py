@@ -22,7 +22,7 @@ from typing import Optional, Set, TYPE_CHECKING
 import execution
 import util
 
-DEFAULT_REVISION = '13.0.0'
+DEFAULT_REVISION = '14.0.0'
 
 
 @enum.unique

@@ -1,55 +1,5 @@
-diff --git a/clang/lib/Driver/ToolChains/BareMetal.cpp b/clang/lib/Driver/ToolChains/BareMetal.cpp
-index ce73e39d1456..851d48383f4e 100644
---- a/clang/lib/Driver/ToolChains/BareMetal.cpp
-+++ b/clang/lib/Driver/ToolChains/BareMetal.cpp
-@@ -6,6 +6,9 @@
- //
- //===----------------------------------------------------------------------===//
- 
-+// Modifications copyright (C) 2021 Arm Limited (or its affiliates).
-+// All rights reserved.
-+
- #include "BareMetal.h"
- 
- #include "CommonArgs.h"
-@@ -125,6 +128,25 @@ static bool isARMBareMetal(const llvm::Triple &Triple) {
-   return true;
- }
- 
-+/// Is the triple aarch64-none-elf or aarch64-none-eabi?
-+static bool isAArch64BareMetal(const llvm::Triple &Triple) {
-+  // This driver supports triple aarch64-none-elf
-+  if (Triple.getArch() != llvm::Triple::aarch64)
-+    return false;
-+
-+  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
-+    return false;
-+
-+  if (Triple.getOS() != llvm::Triple::UnknownOS)
-+    return false;
-+
-+  if (Triple.getObjectFormat() != llvm::Triple::ELF)
-+    return false;
-+
-+  return true;
-+}
-+
-+
- static bool isRISCVBareMetal(const llvm::Triple &Triple) {
-   if (Triple.getArch() != llvm::Triple::riscv32 &&
-       Triple.getArch() != llvm::Triple::riscv64)
-@@ -151,7 +173,8 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
- }
- 
- bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
--  return isARMBareMetal(Triple) || isRISCVBareMetal(Triple);
-+  return isARMBareMetal(Triple) || isAArch64BareMetal(Triple) ||
-+	 isRISCVBareMetal(Triple);
- }
- 
- Tool *BareMetal::buildLinker() const {
 diff --git a/libcxx/include/cmath b/libcxx/include/cmath
-index adf83c2b0a7b..420cc4052715 100644
+index 8bd55542ed92..e49a5b7b8f1a 100644
 --- a/libcxx/include/cmath
 +++ b/libcxx/include/cmath
 @@ -7,6 +7,9 @@
@@ -81,10 +31,10 @@ index adf83c2b0a7b..420cc4052715 100644
  lerp(long double __a, long double __b, long double __t) _NOEXCEPT { return __lerp(__a, __b, __t); }
 +#endif
  
- #endif // _LIBCPP_STD_VER > 17
- 
+ template <class _A1, class _A2, class _A3>
+ inline _LIBCPP_HIDE_FROM_ABI
 diff --git a/libcxx/include/math.h b/libcxx/include/math.h
-index 77762d554512..92291fd28710 100644
+index e59ac6be11bf..622fb96472d6 100644
 --- a/libcxx/include/math.h
 +++ b/libcxx/include/math.h
 @@ -7,6 +7,9 @@
@@ -406,7 +356,7 @@ index 77762d554512..92291fd28710 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_INLINE_VISIBILITY
-@@ -1198,7 +1258,9 @@ typename std::_EnableIf
+@@ -1198,7 +1258,9 @@ typename std::__enable_if_t
  // erf
  
  inline _LIBCPP_INLINE_VISIBILITY float       erf(float __lcpp_x) _NOEXCEPT       {return ::erff(__lcpp_x);}
@@ -667,79 +617,3 @@ index 77762d554512..92291fd28710 100644
  
  template <class _A1>
  inline _LIBCPP_INLINE_VISIBILITY
-diff --git a/llvm/lib/Support/CommandLine.cpp b/llvm/lib/Support/CommandLine.cpp
-index 4ae3ad4c2453..b2b6d93561fd 100644
---- a/llvm/lib/Support/CommandLine.cpp
-+++ b/llvm/lib/Support/CommandLine.cpp
-@@ -15,6 +15,9 @@
- //
- //===----------------------------------------------------------------------===//
- 
-+// Modifications copyright (C) 2021 Arm Limited (or its affiliates).
-+// All rights reserved.
-+
- #include "llvm/Support/CommandLine.h"
- 
- #include "DebugOptions.h"
-@@ -1112,12 +1115,57 @@ static llvm::Error ExpandResponseFile(
-   if (!RelativeNames)
-     return Error::success();
-   llvm::StringRef BasePath = llvm::sys::path::parent_path(FName);
--  // If names of nested response files should be resolved relative to including
--  // file, replace the included response file names with their full paths
--  // obtained by required resolution.
-+
-+  // There is some semantics to the config file syntax.
-+  // TODO: think about the syntax a bit, currently it's rather crude.
-   for (auto &Arg : NewArgv) {
-+    if (!Arg)
-+      continue;
-+
-+    // Recognize variables when they start with $
-+    // The special variable $@ expands to the current path
-+    // To get a literal $, use $$
-+    StringRef Val(Arg);
-+    StringRef::size_type Pos = Val.find('$');
-+    if (Pos != StringRef::npos) {
-+      SmallString<128> ExpandedVar;
-+      size_t from = 0;
-+
-+      do {
-+        //copy until variable
-+        ExpandedVar.append(Val.substr(from, Pos));
-+
-+        // handle variable
-+        Pos++;
-+        switch (Val[Pos]) {
-+        case '$':
-+          ExpandedVar.append(1, '$');
-+          break;
-+        case '@':
-+          ExpandedVar.append(llvm::sys::path::parent_path(FName));
-+          break;
-+        default:
-+          // TODO: emit diagnostic
-+          assert(!"unknown variable in config file");
-+          break;
-+        }
-+        Pos++;
-+
-+        //continue the search
-+        from = Pos;
-+        Pos = Val.find('$', from);
-+      } while (Pos != StringRef::npos);
-+
-+      //copy the rest of the argument over
-+      ExpandedVar.append(Val.substr(from));
-+      Arg = Saver.save(ExpandedVar.c_str()).data();
-+    }
-+    // If names of nested response files should be resolved relative to including
-+    // file, replace the included response file names with their full paths
-+    // obtained by required resolution.
-+
-     // Skip non-rsp file arguments.
--    if (!Arg || Arg[0] != '@')
-+    if (Arg[0] != '@')
-       continue;
- 
-     StringRef FileName(Arg + 1);
