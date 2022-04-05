@@ -55,5 +55,5 @@ Revisions:
       - Name: newlib.git
         FriendlyName: Newlib
         URL:  https://github.com/mirror/newlib-cygwin.git
-        Revision: 5badb8aa0a6a1a79504dc0cd4ee40df1f173060c
+        Revision: 8c57b8b2b4c4f82e8cca6c4c6d8ac8a1c05fe8a9
         Patch: newlib-HEAD.patch
