@@ -514,12 +514,16 @@ class ToolchainBuild:
         # call to _init in __libc_init_array (the _init function was used in an
         # old initialization mechanism, and in the LLVM toolchain it is not
         # defined)
+        # Commit 437c5c5085ff30b4a4960b2b53d06728c788361d (introduced during
+        # newlib 4.2.0 development stage) renamed HAVE_INIT_FINI to
+        # _HAVE_INIT_FINI, so we need to undefine both.
         config_env = {
             'CC_FOR_TARGET': compiler_str('clang', cfg),
             'CXX_FOR_TARGET': compiler_str('clang++', cfg),
             'CFLAGS_FOR_TARGET': lib_spec.flags +
             ' -D__USES_INITFINI__' +
             ' -UHAVE_INIT_FINI' +
+            ' -U_HAVE_INIT_FINI' +
             ' --sysroot {}'.format(
                 join(cfg.target_llvm_rt_dir,
                      lib_spec.name,
