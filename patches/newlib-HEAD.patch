@@ -1,7 +1,29 @@
+diff --git a/libgloss/aarch64/crt0.S b/libgloss/aarch64/crt0.S
+index f831be12e..e3f45c95e 100644
+--- a/libgloss/aarch64/crt0.S
++++ b/libgloss/aarch64/crt0.S
+@@ -36,7 +36,7 @@
+ #error __USER_LABEL_PREFIX is not defined
+ #endif
+ 
+-#ifdef HAVE_INITFINI_ARRAY
++#ifdef _HAVE_INITFINI_ARRAY
+ #define _init	__libc_init_array
+ #define _fini	__libc_fini_array
+ #endif
 diff --git a/libgloss/arm/crt0.S b/libgloss/arm/crt0.S
-index 8490bde2f..8b85b28f4 100644
+index 8490bde2f..8826d4916 100644
 --- a/libgloss/arm/crt0.S
 +++ b/libgloss/arm/crt0.S
+@@ -12,7 +12,7 @@
+ #error __USER_LABEL_PREFIX is not defined
+ #endif
+ 
+-#ifdef HAVE_INITFINI_ARRAY
++#ifdef _HAVE_INITFINI_ARRAY
+ #define _init	__libc_init_array
+ #define _fini	__libc_fini_array
+ #endif
 @@ -565,7 +565,7 @@ change_back:
  
  	/* For Thumb, constants must be after the code since only 
@@ -68,10 +90,10 @@ index 845ad0173..2056c2adf 100644
          .global __rt_stkovf_split_small
  
 diff --git a/libgloss/libnosys/configure b/libgloss/libnosys/configure
-index fe8244703..53585e19b 100755
+index 72c65a68c..474b486f9 100755
 --- a/libgloss/libnosys/configure
 +++ b/libgloss/libnosys/configure
-@@ -2081,7 +2081,7 @@ $as_echo "#define MISSING_SYSCALL_NAMES 1" >>confdefs.h
+@@ -2071,7 +2071,7 @@ $as_echo "#define MISSING_SYSCALL_NAMES 1" >>confdefs.h
  esac
  
  case "${target}" in
@@ -210,7 +232,7 @@ index d64fc09b1..1b6f07562 100644
  .Ltail:
  	/* Work out exactly where the string ends.  */
 diff --git a/newlib/libc/sys/arm/crt0.S b/newlib/libc/sys/arm/crt0.S
-index 5e677a23c..6faf74096 100644
+index 6b01d8a88..f7f8ecc78 100644
 --- a/newlib/libc/sys/arm/crt0.S
 +++ b/newlib/libc/sys/arm/crt0.S
 @@ -556,7 +556,7 @@ change_back:
