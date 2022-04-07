@@ -1,29 +1,7 @@
-diff --git a/libgloss/aarch64/crt0.S b/libgloss/aarch64/crt0.S
-index f831be12e..e3f45c95e 100644
---- a/libgloss/aarch64/crt0.S
-+++ b/libgloss/aarch64/crt0.S
-@@ -36,7 +36,7 @@
- #error __USER_LABEL_PREFIX is not defined
- #endif
- 
--#ifdef HAVE_INITFINI_ARRAY
-+#ifdef _HAVE_INITFINI_ARRAY
- #define _init	__libc_init_array
- #define _fini	__libc_fini_array
- #endif
 diff --git a/libgloss/arm/crt0.S b/libgloss/arm/crt0.S
-index 8490bde2f..8826d4916 100644
+index 78515180b..8826d4916 100644
 --- a/libgloss/arm/crt0.S
 +++ b/libgloss/arm/crt0.S
-@@ -12,7 +12,7 @@
- #error __USER_LABEL_PREFIX is not defined
- #endif
- 
--#ifdef HAVE_INITFINI_ARRAY
-+#ifdef _HAVE_INITFINI_ARRAY
- #define _init	__libc_init_array
- #define _fini	__libc_fini_array
- #endif
 @@ -565,7 +565,7 @@ change_back:
  
  	/* For Thumb, constants must be after the code since only 
