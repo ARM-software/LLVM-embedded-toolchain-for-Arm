@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2021, Arm Limited and affiliates.
+# Copyright (c) 2020-2022, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,10 +50,12 @@ Revisions:
       - Name: llvm.git
         FriendlyName: LLVM
         URL:  https://github.com/llvm/llvm-project.git
-        Revision: f642436cc213f99a90e3a4258666dd693b29d79d
+        Branch: main
+        Revision: HEAD
         Patch: llvm-HEAD.patch
       - Name: newlib.git
         FriendlyName: Newlib
         URL:  https://github.com/mirror/newlib-cygwin.git
-        Revision: 4ed502ba02270adee7c46bb738374cab867baee1
+        Branch: master
+        Revision: HEAD
         Patch: newlib-HEAD.patch
