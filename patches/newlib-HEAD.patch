@@ -25,7 +25,7 @@ index 6b2d62a9b..000a2c728 100644
  #endif
  {
 diff --git a/libgloss/arm/syscalls.c b/libgloss/arm/syscalls.c
-index fc394f94b..0b3287df4 100644
+index 710a741ee..9e710b09a 100644
 --- a/libgloss/arm/syscalls.c
 +++ b/libgloss/arm/syscalls.c
 @@ -180,7 +180,7 @@ initialise_monitor_handles (void)
@@ -67,6 +67,13 @@ index 845ad0173..2056c2adf 100644
          .global __rt_stkovf_split_big
          .global __rt_stkovf_split_small
  
+diff --git a/libgloss/doc/porting.info b/libgloss/doc/porting.info
+new file mode 100644
+index 000000000..8b1378917
+--- /dev/null
++++ b/libgloss/doc/porting.info
+@@ -0,0 +1 @@
++
 diff --git a/newlib/libc/machine/aarch64/memchr.S b/newlib/libc/machine/aarch64/memchr.S
 index 53f5d6bc0..81fcecccd 100644
 --- a/newlib/libc/machine/aarch64/memchr.S
