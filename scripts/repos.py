@@ -239,6 +239,8 @@ def patch_repositories(checkout_path: str, tc_version: LLVMBMTC,
         repo = git.Repo(repo_path)
         try:
             repo.head.reset(index=True, working_tree=True)
+            # Remove ignored files (our newlib patch contains one)
+            repo.git.clean(['-fX'])
             repo.git.apply(['-p1', patch_file])
         except git.exc.GitCommandError as ex:  # pylint: disable=no-member
             die('could not patch "{}" with "{}".\n'
