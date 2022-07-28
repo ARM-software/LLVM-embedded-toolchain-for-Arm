@@ -505,8 +505,12 @@ class ToolchainBuild:
             bin_path = join(cfg.native_llvm_bin_dir, bin_name)
             if cfg.use_ccache:
                 bin_path = 'ccache ' + bin_path
-            return '{} -target {} -ffreestanding'.format(bin_path,
-                                                         lib_spec.target)
+            return ' '.join([
+                bin_path,
+                '-target', lib_spec.target,
+                '-ffreestanding',
+                '-Wno-implicit-function-declaration',
+            ])
 
         # __USES_INITFINI__ and HAVE_INIT_FINI are related to the .init_array
         # mechanism implementation: __USES_INITFINI__ enables the call to
