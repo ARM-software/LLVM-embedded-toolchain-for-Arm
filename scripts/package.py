@@ -153,10 +153,10 @@ def _copy_licenses(cfg: config.Config) -> None:
         dest_name = '{}-LICENSE.txt'.format(comp_dir.upper())
         add_license(comp_name, src_path, dest_name)
 
-    newlib_lic_names = ['COPYING.NEWLIB', 'COPYING.LIBGLOSS']
-    newlib_lic_files = [os.path.join(cfg.newlib_repo_dir, n)
-                        for n in newlib_lic_names]
-    add_multiple_licenses('Newlib', newlib_lic_files)
+    picolibc_lic_names = ['COPYING.NEWLIB', 'COPYING.picolibc']
+    picolibc_lic_files = [os.path.join(cfg.picolibc_repo_dir, n)
+                          for n in picolibc_lic_names]
+    add_multiple_licenses('Picolibc', picolibc_lic_files)
 
     if cfg.is_using_mingw and cfg.copy_runtime_dlls:
         mingw_lic_path = os.path.join(cfg.source_dir, 'mingw-licenses')
@@ -166,7 +166,7 @@ def _copy_licenses(cfg: config.Config) -> None:
 
     tp_lic_lines += [
         '',
-        'Newlib and libgloss licenses refer to the source files of the '
+        'Newlib and picolibc licenses refer to the source files of the '
         'corresponding',
         'libraries. To examine the source code please download the source '
         'package of ',

@@ -7,7 +7,7 @@ bare-metal LLVM based toolchain targeting Arm based on:
 * libc++abi
 * libc++
 * compiler-rt
-* newlib
+* picolibc (newlib in versions 14 and earlier)
 
 ## Goal
 
@@ -42,7 +42,7 @@ The LLVM Embedded Toolchain for Arm relies on the following upstream components
 Component  | Link
 ---------- | ------------------------------------
 LLVM       | https://github.com/llvm/llvm-project
-newlib     | https://sourceware.org/newlib
+picolibc   | https://github.com/picolibc/picolibc
 
 ### Windows runtime DLLs
 
