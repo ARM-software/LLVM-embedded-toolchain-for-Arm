@@ -192,10 +192,11 @@ class LibrarySpec:
         self.arch_options = arch_options
         self.other_flags = other_flags
         if self.triple_arch == 'arm':
-            self.name = '{}_{}_{}'.format(self.march, float_abi.value,
-                                          name_suffix)
+            self.name = '{}_{}'.format(self.march, float_abi.value)
         else:
-            self.name = '{}_{}'.format(self.triple_arch, name_suffix)
+            self.name = self.triple_arch
+        if name_suffix:
+            self.name += '_' + name_suffix
 
     @property
     def target(self):
