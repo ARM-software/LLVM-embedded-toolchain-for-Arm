@@ -176,7 +176,12 @@ def _check_tool(cfg: config.Config, bin_name: str, name: str,
     assert bin_path is not None
     ver_line = execution.run_stdout([bin_name, '--version'])[0]
     assert '{} version'.format(bin_name) in ver_line
-    ver = _str_to_ver(ver_line.split(' ')[-1])
+    version_str = ver_line.split(' ')[-1]
+    # Strip pre-release and build metadata
+    version_match = re.match(r'\d+(\.\d+)*', version_str)
+    if version_match:
+        version_str = version_match.group(0)
+    ver = _str_to_ver(version_str)
     if ver < min_version:
         _print_version_error(name, bin_path, ver, min_version)
         return False
