@@ -191,7 +191,6 @@ class LibrarySpec:
         self.float_abi = float_abi
         self.arch_options = arch_options
         self.other_flags = other_flags
-        name_suffix = '_' + name_suffix if name_suffix else ''
         if self.triple_arch == 'arm':
             self.name = '{}_{}'.format(self.march, float_abi.value)
         else:
