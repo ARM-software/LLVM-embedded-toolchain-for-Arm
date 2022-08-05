@@ -62,8 +62,10 @@ Some notable options include:
     [Cross-compiling the toolchain for Windows](#cross-compiling-the-toolchain-for-windows))
 * ``--host-toolchain-dir`` the directory from Step 0 that the toolchain resides
   in. Default is ``/usr/bin``.
+* ``--build-dir`` the directory to use for build output.
+  Default is ``./build-<revision>``.
 * ``--install-dir`` the LLVM Embedded Toolchain for Arm installation directory.
-  Default is ``./install-<revision>``.
+  Default is ``<build-dir>/install``.
 
 The build script can optionally take advantage of some tools to speed up the
 build. Currently, these tools are ``ccache``, and ``ninja``.
