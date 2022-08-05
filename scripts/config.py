@@ -358,8 +358,16 @@ class Config:  # pylint: disable=too-many-instance-attributes
             self.repos_dir = _assign_dir(args.repositories_dir, 'repos', rev)
 
         self.build_dir = _assign_dir(args.build_dir, 'build', rev)
-        self.install_dir = _assign_dir(args.install_dir, 'install', rev)
-        self.package_dir = os.path.abspath(args.package_dir)
+        self.install_dir = (
+            os.path.abspath(args.install_dir)
+            if args.install_dir
+            else os.path.join(self.build_dir, 'install')
+        )
+        self.package_dir = (
+            os.path.abspath(args.package_dir)
+            if args.package_dir
+            else self.build_dir
+        )
         self.checkout_mode = CheckoutMode(args.checkout_mode)
         self.build_mode = BuildMode(args.build_mode)
 

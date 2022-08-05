@@ -64,11 +64,10 @@ def parse_args_to_config() -> Config:
                              '(default: ./build-<revision>)')
     parser.add_argument('--install-dir', type=str, metavar='PATH',
                         help='directory to install the toolchain to '
-                             '(default: ./install-<revision>)')
+                             '(default: <build-dir>/install)')
     parser.add_argument('--package-dir', type=str, metavar='PATH',
-                        default=cwd,
                         help='directory to store the packaged toolchain in '
-                             '(default: .)')
+                             '(default: <build-dir>)')
     parser.add_argument('--repositories-dir', type=str, metavar='PATH',
                         help='path to directory containing LLVM and picolibc '
                              'repositories (default: ./repos-<revision>)')
