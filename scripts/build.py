@@ -70,7 +70,7 @@ def parse_args_to_config() -> Config:
                         help='directory to store the packaged toolchain in '
                              '(default: .)')
     parser.add_argument('--repositories-dir', type=str, metavar='PATH',
-                        help='path to directory containing LLVM and picolibc '
+                        help='path to directory containing LLVM and newlib '
                              'repositories (default: ./repos-<revision>)')
     default_toolchain = config.ToolchainKind.CLANG.value
     parser.add_argument('--host-toolchain', type=str,
@@ -156,8 +156,8 @@ def parse_args_to_config() -> Config:
                              '  prepare - check out and patch sources\n'
                              '  clang - build and install Clang, lld and '
                              'other binary utilities\n'
-                             '  picolibc - build and install picolibc for '
-                             'each target\n'
+                             '  newlib - build and install newlib for each '
+                             'target\n'
                              '  compiler-rt - build and install compiler-rt '
                              'for each target\n'
                              '  libcxx - build and install libc++abi and '
@@ -183,7 +183,7 @@ def prepare_repositories(cfg: config.Config,
     # Determine which git action to perform
     do_remove_and_clone = False
     do_reset_and_patch = False
-    repo_dirs = [cfg.llvm_repo_dir, cfg.picolibc_repo_dir]
+    repo_dirs = [cfg.llvm_repo_dir, cfg.newlib_repo_dir]
     if cfg.checkout_mode == CheckoutMode.FORCE:
         # In the 'force' mode always remove existing checkouts, then clone the
         # repositories.
@@ -233,7 +233,7 @@ def run_or_skip(cfg: Config, action: Action, func: Callable[[], None],
 
 def build_all(cfg: Config) -> None:
     """Build and install all components of the toolchain: Clang and LLVM
-       binutils, picolibc, compiler_rt, configuration files.
+       binutils, newlib, compiler_rt, configuration files.
     """
     builder = make.ToolchainBuild(cfg)
     if cfg.is_cross_compiling:
@@ -241,15 +241,15 @@ def build_all(cfg: Config) -> None:
                     'Native LLVM tools')
     run_or_skip(cfg, Action.CLANG, builder.build_clang, 'Clang build')
     if any(action in cfg.actions for action in
-           [Action.PICOLIBC, Action.COMPILER_RT, Action.LIBCXX,
+           [Action.NEWLIB, Action.COMPILER_RT, Action.LIBCXX,
             Action.CONFIGURE]):
         logging.info('Building library variants and/or configurations: %s',
                      ', '.join(v.name for v in cfg.variants))
 
     for lib_spec in cfg.variants:
-        run_or_skip(cfg, Action.PICOLIBC,
-                    functools.partial(builder.build_picolibc, lib_spec),
-                    'picolibc build for {}'.format(lib_spec.name))
+        run_or_skip(cfg, Action.NEWLIB,
+                    functools.partial(builder.build_newlib, lib_spec),
+                    'newlib build for {}'.format(lib_spec.name))
         run_or_skip(cfg, Action.COMPILER_RT,
                     functools.partial(builder.build_compiler_rt, lib_spec),
                     'compiler-rt build for {}'.format(lib_spec.name))

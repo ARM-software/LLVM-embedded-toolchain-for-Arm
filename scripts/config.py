@@ -28,10 +28,10 @@ DEFAULT_REVISION = 'HEAD'
 @enum.unique
 class SourceType(enum.Enum):
     """Enumeration for the SourceType value in versions.yml:
-       STANDALONE - the source contains just the build scripts, LLVM and
-                    picolibc need to be checked out separately
-       SOURCE_PACKAGE - the source contains LLVM and picolibc bundled with
-                        the build scripts"""
+       STANDALONE - the source contains just the build scripts, LLVM and newlib
+                    need to be checked out separately
+       SOURCE_PACKAGE - the source contains LLVM and newlib bundled with the
+                        build scripts"""
     STANDALONE = 'standalone-build-scripts'
     SOURCE_PACKAGE = 'source-package'
 
@@ -119,7 +119,7 @@ class Action(enum.Enum):
     """
     PREPARE = 'prepare'
     CLANG = 'clang'
-    PICOLIBC = 'picolibc'
+    NEWLIB = 'newlib'
     COMPILER_RT = 'compiler-rt'
     LIBCXX = 'libcxx'
     CONFIGURE = 'configure'
@@ -402,7 +402,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
     @property
     def is_source_package(self) -> bool:
         """True iff building from a bundled source (i.e. build scripts, LLVM
-           and picolibc) rather than a repository containing just the build
+           and newlib) rather than a repository containing just the build
            scripts."""
         assert self.source_type is not None
         return self.source_type == SourceType.SOURCE_PACKAGE
@@ -412,7 +412,7 @@ class Config:  # pylint: disable=too-many-instance-attributes
            configuration, but are still useful for convenience."""
         join = os.path.join
         self.llvm_repo_dir = join(self.repos_dir, 'llvm.git')
-        self.picolibc_repo_dir = join(self.repos_dir, 'picolibc.git')
+        self.newlib_repo_dir = join(self.repos_dir, 'newlib.git')
         self.cmake_generator = 'Ninja' if self.use_ninja else 'Unix Makefiles'
         self.version_string = self.revision
         self.skip_reconfigure = self.build_mode == BuildMode.INCREMENTAL
