@@ -20,7 +20,7 @@ include ../../Makefile.conf
 build: hello.elf
 
 hello.elf: *.cpp
-	$(BIN_PATH)/clang++ --config armv6m_soft_nofp_rdimon_baremetal -g -T ../../ldscripts/microbit.ld -o hello.elf ../../startup/startup_ARMCM0.S $^
+	$(BIN_PATH)/clang++ --config armv6m_soft_nofp_semihost_baremetal -g -T ../../ldscripts/microbit.ld -o hello.elf ../../startup/startup_ARMCM0.S $^
 
 %.hex: %.elf
 	$(BIN_PATH)/llvm-objcopy -O ihex $< $@

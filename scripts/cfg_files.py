@@ -57,26 +57,26 @@ def write_cfg_files(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
         '-lnosys',
     ]
     # Semihosting and linker script provided
-    rdimon_lines = base_cfg_lines + [
+    semihost_lines = base_cfg_lines + [
         '-Wl,-T<CFGDIR>/../lib/clang-runtimes/{}/{}'.format(
             lib_spec.name,
             _get_base_ld_name(lib_spec)),
-        '<CFGDIR>/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(
+        '<CFGDIR>/../lib/clang-runtimes/{}/lib/crt0-semihost.o'.format(
             lib_spec.name),
-        '-lrdimon',
+        '-lsemihost',
     ]
     # Semihosting, but no linker script, e.g. to use with QEMU Arm System
     # emulator
-    rdimon_baremetal_lines = base_cfg_lines + [
-        '<CFGDIR>/../lib/clang-runtimes/{}/lib/rdimon-crt0.o'.format(
+    semihost_baremetal_lines = base_cfg_lines + [
+        '<CFGDIR>/../lib/clang-runtimes/{}/lib/crt0-semihost.o'.format(
             lib_spec.name),
-        '-lrdimon',
+        '-lsemihost',
     ]
 
     cfg_files = [
         ('nosys', nosys_lines),
-        ('rdimon', rdimon_lines),
-        ('rdimon_baremetal', rdimon_baremetal_lines),
+        ('semihost', semihost_lines),
+        ('semihost_baremetal', semihost_baremetal_lines),
     ]
 
     for name, lines in cfg_files:

@@ -81,7 +81,7 @@ command line, for example:
 
 ```
 $ PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
-$ clang --config armv6m_soft_nofp_rdimon -o example example.c
+$ clang --config armv6m_soft_nofp_semihost -o example example.c
 ```
 
 The available configuration files can be listed using:
@@ -89,7 +89,7 @@ The available configuration files can be listed using:
 $ ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg
 ```
 
-Note that configurations under the `nosys` or `rdimon_baremetal` categories
+Note that configurations under the `nosys` or `semihost_baremetal` categories
 require the linker script to be specified with `-T`:
 
 ```
