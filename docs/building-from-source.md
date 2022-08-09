@@ -148,10 +148,8 @@ $ build.py --host-toolchain mingw --copy-runtime-dlls no
 
 ## Divergences from upstream
 
-### newlib:
-* Clang does not support the ``naked`` attribute on C functions, breaking the
-  Linux startup (out of scope).
-* Target triple ending with eabi is not considered an ELF target.
+### picolibc:
+* Added a fix for building with -mthumb
 
 ### LLVM:
 * Recognize $@ in a config file argument to mean the directory of the config

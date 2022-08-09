@@ -72,12 +72,12 @@ class RuntimeDLLs:
 
 class ToolchainBuild:
     """Class for configuring/building/installing all toolchain components:
-       LLVM, newlib, compiler_rt.
+       LLVM, picolibc, compiler_rt.
     """
     def __init__(self, cfg: config.Config):
         self.cfg = cfg
         self.runner = execution.Runner(cfg.verbose)
-        # Tools needed for newlib and compiler-rt build
+        # Tools needed for picolibc and compiler-rt build
         binutils = ['ar', 'nm', 'as', 'ranlib', 'strip', 'readelf', 'objdump']
         self.llvm_binutils = ['llvm-' + name for name in binutils]
 
@@ -384,7 +384,7 @@ class ToolchainBuild:
         cmake_defs = self._get_common_cmake_defs_for_libs(lib_spec)
         # Disable C++17 aligned allocation feature because its implementation
         # in libc++ relies on posix_memalign() which is not available in our
-        # newlib build
+        # picolibc build
         cxx_flags = (cmake_defs.get('CMAKE_CXX_FLAGS', '')
                      + ' -D_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION')
         install_dir = os.path.join(self.cfg.target_llvm_rt_dir,
@@ -443,7 +443,7 @@ class ToolchainBuild:
            native target LLVM.
         """
         cfg = self.cfg
-        logging.info('Copying newlib libraries and headers to the native '
+        logging.info('Copying picolibc libraries and headers to the native '
                      'toolchain directory')
         from_path = os.path.join(cfg.target_llvm_rt_dir, lib_spec.name)
         to_path = os.path.join(cfg.native_llvm_rt_dir, lib_spec.name)
@@ -458,9 +458,9 @@ class ToolchainBuild:
         except shutil.Error as ex:
             raise util.ToolchainBuildError from ex
 
-    def _copy_newlib_headers_and_libs(self, source_dir: str,
-                                      destination_dir: str) -> None:
-        """ Copying newlib headers and libraries from
+    def _copy_picolibc_headers_and_libs(self, source_dir: str,
+                                        destination_dir: str) -> None:
+        """ Copying picolibc headers and libraries from
             lib_spec_name/target/{lib|include} to
             lib_spec_name/{lib|include} """
         cfg = self.cfg
@@ -489,98 +489,85 @@ class ToolchainBuild:
         except shutil.Error as ex:
             raise util.ToolchainBuildError from ex
 
-    def build_newlib(self, lib_spec: config.LibrarySpec) -> None:
-        """Build and install a single variant of newlib."""
+    def build_picolibc(self, lib_spec: config.LibrarySpec) -> None:
+        """Build and install a single variant of picolibc."""
         self.runner.reset_cwd()
         cfg = self.cfg
         join = os.path.join
-        newlib_build_dir = join(cfg.build_dir, 'newlib', lib_spec.name)
-        # Newlib install is placed in build directory; later on it is copied
+        build_dir = join(cfg.build_dir, "picolibc", lib_spec.name)
+        # install is placed in build directory; later on it is copied
         # into installation directory.
-        newlib_install_dir = join(cfg.build_dir, 'newlib', lib_spec.name,
-                                  'install')
-        self._prepare_build_dir(newlib_build_dir)
+        install_dir = join(cfg.build_dir, "picolibc", lib_spec.name, "install")
+        self._prepare_build_dir(build_dir)
 
-        def compiler_str(bin_name: str, cfg: config.Config) -> str:
-            bin_path = join(cfg.native_llvm_bin_dir, bin_name)
-            if cfg.use_ccache:
-                bin_path = 'ccache ' + bin_path
-            return ' '.join([
-                bin_path,
-                '-target', lib_spec.target,
-                '-ffreestanding',
-                '-Wno-implicit-function-declaration',
-            ])
+        crossfile_path = join(build_dir, "meson-cross-build.txt")
 
-        # __USES_INITFINI__ and HAVE_INIT_FINI are related to the .init_array
-        # mechanism implementation: __USES_INITFINI__ enables the call to
-        # __libc_init_array in crt0.S. Undefining HAVE_INIT_FINI disables the
-        # call to _init in __libc_init_array (the _init function was used in an
-        # old initialization mechanism, and in the LLVM toolchain it is not
-        # defined)
-        # Commit 437c5c5085ff30b4a4960b2b53d06728c788361d (introduced during
-        # newlib 4.2.0 development stage) renamed HAVE_INIT_FINI to
-        # _HAVE_INIT_FINI, so we need to undefine both.
-        config_env = {
-            'CC_FOR_TARGET': compiler_str('clang', cfg),
-            'CXX_FOR_TARGET': compiler_str('clang++', cfg),
-            'CFLAGS_FOR_TARGET': lib_spec.flags +
-            ' -D__USES_INITFINI__' +
-            ' -UHAVE_INIT_FINI' +
-            ' -U_HAVE_INIT_FINI' +
-            ' --sysroot {}'.format(
-                join(cfg.target_llvm_rt_dir,
-                     lib_spec.name,
-                     lib_spec.target)),
-        }
-        for tool in ['ar', 'nm', 'as', 'ranlib',
-                     'strip', 'readelf', 'objdump']:
-            var_name = '{}_FOR_TARGET'.format(tool.upper())
-            tool_path = join(cfg.native_llvm_bin_dir, 'llvm-{}'.format(tool))
-            config_env[var_name] = tool_path
+        clang_args = [
+            f"{cfg.native_llvm_bin_dir}/clang",
+        ] + lib_spec.flags.split()
+
+        if cfg.use_ccache:
+            clang_args = ['ccache'] + clang_args
+
+        crossfile_content = f"""\
+[binaries]
+c = {clang_args}
+ar = '{cfg.native_llvm_bin_dir}/llvm-ar'
+nm = '{cfg.native_llvm_bin_dir}/llvm-nm'
+strip = '{cfg.native_llvm_bin_dir}/llvm-strip'
+# only needed to run tests
+exe_wrapper = ['sh', '-c', 'test -z "$PICOLIBC_TEST" || \
+run-{lib_spec.triple_arch} "$@"', 'run-{lib_spec.triple_arch}']
+
+[host_machine]
+system = 'none'
+cpu_family = '{lib_spec.triple_arch}'
+cpu = '{lib_spec.triple_arch}'
+endian = 'little'
+
+[properties]
+skip_sanity_check = true
+"""
+        with open(crossfile_path, "w") as crossfile:
+            crossfile.write(crossfile_content)
 
         configure_args = [
-            join(cfg.newlib_repo_dir, 'configure'),
-            '--target={}'.format(lib_spec.target),
-            '--prefix={}'.format(cfg.target_llvm_dir),
-            '--exec-prefix={}'.format(newlib_install_dir),
-            '--enable-newlib-io-long-long',
-            '--enable-newlib-register-fini',
-            '--disable-newlib-supplied-syscalls',
-            '--enable-newlib-io-c99-formats',
-            '--disable-nls',
-            '--enable-lite-exit',
+            "meson",
+            f"-Dincludedir=picolibc/{lib_spec.target}/include",
+            f"-Dlibdir=picolibc/{lib_spec.target}/lib",
+            "--prefix",
+            install_dir,
+            "--cross-file",
+            crossfile_path,
+            cfg.picolibc_repo_dir,
         ]
-        make_args = [
-            'make',
-            '-j{}'.format(cfg.num_threads),
-        ]
+
         try:
-            logging.info('Configuring newlib for %s', lib_spec.name)
-            self.runner.run(configure_args, cwd=newlib_build_dir,
-                            env=config_env)
-            logging.info('Building and installing newlib for %s',
-                         lib_spec.name)
-            self.runner.run(make_args, cwd=newlib_build_dir)
-            self.runner.run(['make', 'install'], cwd=newlib_build_dir)
+            logging.info("Configuring picolibc for %s", lib_spec.name)
+            self.runner.run(configure_args, cwd=build_dir)
+            logging.info(
+                "Building and installing picolibc for %s", lib_spec.name
+            )
+            self.runner.run(
+                ["ninja", "-j", str(cfg.num_threads)], cwd=build_dir
+            )
+            self.runner.run(["ninja", "install"], cwd=build_dir)
         except subprocess.SubprocessError as ex:
             raise util.ToolchainBuildError from ex
 
-        logging.info('Copying newlib include and lib directories to'
-                     ' installation directory')
+        logging.info(
+            "Copying picolibc include and lib directories to"
+            " installation directory"
+        )
 
-        self._copy_newlib_headers_and_libs(join(newlib_install_dir,
-                                                lib_spec.target,
-                                                'lib'),
-                                           join(cfg.target_llvm_rt_dir,
-                                                lib_spec.name,
-                                                'lib'))
-        self._copy_newlib_headers_and_libs(join(newlib_install_dir,
-                                                lib_spec.target,
-                                                'include'),
-                                           join(cfg.target_llvm_rt_dir,
-                                                lib_spec.name,
-                                                'include'))
+        self._copy_picolibc_headers_and_libs(
+            join(install_dir, "picolibc", lib_spec.target, "lib"),
+            join(cfg.target_llvm_rt_dir, lib_spec.name, "lib"),
+        )
+        self._copy_picolibc_headers_and_libs(
+            join(install_dir, "picolibc", lib_spec.target, "include"),
+            join(cfg.target_llvm_rt_dir, lib_spec.name, "include"),
+        )
 
         if cfg.is_cross_compiling:
             self._copy_runtime_to_native(lib_spec)
