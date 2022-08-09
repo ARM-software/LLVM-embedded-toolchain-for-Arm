@@ -611,6 +611,10 @@ class ToolchainBuild:
             stdout: List[str] = []
             stderr: List[str] = []
             try:
+                self.runner.run_capture_output(["make", "clean"],
+                                               cwd=smoketest_path,
+                                               capture_stdout=stdout,
+                                               capture_stderr=stderr)
                 self.runner.run_capture_output(commands,
                                                cwd=smoketest_path,
                                                capture_stdout=stdout,

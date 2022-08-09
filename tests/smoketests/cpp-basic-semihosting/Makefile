@@ -23,4 +23,7 @@ hello.elf: *.cpp
 run: hello.elf
 	@qemu-arm -cpu cortex-m0 $<
 
-.PHONY: build run
+clean:
+	rm -f hello.elf
+
+.PHONY: build run clean
