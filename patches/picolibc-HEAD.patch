@@ -1,3 +1,29 @@
+diff --git a/newlib/libc/include/bits/types/mbstate_t.h b/newlib/libc/include/bits/types/mbstate_t.h
+new file mode 100644
+index 0000000..fae326c
+--- /dev/null
++++ b/newlib/libc/include/bits/types/mbstate_t.h
+@@ -0,0 +1,8 @@
++#ifndef _PICOLIBC_BITS_TYPES_MBSTATE_T_H
++#define _PICOLIBC_BITS_TYPES_MBSTATE_T_H
++
++#include <sys/_types.h>
++
++typedef _mbstate_t mbstate_t;
++
++#endif /* _PICOLIBC_BITS_TYPES_MBSTATE_T_H */
+diff --git a/newlib/libc/include/meson.build b/newlib/libc/include/meson.build
+index 4696e94..f5cf6a3 100644
+--- a/newlib/libc/include/meson.build
++++ b/newlib/libc/include/meson.build
+@@ -111,3 +111,7 @@ endif
+ 
+ install_headers(inc_headers,
+ 		install_dir: include_dir)
++
++# For compatibility with libc++'s __mbstate_t.h:
++install_headers(['bits/types/mbstate_t.h'],
++		install_dir: include_dir / 'bits/types')
 diff --git a/picocrt/machine/arm/crt0.c b/picocrt/machine/arm/crt0.c
 index 037baf9..bee07b3 100644
 --- a/picocrt/machine/arm/crt0.c

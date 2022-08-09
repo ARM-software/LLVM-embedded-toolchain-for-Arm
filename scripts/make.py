@@ -418,6 +418,7 @@ class ToolchainBuild:
             'LIBCXX_ENABLE_DEBUG_MODE_SUPPORT:BOOL': 'OFF',
             'LIBCXX_ENABLE_RANDOM_DEVICE:BOOL': 'OFF',
             'LIBCXX_ENABLE_LOCALIZATION:BOOL': 'OFF',
+            'LIBCXX_ENABLE_WIDE_CHARACTERS': 'OFF',
             'LIBCXX_ENABLE_EXCEPTIONS:BOOL': 'OFF',
             'LIBCXX_ENABLE_RTTI:BOOL': 'OFF',
             'LIBCXX_ENABLE_THREADS:BOOL': 'OFF',
@@ -595,17 +596,16 @@ skip_sanity_check = true
                 "make", "build" if do_not_run else "run",
                 f"BIN_PATH={bin_path}"
             ]
-            stdout: List[str] = []
-            stderr: List[str] = []
+            output: List[str] = []
             try:
                 self.runner.run_capture_output(["make", "clean"],
                                                cwd=smoketest_path,
-                                               capture_stdout=stdout,
-                                               capture_stderr=stderr)
+                                               capture_stdout=output,
+                                               capture_stderr=output)
                 self.runner.run_capture_output(commands,
                                                cwd=smoketest_path,
-                                               capture_stdout=stdout,
-                                               capture_stderr=stderr)
+                                               capture_stdout=output,
+                                               capture_stderr=output)
             except subprocess.SubprocessError as ex:
                 logging.error("Failed to run test suite: smoketests")
                 raise util.ToolchainBuildError from ex
@@ -638,9 +638,7 @@ skip_sanity_check = true
 
                 return True
 
-            if not _check_output("stdout", smoketest_dir, stdout):
-                all_tests_succeeded = False
-            if not _check_output("stderr", smoketest_dir, stderr):
+            if not _check_output("stdout", smoketest_dir, output):
                 all_tests_succeeded = False
 
         if all_tests_succeeded:

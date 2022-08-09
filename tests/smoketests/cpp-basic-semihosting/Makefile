@@ -17,8 +17,12 @@
 
 build: hello.elf
 
-hello.elf: *.cpp
-	@$(BIN_PATH)/clang++ --config armv6m_soft_nofp_semihost -g -o hello.elf $^
+hello.elf: *.cpp ../arm.ld
+	@$(BIN_PATH)/clang++ \
+	--config armv6m_soft_nofp_semihost_baremetal \
+	-g \
+	-o hello.elf \
+	$^
 
 run: hello.elf
 	@qemu-arm -cpu cortex-m0 $<
