@@ -26,9 +26,9 @@ Revisions:
         Branch: main
         Revision: HEAD
         Patch: llvm-HEAD.patch
-      - Name: newlib.git
-        FriendlyName: Newlib
-        URL:  https://github.com/mirror/newlib-cygwin.git
-        Branch: master
+      - Name: picolibc.git
+        FriendlyName: Picolibc
+        URL:  https://github.com/picolibc/picolibc.git
+        Branch: main
         Revision: HEAD
-        Patch: newlib-HEAD.patch
+        Patch: picolibc-HEAD.patch

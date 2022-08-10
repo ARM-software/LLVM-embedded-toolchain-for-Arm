@@ -62,13 +62,23 @@ class Runner:
 
         return env
 
+    @staticmethod
+    def _get_exception_output(output: Optional[bytes]) -> str:
+        if not output:
+            return ""
+        lines = output.decode('utf-8', errors='replace').split('\n')
+        if len(lines) > 30:
+            lines = ['...'] + lines[-30:]
+        return '\n'.join(lines)
+
     def _log_exception(self, ex: subprocess.CalledProcessError) -> None:
         if not self.verbose:
-            lines = ex.stderr.decode('utf-8', errors='replace').split('\n')
-            if len(lines) > 30:
-                lines = ['...'] + lines[-30:]
-            logging.error('Command failed with return code %d, '
-                          'stderr:\n%s', ex.returncode, '\n'.join(lines))
+            logging.error(
+                'Command failed with return code %s\nstdout:\n%s\nstderr:\n%s',
+                ex.returncode,
+                self._get_exception_output(ex.stdout),
+                self._get_exception_output(ex.stderr),
+            )
         else:
             # In verbose mode stderr has already been copied to sys.stderr,
             # so we only need to output the return code
@@ -107,9 +117,14 @@ class Runner:
         env = self._configure_env(args, cwd, env)
 
         try:
+            stderr = (
+                subprocess.STDOUT
+                if capture_stderr is capture_stdout
+                else subprocess.PIPE
+            )
             result = subprocess.run(args,
                                     stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
+                                    stderr=stderr,
                                     check=True,
                                     cwd=cwd,
                                     env=env)
@@ -121,11 +136,12 @@ class Runner:
             # are redirected to the same stream, the ordering of events will
             # be lost.
             sys.stdout.write(result.stdout.decode('utf-8'))
-            sys.stderr.write(result.stderr.decode('utf-8'))
+            if result.stderr is not None:
+                sys.stderr.write(result.stderr.decode('utf-8'))
 
         if capture_stdout is not None:
             capture_stdout[:] = result.stdout.decode('utf-8').splitlines()
-        if capture_stderr is not None:
+        if capture_stderr is not None and capture_stderr is not capture_stdout:
             capture_stderr[:] = result.stderr.decode('utf-8').splitlines()
 
 

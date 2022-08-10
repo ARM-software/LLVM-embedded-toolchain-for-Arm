@@ -1,0 +1,66 @@
+diff --git a/newlib/libc/include/bits/types/mbstate_t.h b/newlib/libc/include/bits/types/mbstate_t.h
+new file mode 100644
+index 0000000..fae326c
+--- /dev/null
++++ b/newlib/libc/include/bits/types/mbstate_t.h
+@@ -0,0 +1,8 @@
++#ifndef _PICOLIBC_BITS_TYPES_MBSTATE_T_H
++#define _PICOLIBC_BITS_TYPES_MBSTATE_T_H
++
++#include <sys/_types.h>
++
++typedef _mbstate_t mbstate_t;
++
++#endif /* _PICOLIBC_BITS_TYPES_MBSTATE_T_H */
+diff --git a/newlib/libc/include/meson.build b/newlib/libc/include/meson.build
+index 4696e94..f5cf6a3 100644
+--- a/newlib/libc/include/meson.build
++++ b/newlib/libc/include/meson.build
+@@ -111,3 +111,7 @@ endif
+ 
+ install_headers(inc_headers,
+ 		install_dir: include_dir)
++
++# For compatibility with libc++'s __mbstate_t.h:
++install_headers(['bits/types/mbstate_t.h'],
++		install_dir: include_dir / 'bits/types')
+diff --git a/picocrt/machine/arm/crt0.c b/picocrt/machine/arm/crt0.c
+index 037baf9..bee07b3 100644
+--- a/picocrt/machine/arm/crt0.c
++++ b/picocrt/machine/arm/crt0.c
+@@ -176,7 +176,7 @@ void __attribute__((naked))
+ arm_hardfault_isr(void)
+ {
+     __asm__("mov r0, sp");
+-    __asm__("mov r1, #" REASON(REASON_HARDFAULT));
++    __asm__("movs r1, #" REASON(REASON_HARDFAULT));
+     __asm__("bl  arm_fault");
+ }
+ 
+@@ -184,7 +184,7 @@ void __attribute__((naked))
+ arm_memmange_isr(void)
+ {
+     __asm__("mov r0, sp");
+-    __asm__("mov r1, #" REASON(REASON_MEMMANAGE));
++    __asm__("movs r1, #" REASON(REASON_MEMMANAGE));
+     __asm__("bl  arm_fault");
+ }
+ 
+@@ -192,7 +192,7 @@ void __attribute__((naked))
+ arm_busfault_isr(void)
+ {
+     __asm__("mov r0, sp");
+-    __asm__("mov r1, #" REASON(REASON_BUSFAULT));
++    __asm__("movs r1, #" REASON(REASON_BUSFAULT));
+     __asm__("bl  arm_fault");
+ }
+ 
+@@ -200,7 +200,7 @@ void __attribute__((naked))
+ arm_usagefault_isr(void)
+ {
+     __asm__("mov r0, sp");
+-    __asm__("mov r1, #" REASON(REASON_USAGE));
++    __asm__("movs r1, #" REASON(REASON_USAGE));
+     __asm__("bl  arm_fault");
+ }
+ 

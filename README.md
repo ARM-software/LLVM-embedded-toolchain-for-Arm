@@ -7,7 +7,7 @@ bare-metal LLVM based toolchain targeting Arm based on:
 * libc++abi
 * libc++
 * compiler-rt
-* newlib
+* picolibc (newlib in versions 14 and earlier)
 
 ## Goal
 
@@ -42,7 +42,7 @@ The LLVM Embedded Toolchain for Arm relies on the following upstream components
 Component  | Link
 ---------- | ------------------------------------
 LLVM       | https://github.com/llvm/llvm-project
-newlib     | https://sourceware.org/newlib
+picolibc   | https://github.com/picolibc/picolibc
 
 ### Windows runtime DLLs
 
@@ -81,7 +81,7 @@ command line, for example:
 
 ```
 $ PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
-$ clang --config armv6m_soft_nofp_rdimon -o example example.c
+$ clang --config armv6m_soft_nofp_semihost -o example example.c
 ```
 
 The available configuration files can be listed using:
@@ -89,7 +89,7 @@ The available configuration files can be listed using:
 $ ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg
 ```
 
-Note that configurations under the `nosys` or `rdimon_baremetal` categories
+Note that configurations under the `nosys` or `semihost_baremetal` categories
 require the linker script to be specified with `-T`:
 
 ```
