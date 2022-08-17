@@ -20,7 +20,7 @@ include ../../Makefile.conf
 build: hello.elf
 
 hello.elf: *.c
-	$(BIN_PATH)/clang --config armv6m_soft_nofp_semihost -g -o hello.elf $^
+	$(BIN_PATH)/clang --config armv6m_soft_nofp_semihost_ldscript -g -o hello.elf $^
 
 run: hello.elf
 	qemu-arm -cpu cortex-m0 $<

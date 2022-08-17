@@ -17,9 +17,9 @@
 
 build: hello.elf
 
-hello.elf: *.cpp ../arm.ld
+hello.elf: *.cpp
 	@$(BIN_PATH)/clang++ \
-	--config armv6m_soft_nofp_semihost_baremetal \
+	--config armv6m_soft_nofp_semihost_ldscript \
 	-g \
 	-o hello.elf \
 	$^
