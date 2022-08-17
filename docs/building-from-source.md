@@ -15,16 +15,18 @@ The build requires the following software to be installed:
 * Python version 3.6 or above and python3-venv
 * Git
 * GNU Make
+* Ninja
 
 On a Ubuntu 18.04.5 LTS machine you can use the following commands to install
 the software mentioned above:
 ```
-# apt-get install clang # If the Clang version installed by the package manager is older than 6.0.0, download a recent version from https://releases.llvm.org or build from source
-# apt-get install python3
-# apt-get install python3-venv
-# apt-get install git
-# apt-get install make
-# apt-get install cmake # If the CMake version installed by the package manager is older than 3.13.4, download a recent version from https://cmake.org/download and add it to PATH
+$ apt-get install clang # If the Clang version installed by the package manager is older than 6.0.0, download a recent version from https://releases.llvm.org or build from source
+$ apt-get install python3
+$ apt-get install python3-venv
+$ apt-get install git
+$ apt-get install make
+$ apt-get install ninja-build
+$ apt-get install cmake # If the CMake version installed by the package manager is older than 3.13.4, download a recent version from https://cmake.org/download and add it to PATH
 ```
 
 ## Preparing the environment
