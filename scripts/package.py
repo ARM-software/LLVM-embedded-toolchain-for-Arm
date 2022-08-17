@@ -98,6 +98,7 @@ def _copy_docs(cfg: config.Config) -> None:
     """Copy documentation."""
     _force_copy(cfg.source_dir, cfg.target_llvm_dir, 'docs')
     _force_copy(cfg.source_dir, cfg.target_llvm_dir, 'README.md')
+    _force_copy(cfg.source_dir, cfg.target_llvm_dir, 'CHANGELOG.md')
 
 
 def _copy_licenses(cfg: config.Config) -> None:
