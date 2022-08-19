@@ -17,9 +17,9 @@
 
 build: hello.elf
 
-hello.elf: *.c ../arm.ld
+hello.elf: *.c
 	@$(BIN_PATH)/clang \
-	--config $(BIN_PATH)/armv6m_soft_nofp_semihost_baremetal.cfg \
+	--config armv6m_soft_nofp_semihost -T picolibc.ld \
 	-g \
 	-o hello.elf \
 	$^

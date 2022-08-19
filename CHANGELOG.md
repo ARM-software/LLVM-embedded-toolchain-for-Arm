@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed 
 
 - Replaced newlib with [picolibc](https://github.com/picolibc/picolibc) (GitHub issue #61)
-- Replaced "rdimon" with "semihost" in configuration names
+- Renamed and updated configuration files
 
 ### Removed
 

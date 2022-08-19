@@ -36,7 +36,7 @@
 @if [%BIN_PATH%]==[] goto :bin_path_empty
 @call :build_fn
 :do_run
-qemu-system-arm.exe -M microbit -semihosting -nographic -device loader,file=hello.hex -m 1073741824k
+qemu-system-arm.exe -M microbit -semihosting -nographic -device loader,file=hello.hex
 @exit /B
 
 :clean
@@ -49,6 +49,6 @@ if exist hello.hex del /q hello.hex
 @exit /B 1
 
 :build_fn
-%BIN_PATH%\clang.exe --config armv6m_soft_nofp_nosys -g -T ..\..\ldscripts\microbit.ld -o hello.elf ..\..\startup\startup_ARMCM0.S hello.c
+%BIN_PATH%\clang.exe --config armv6m_soft_nofp -g -T ..\..\ldscripts\microbit.ld -o hello.elf hello.c
 %BIN_PATH%\llvm-objcopy.exe -O ihex hello.elf hello.hex
 @exit /B

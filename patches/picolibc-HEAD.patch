@@ -64,3 +64,86 @@ index 037baf9..bee07b3 100644
      __asm__("bl  arm_fault");
  }
  
+diff --git a/picolibc.ld.in b/picolibc.ld.in
+index c69ad3c..b2c6a12 100644
+--- a/picolibc.ld.in
++++ b/picolibc.ld.in
+@@ -42,8 +42,8 @@ ENTRY(_start)
+ 
+ MEMORY
+ {
+-	flash (rxai!w) : ORIGIN = DEFINED(__flash) ? __flash : 0x10000000, LENGTH = DEFINED(__flash_size) ? __flash_size : 0x10000
+-	ram (wxa!ri)   : ORIGIN = DEFINED(__ram  ) ? __ram   : 0x20000000, LENGTH = DEFINED(__ram_size  ) ? __ram_size   : 0x08000
++	flash (rx) : ORIGIN = DEFINED(__flash) ? __flash : 0x10000000, LENGTH = DEFINED(__flash_size) ? __flash_size : 0x10000
++	ram (rwx)   : ORIGIN = DEFINED(__ram  ) ? __ram   : 0x20000000, LENGTH = DEFINED(__ram_size  ) ? __ram_size   : 0x08000
+ }
+ 
+ PHDRS
+@@ -62,7 +62,7 @@ SECTIONS
+ 		KEEP (*(.text.init.enter))
+ 		KEEP (*(.data.init.enter))
+ 		KEEP (*(SORT_BY_NAME(.init) SORT_BY_NAME(.init.*)))
+-	} >flash AT>flash :text
++	} >flash :text
+ 
+ 	.text : {
+ 
+@@ -108,7 +108,7 @@ SECTIONS
+ 		KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
+ 		KEEP (*(.fini_array .dtors))
+ 		PROVIDE_HIDDEN ( __fini_array_end = . );
+-	} >flash AT>flash :text
++	} >flash :text
+ 
+         /* additional sections when compiling with C++ exception support */
+ 	@CPP_START@
+@@ -116,7 +116,7 @@ SECTIONS
+ 		*(.gcc_except_table *.gcc_except_table.*)
+ 		KEEP (*(.eh_frame .eh_frame.*))
+ 		*(.ARM.extab* .gnu.linkonce.armextab.*)
+-	} >flash AT>flash :text
++	} >flash :text
+ 
+ 	.except_unordered : {
+                 . = ALIGN(8);
+@@ -124,7 +124,7 @@ SECTIONS
+         	PROVIDE(__exidx_start = .);
+ 		*(.ARM.exidx*)
+         	PROVIDE(__exidx_end = .);
+-        } >flash AT>flash :text
++        } >flash :text
+ 	@CPP_END@
+ 
+ 	/*
+@@ -137,7 +137,7 @@ SECTIONS
+ 		PROVIDE(__preserve_end__ = .);
+ 	} >ram AT>ram :ram
+ 
+-	.data : ALIGN_WITH_INPUT {
++	.data : {
+ 		*(.data .data.*)
+ 		*(.gnu.linkonce.d.*)
+ 
+@@ -147,7 +147,7 @@ SECTIONS
+ 		PROVIDE( __global_pointer$ = . + 0x800 );
+ 		*(.sdata .sdata.* .sdata2.*)
+ 		*(.gnu.linkonce.s.*)
+-	} >ram AT>flash :ram_init
++	} >ram :ram_init
+ 	PROVIDE(__data_start = ADDR(.data));
+ 	PROVIDE(__data_source = LOADADDR(.data));
+ 
+@@ -159,11 +159,11 @@ SECTIONS
+ 	 * into the allocate ram addresses by the existing
+ 	 * data initialization code in crt0
+ 	 */
+-	.tdata : ALIGN_WITH_INPUT {
++	.tdata : {
+ 		*(.tdata .tdata.* .gnu.linkonce.td.*)
+ 		PROVIDE(__data_end = .);
+ 		PROVIDE(__tdata_end = .);
+-	} >ram AT>flash :tls :ram_init
++	} >ram :tls :ram_init
+ 	PROVIDE( __tls_base = ADDR(.tdata));
+ 	PROVIDE( __tdata_start = ADDR(.tdata));
+ 	PROVIDE( __tdata_source = LOADADDR(.tdata) );
