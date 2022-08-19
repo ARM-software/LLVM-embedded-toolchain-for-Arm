@@ -19,7 +19,8 @@ build: hello.elf
 
 hello.elf: *.cpp
 	@$(BIN_PATH)/clang++ \
-	--config armv6m_soft_nofp_semihost_ldscript \
+	--config armv6m_soft_nofp_semihost \
+	-T picolibc.ld \
 	-g \
 	-o hello.elf \
 	$^

@@ -37,28 +37,18 @@ def write_cfg_files(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
         f'--sysroot {sysroot}',
     ]
 
-    # No semihosting and no linker script
-    basic_lines = base_cfg_lines + [
+    no_semihost_lines = base_cfg_lines + [
         f'{sysroot}/lib/crt0.o',
     ]
 
-    # Semihosting, but no linker script
     semihost_lines = base_cfg_lines + [
         f'{sysroot}/lib/crt0-semihost.o',
         '-lsemihost',
     ]
 
-    # Semihosting and linker script provided.
-    # picolibc.ld is used because we specify -fno-exceptions above but
-    # if that changes then picolibcpp.ld should be used instead.
-    semihost_ldscript_lines = semihost_lines + [
-        f'-Wl,-T{sysroot}/lib/picolibc.ld',
-    ]
-
     cfg_files = [
-        ('', basic_lines),
+        ('', no_semihost_lines),
         ('_semihost', semihost_lines),
-        ('_semihost_ldscript', semihost_ldscript_lines),
     ]
 
     for suffix, lines in cfg_files:

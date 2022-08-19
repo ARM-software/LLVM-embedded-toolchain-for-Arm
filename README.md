@@ -76,25 +76,26 @@ and extract the archive into an arbitrary directory.
 
 ### Using the toolchain
 
-To use the toolchain you need to provide a compiler configuration file on the
-command line, for example:
+To use the toolchain, on the command line you need to provide:
+* A [configuration file](
+  https://clang.llvm.org/docs/UsersManual.html#configuration-files) specified
+  with `--config`.
+* A [linker script](
+  https://sourceware.org/binutils/docs/ld/Scripts.html) specified with `-T`.
+  Default `picolibcpp.ld` & `picolibc.ld` scripts are provided and can be used
+  directly or included from a [custom linker script](
+  https://github.com/picolibc/picolibc/blob/main/doc/linking.md#using-picolibcld).
+
+For example:
 
 ```
 $ PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
-$ clang --config armv6m_soft_nofp_semihost_ldscript -o example example.c
+$ clang --config armv6m_soft_nofp_semihost -T picolibc.ld -o example example.c
 ```
 
 The available configuration files can be listed using:
 ```
 $ ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg
-```
-
-Note that non-`ldscript` configurations
-require the linker script to be specified with `-T`:
-
-```
-$ PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
-$ clang --config armv6m_soft_nofp -T device.ld -o example example.c
 ```
 
 ## Building from source
