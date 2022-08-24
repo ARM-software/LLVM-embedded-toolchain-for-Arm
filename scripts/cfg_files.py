@@ -35,6 +35,7 @@ def write_cfg_files(cfg: config.Config, lib_spec: config.LibrarySpec) -> None:
         # libc++ is built with LIBCXX_ENABLE_RTTI=OFF
         '-fno-rtti',
         f'--sysroot {sysroot}',
+        f'-resource-dir {sysroot}',
     ]
 
     no_semihost_lines = base_cfg_lines + [
