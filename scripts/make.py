@@ -296,7 +296,6 @@ class ToolchainBuild:
         }
         return defs
 
-    # pylint: disable=too-many-locals
     def build_compiler_rt(self, lib_spec: config.LibrarySpec) -> None:
         """Build and install a single variant of compiler-rt."""
         self.runner.reset_cwd()
@@ -332,16 +331,19 @@ class ToolchainBuild:
         self._cmake_build(rt_build_dir)
         self._cmake_build(rt_build_dir, target='install')
 
-        # When clang has a baremetal target (e.g. aarch64-none-elf) then it
-        # will search with `baremetal` as the OS name. Thus, we have to move
-        # the compiler-rt builtins support library (and any other artefacts)
-        # from lib/generic to lib/baremetal to make them locatable by clang
+        # Move the libraries from lib/linux to lib
         lib_dir = join(rt_install_dir, 'lib')
-        baremetal_dir = join(lib_dir, 'baremetal')
         generic_dir = join(lib_dir, 'generic')
+        for name in os.listdir(generic_dir):
+            assert name != 'generic'
+            src = join(generic_dir, name)
+            dest = join(lib_dir, name)
+            if cfg.verbose:
+                logging.info('Moving %s to %s', src, dest)
+            shutil.move(src, dest)
         if cfg.verbose:
-            logging.info('Moving %s to %s', generic_dir, baremetal_dir)
-        shutil.move(generic_dir, baremetal_dir)
+            logging.info('Removing %s', generic_dir)
+        shutil.rmtree(generic_dir)
 
         # Adjust compiler-rt library names. They were changed in
         # https://reviews.llvm.org/D98452, but in our configuration Clang still
