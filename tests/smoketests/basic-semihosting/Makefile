@@ -19,15 +19,19 @@ build: hello.elf
 
 hello.elf: *.c
 	@$(BIN_PATH)/clang \
-	--config armv6m_soft_nofp_semihost -T picolibc.ld \
+	--config armv6m_soft_nofp_semihost \
+	-T ../../../samples/ldscripts/microbit.ld \
 	-g \
 	-o hello.elf \
 	$^
 
-run: hello.elf
-	@qemu-arm -cpu cortex-m0 $<
+%.hex: %.elf
+	@$(BIN_PATH)/llvm-objcopy -O ihex $< $@
+
+run: hello.hex
+	@qemu-system-arm -M microbit -semihosting -nographic -device loader,file=$<
 
 clean:
-	rm -f hello.elf
+	rm -f hello.elf hello.hex
 
 .PHONY: build run clean
