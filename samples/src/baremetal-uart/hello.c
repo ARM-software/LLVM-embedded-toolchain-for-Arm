@@ -14,6 +14,14 @@ DEFINE_PORT(uart_txd, 0x4000251C);
 DEFINE_PORT(uart_baud_rate, 0x40002524);
 DEFINE_PORT(uart_config, 0x4000256C);
 
+__attribute__ ((noinline)) void delay(int cycles)
+{
+  for (int c = cycles; --c; ) {
+    // prevent the compiler from optimising out the loop
+    asm("");
+  }
+}
+
 void uart_init()
 {
   *gpio_dir_set = 1 << 24;
@@ -22,11 +30,14 @@ void uart_init()
   *uart_pseltxd = 24;
   *uart_enable = 4;
   *uart_starttx = 1;
+
+  delay(1000);
 }
 
 void uart_send_message(char* message)
 {
   for(char* next_char = message; *next_char != '\0'; next_char++) {
+    *uart_txdrdy = 0;
     *uart_txd = *next_char;
     while (!*uart_txdrdy) {};
   }
@@ -38,5 +49,3 @@ int main(void)
   uart_send_message("Hello World!");
   return 0;
 }
-
-void SystemInit() {}
