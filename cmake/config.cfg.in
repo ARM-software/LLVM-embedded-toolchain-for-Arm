@@ -1,0 +1,6 @@
+${common_flags}
+-fuse-ld=lld
+-fno-exceptions
+-fno-rtti
+--sysroot <CFGDIR>/../lib/clang-runtimes/${variant}
+<CFGDIR>/../lib/clang-runtimes/${variant}/lib/${crt0}${extra_args}
