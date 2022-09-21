@@ -1,0 +1,14 @@
+This product embeds and uses the following pieces of software which have
+additional or alternate licenses:
+ - LLVM: third-party-licenses/LLVM-LICENSE.txt
+ - Clang: third-party-licenses/CLANG-LICENSE.txt
+ - lld: third-party-licenses/LLD-LICENSE.txt
+ - compiler-rt: third-party-licenses/COMPILER-RT-LICENSE.txt
+ - libc++: third-party-licenses/LIBCXX-LICENSE.txt
+ - libc++abi: third-party-licenses/LIBCXXABI-LICENSE.txt
+ - Picolibc: third-party-licenses/COPYING.NEWLIB, third-party-licenses/COPYING.picolibc${mingw_runtime_dlls}
+
+Newlib and picolibc licenses refer to the source files of the corresponding
+libraries. To examine the source code please download the source package of 
+the LLVM Embedded Toolchain for Arm HEAD from
+https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases.
