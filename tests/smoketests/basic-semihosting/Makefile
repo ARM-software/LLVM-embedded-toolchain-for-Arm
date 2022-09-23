@@ -19,7 +19,7 @@ build: hello.elf
 
 hello.elf: *.c
 	@$(BIN_PATH)/clang \
-	--config armv6m_soft_nofp_semihost \
+	--config armv6m_soft_nofp_semihost.cfg \
 	-T ../../../samples/ldscripts/microbit.ld \
 	-g \
 	-o hello.elf \

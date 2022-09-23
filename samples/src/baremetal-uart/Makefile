@@ -20,7 +20,7 @@ include ../../Makefile.conf
 build: hello.elf
 
 hello.elf: *.c
-	$(BIN_PATH)/clang --config armv6m_soft_nofp -g -T ../../ldscripts/microbit.ld -o hello.elf $^
+	$(BIN_PATH)/clang --config armv6m_soft_nofp.cfg -g -T ../../ldscripts/microbit.ld -o hello.elf $^
 
 %.hex: %.elf
 	$(BIN_PATH)/llvm-objcopy -O ihex $< $@

@@ -49,6 +49,6 @@ if exist hello.hex del /q hello.hex
 @exit /B 1
 
 :build_fn
-%BIN_PATH%\clang++.exe --config armv6m_soft_nofp_semihost -g -T ..\..\ldscripts\microbit.ld -o hello.elf hello.cpp
+%BIN_PATH%\clang++.exe --config armv6m_soft_nofp_semihost.cfg -g -T ..\..\ldscripts\microbit.ld -o hello.elf hello.cpp
 %BIN_PATH%\llvm-objcopy.exe -O ihex hello.elf hello.hex
 @exit /B
