@@ -90,7 +90,7 @@ For example:
 
 ```
 $ PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
-$ clang --config armv6m_soft_nofp_semihost -T picolibc.ld -o example example.c
+$ clang --config armv6m_soft_nofp_semihost.cfg -T picolibc.ld -o example example.c
 ```
 
 The available configuration files can be listed using:
