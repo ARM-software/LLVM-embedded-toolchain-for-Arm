@@ -372,11 +372,11 @@ class ToolchainBuild:
         Build and install a single variant of lib++abi, libc++ & libunwind
         """
         cmake_defs = self._get_common_cmake_defs_for_libs(lib_spec)
-        # Disable C++17 aligned allocation feature because its implementation
-        # in libc++ relies on posix_memalign() which is not available in our
-        # picolibc build
+        # Defining _DEFAULT_SOURCE means that extensions like
+        # posix_memalign can be used by the C++ runtimes. This is
+        # required to implement C++17's aligned new & delete operators.
         cxx_flags = (cmake_defs.get('CMAKE_CXX_FLAGS', '')
-                     + ' -D_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION')
+                     + ' -D_DEFAULT_SOURCE')
         install_dir = os.path.join(self.cfg.target_llvm_rt_dir,
                                    lib_spec.name)
         cmake_defs.update({
