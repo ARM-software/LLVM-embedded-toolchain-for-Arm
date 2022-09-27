@@ -418,7 +418,10 @@ while(library_variants)
 
     # compiler-rt
 
-    set(runtimes_flags "${common_flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${sysroot}")
+    # Defining _DEFAULT_SOURCE means that extensions like posix_memalign
+    # can be used by the C++ runtimes. This is required to implement
+    # C++17's aligned new & delete operators.
+    set(runtimes_flags "${common_flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${sysroot} -D_DEFAULT_SOURCE")
 
     ExternalProject_Add(
         compiler_rt_${variant}
@@ -476,7 +479,6 @@ while(library_variants)
 
     # Other LLVM runtimes
 
-    set(runtimes_cxx_flags "${runtimes_flags} -D_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION")
     ExternalProject_Add(
         runtimes_${variant}
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/runtimes
@@ -489,7 +491,7 @@ while(library_variants)
         -DCMAKE_BUILD_TYPE=MinSizeRel
         -DCMAKE_CXX_COMPILER=${llvm_bin}/clang++
         -DCMAKE_CXX_COMPILER_TARGET=${target}
-        -DCMAKE_CXX_FLAGS=${runtimes_cxx_flags}
+        -DCMAKE_CXX_FLAGS=${runtimes_flags}
         -DCMAKE_C_COMPILER=${llvm_bin}/clang
         -DCMAKE_C_COMPILER_TARGET=${target}
         -DCMAKE_C_FLAGS=${runtimes_flags}
