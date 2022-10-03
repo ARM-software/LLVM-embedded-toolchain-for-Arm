@@ -147,6 +147,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
 )
 set(LLVM_ENABLE_PROJECTS clang;lld CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD AArch64;ARM CACHE STRING "")
+set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-none-elf CACHE STRING "")
 
 # Default to a release build
 # (CMAKE_BUILD_TYPE is a special CMake variable so if you want to set
