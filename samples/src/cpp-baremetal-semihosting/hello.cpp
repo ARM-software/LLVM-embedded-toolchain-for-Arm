@@ -13,7 +13,3 @@ int main(void) {
 
   return 0;
 }
-
-extern "C" {
-void SystemInit() {}
-}
