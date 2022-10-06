@@ -5,6 +5,3 @@ This sample shows how to use semihosting with
 targeting the
 [micro:bit board model](https://www.qemu.org/2019/05/22/microbit/)
 to build C++ programs.
-
-It uses the startup code and the linker script file from the GNU Arm Embedded
-Toolchain samples.

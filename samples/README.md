@@ -6,7 +6,6 @@ Embedded Toolchain for Arm.
 ## Directory structure
 
 * `ldscripts` - Linker scripts used by the samples.
-* `startup` - Startup code used by the samples.
 * `src` - Sample source code, Makefile and description, each sub-directory is a
   separate sample.
 
@@ -24,16 +23,7 @@ In order to compile the samples you will need the following tools:
 * GNU Make (Linux and MSYS2)
 
 To run the samples you will need a QEMU emulator to be installed on your
-machine. The ``basic-semihosting`` sample uses the QEMU User space emulator,
-on Ubuntu Linux it can be installed using the following command:
-
-```
-# apt-get install qemu-user
-```
-
-The User space emulator is only available for Linux.
-
-The other two samples (``baremetal-semihosting`` and ``baremetal-uart``) rely on
+machine. The samples rely on
 the QEMU Arm System emulator. On Ubuntu Linux it can be installed as follows:
 
 ```
