@@ -18,17 +18,17 @@
 ---
 SourceType: "standalone-build-scripts"
 Revisions:
-  - Revision: HEAD
+  - Revision: branch-15
     Modules:
       - Name: llvm.git
         FriendlyName: LLVM
         URL:  https://github.com/llvm/llvm-project.git
-        Branch: main
-        Revision: HEAD
+        Branch: release/15.x
+        Revision: llvmorg-15.0.2
         Patch: llvm-HEAD.patch
       - Name: picolibc.git
         FriendlyName: Picolibc
         URL:  https://github.com/picolibc/picolibc.git
         Branch: main
-        Revision: HEAD
+        Revision: 3e7c697478ecd4575056d7373ed947ded1eddf8e
         Patch: picolibc-HEAD.patch
