@@ -1,5 +1,5 @@
 diff --git a/libcxx/include/cmath b/libcxx/include/cmath
-index 65a853165..a9cd04aa0 100644
+index 4d81eed339d8..46c9b90b70e0 100644
 --- a/libcxx/include/cmath
 +++ b/libcxx/include/cmath
 @@ -7,6 +7,9 @@
@@ -23,18 +23,18 @@ index 65a853165..a9cd04aa0 100644
  template <class _A1, class _A2, class _A3>
  inline _LIBCPP_INLINE_VISIBILITY
 @@ -634,8 +639,10 @@ lerp(float __a, float __b, float __t)                   _NOEXCEPT { return __ler
- _LIBCPP_HIDE_FROM_ABI constexpr double
+ constexpr double
  lerp(double __a, double __b, double __t)                _NOEXCEPT { return __lerp(__a, __b, __t); }
  
 +#if !(defined(__NEWLIB__) && (defined(_LDBLD_EQ_DBL) || !defined(__CYGWIN__)))
- _LIBCPP_HIDE_FROM_ABI constexpr long double
+ constexpr long double
  lerp(long double __a, long double __b, long double __t) _NOEXCEPT { return __lerp(__a, __b, __t); }
 +#endif
  
  template <class _A1, class _A2, class _A3>
  inline _LIBCPP_HIDE_FROM_ABI
 diff --git a/libcxx/include/math.h b/libcxx/include/math.h
-index 0ec584af9..e26b5138a 100644
+index 0ec584af9dbe..e26b5138ae1b 100644
 --- a/libcxx/include/math.h
 +++ b/libcxx/include/math.h
 @@ -7,6 +7,9 @@
