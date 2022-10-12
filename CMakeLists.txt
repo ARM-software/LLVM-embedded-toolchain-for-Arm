@@ -252,7 +252,7 @@ project(
 # can't be moved after the add_subdirectory command below.
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX
-        "${CMAKE_CURRENT_BINARY_DIR}/install"
+        "${CMAKE_BINARY_DIR}/install"
         CACHE PATH "" FORCE
     )
 endif()
@@ -653,16 +653,17 @@ else()
     set(cpack_generator TGZ)
     set(package_filename_extension ".tar.gz")
 endif()
-set(package_filename ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}${package_filename_extension})
+set(package_filepath ${CMAKE_BINARY_DIR}/${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}${package_filename_extension})
 add_custom_command(
-    OUTPUT ${package_filename}
+    OUTPUT ${package_filepath}
     COMMAND cpack -G ${cpack_generator}
     DEPENDS llvm-toolchain
     USES_TERMINAL
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 add_custom_target(
     package-llvm-toolchain
-    DEPENDS ${package_filename}
+    DEPENDS ${package_filepath}
 )
 add_custom_target(
     clear-unpack-directory
@@ -671,8 +672,8 @@ add_custom_target(
 )
 add_custom_target(
     unpack-llvm-toolchain
-    COMMAND "${CMAKE_COMMAND}" -E tar x ${CMAKE_CURRENT_BINARY_DIR}/${package_filename}
-    DEPENDS ${package_filename}
+    COMMAND "${CMAKE_COMMAND}" -E tar x ${package_filepath}
+    DEPENDS ${package_filepath}
     USES_TERMINAL
     WORKING_DIRECTORY unpack
 )
