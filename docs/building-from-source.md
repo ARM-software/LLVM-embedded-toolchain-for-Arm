@@ -120,7 +120,7 @@ The simplest way to build the toolchain is to invoke
 ```
 $ build.py
 ```
-in the Python. virtual environment.
+in the Python virtual environment.
 
 The build script supports various command line options. To get a description of
 all options run:
