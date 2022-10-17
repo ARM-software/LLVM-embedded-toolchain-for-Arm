@@ -274,6 +274,8 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL TRUE)
 set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
 # Strip debug info from files before packaging them
 set(CPACK_STRIP_FILES TRUE)
+# When extracting the files put them in an ArmCompiler-.../ directory.
+set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY TRUE)
 
 string(TOLOWER ${CMAKE_SYSTEM_PROCESSOR} processor_name)
 string(REGEX MATCH "amd64|x64|x86" x86_match ${processor_name})
