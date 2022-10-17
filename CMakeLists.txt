@@ -162,6 +162,10 @@ if(CCACHE_EXECUTABLE)
     set(LLVM_CCACHE_BUILD ON CACHE BOOL "")
 endif()
 
+# A lot of files get installed which makes the install messages too
+# noisy to be useful so default to disabling them.
+set(CMAKE_INSTALL_MESSAGE NEVER CACHE STRING "")
+
 
 # Define which library variants to build and which flags to use
 # The order is <arch> <name suffix> <flags>
@@ -391,6 +395,10 @@ while(library_variants)
 
     set(sysroot ${LLVM_BINARY_DIR}/lib/clang-runtimes/${variant})
 
+    if (CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
+        set(MESON_INSTALL_QUIET "--quiet")
+    endif()
+
     # picolibc
     ExternalProject_Add(
         picolibc_${variant}
@@ -400,7 +408,7 @@ while(library_variants)
         DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib llvm-strip
         CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
         BUILD_COMMAND ninja
-        INSTALL_COMMAND ninja install
+        INSTALL_COMMAND meson install ${MESON_INSTALL_QUIET}
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_TEST TRUE
@@ -442,6 +450,7 @@ while(library_variants)
         -DCMAKE_C_COMPILER_TARGET=${target}
         -DCMAKE_C_FLAGS=${runtimes_flags}
         -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld
+        -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_NM=${llvm_bin}/llvm-nm
         -DCMAKE_RANLIB=${llvm_bin}/llvm-ranlib
@@ -497,6 +506,7 @@ while(library_variants)
         -DCMAKE_C_COMPILER_TARGET=${target}
         -DCMAKE_C_FLAGS=${runtimes_flags}
         -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld
+        -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_NM=${llvm_bin}/llvm-nm
         -DCMAKE_RANLIB=${llvm_bin}/llvm-ranlib
