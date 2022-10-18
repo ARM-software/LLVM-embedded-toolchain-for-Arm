@@ -8,11 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+### Changed
+
+- Packages now extract into a LVMEmbeddedToolchainForArm-VERSION-PLATFORM subdirectory.
+
+### Removed
+
+## [15.0.2]
+
+### Added
+
 - A changelog
 - Support for building with CMake directly
 
-### Changed 
+### Changed
 
+- Updated to [LLVM 15.0.2](https://github.com/llvm/llvm-project/releases/tag/llvmorg-15.0.2)
 - Replaced newlib with [picolibc](https://github.com/picolibc/picolibc) (GitHub issue #61)
 - Renamed and updated configuration files
 - Configuration files must now be specified including the file name suffix e.g. `--config armv6m_soft_nofp.cfg`
