@@ -665,9 +665,13 @@ else()
     set(cpack_generator TGZ)
     set(package_filename_extension ".tar.gz")
 endif()
-set(package_filepath ${CMAKE_BINARY_DIR}/${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}${package_filename_extension})
+# CPACK_PACKAGE_FILE_NAME may refer to the source package so use this variable instead.
+set(binary_package_name ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
+set(package_filepath ${CMAKE_BINARY_DIR}/${binary_package_name}${package_filename_extension})
+set(unpack_directory ${CMAKE_CURRENT_BINARY_DIR}/unpack/${binary_package_name})
 add_custom_command(
     OUTPUT ${package_filepath}
+    COMMAND "${CMAKE_COMMAND}" -E rm -f ${package_filepath}
     COMMAND cpack -G ${cpack_generator}
     DEPENDS llvm-toolchain
     USES_TERMINAL
@@ -723,7 +727,7 @@ foreach(test
     add_custom_target(
         check-package-llvm-toolchain-smoketests-${test}
         COMMAND make clean
-        COMMAND make run BIN_PATH=${CMAKE_CURRENT_BINARY_DIR}/unpack/bin
+        COMMAND make run BIN_PATH=${unpack_directory}/bin
         COMMAND make clean
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/smoketests/${test}
     )
@@ -751,9 +755,9 @@ foreach(test
     add_custom_target(
         check-package-llvm-toolchain-samples-${test}
         COMMAND make clean
-        COMMAND make run BIN_PATH=${CMAKE_CURRENT_BINARY_DIR}/unpack/bin
+        COMMAND make run BIN_PATH=${unpack_directory}/bin
         COMMAND make clean
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/unpack/samples/src/${test}
+        WORKING_DIRECTORY ${unpack_directory}/samples/src/${test}
     )
     add_dependencies(check-package-llvm-toolchain-samples-${test} unpack-llvm-toolchain)
     add_dependencies(check-package-llvm-toolchain check-package-llvm-toolchain-samples-${test})
