@@ -401,31 +401,50 @@ while(library_variants)
         set(MESON_INSTALL_QUIET "--quiet")
     endif()
 
-    # picolibc
-    ExternalProject_Add(
-        picolibc_${variant}
-        SOURCE_DIR ${picolibc_SOURCE_DIR}
-        INSTALL_DIR ${sysroot}
-        PREFIX picolibc/${variant}
-        DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib llvm-strip
-        CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
-        BUILD_COMMAND ninja
-        INSTALL_COMMAND meson install ${MESON_INSTALL_QUIET}
-        USES_TERMINAL_CONFIGURE TRUE
-        USES_TERMINAL_BUILD TRUE
-        USES_TERMINAL_TEST TRUE
-        LIST_SEPARATOR ,
-        # Always run the build command so that incremental builds are correct.
-        BUILD_ALWAYS TRUE
-        CONFIGURE_HANDLED_BY_BUILD TRUE
-    )
-    # Set meson_c_args to a comma-separated list of the clang path and flags e.g.
-    # 'path/to/clang', '--target=armv6m-none-eabi', '-march=armv6m'
-    set(meson_c_args "${common_flags}")
-    string(REPLACE " " "', '" meson_c_args "${meson_c_args}")
-    set(meson_c_args "'${llvm_bin}/clang', '${meson_c_args}'")
-    ExternalProject_Get_Property(picolibc_${variant} BINARY_DIR)
-    configure_file(cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
+    # Can change this per library variant, if desired
+    set(libc_type picolibc)
+
+    if(libc_type STREQUAL "picolibc")
+        ExternalProject_Add(
+            picolibc_${variant}
+            SOURCE_DIR ${picolibc_SOURCE_DIR}
+            INSTALL_DIR ${sysroot}
+            PREFIX picolibc/${variant}
+            DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib llvm-strip
+            CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
+            BUILD_COMMAND ninja
+            INSTALL_COMMAND meson install ${MESON_INSTALL_QUIET}
+            USES_TERMINAL_CONFIGURE TRUE
+            USES_TERMINAL_BUILD TRUE
+            USES_TERMINAL_TEST TRUE
+            LIST_SEPARATOR ,
+            # Always run the build command so that incremental builds are correct.
+            BUILD_ALWAYS TRUE
+            CONFIGURE_HANDLED_BY_BUILD TRUE
+        )
+        # Set meson_c_args to a comma-separated list of the clang path
+        # and flags e.g. 'path/to/clang', '--target=armv6m-none-eabi',
+        # '-march=armv6m'
+        set(meson_c_args "${common_flags}")
+        string(REPLACE " " "', '" meson_c_args "${meson_c_args}")
+        set(meson_c_args "'${llvm_bin}/clang', '${meson_c_args}'")
+        ExternalProject_Get_Property(picolibc_${variant} BINARY_DIR)
+        configure_file(cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
+        set(libc_target picolibc_${variant})
+        set(libc_specific_runtimes_options
+            -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+            -DLIBCXXABI_ENABLE_PIC=OFF
+            -DLIBCXXABI_ENABLE_THREADS=OFF
+            -DLIBCXX_ENABLE_EXCEPTIONS=OFF
+            -DLIBCXX_ENABLE_LOCALIZATION=OFF
+            -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF
+            -DLIBCXX_ENABLE_RANDOM_DEVICE=OFF
+            -DLIBCXX_ENABLE_RTTI=OFF
+            -DLIBCXX_ENABLE_THREADS=OFF
+            -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
+            -DLIBUNWIND_ENABLE_THREADS=OFF
+        )
+    endif()
 
     # compiler-rt
 
@@ -439,7 +458,7 @@ while(library_variants)
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/compiler-rt
         PREFIX compiler-rt/${variant}
         INSTALL_DIR compiler-rt/${variant}/install
-        DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib picolibc_${variant}
+        DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib ${libc_target}
         CMAKE_ARGS
         -DCMAKE_AR=${llvm_bin}/llvm-ar
         -DCMAKE_ASM_COMPILER_TARGET=${target}
@@ -496,7 +515,7 @@ while(library_variants)
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/runtimes
         INSTALL_DIR ${sysroot}
         PREFIX runtimes/${variant}
-        DEPENDS clang compiler_rt_${variant} lld llvm-ar llvm-config llvm-nm llvm-ranlib picolibc_${variant}
+        DEPENDS clang compiler_rt_${variant} lld llvm-ar llvm-config llvm-nm llvm-ranlib ${libc_target}
         CMAKE_ARGS
         -DCMAKE_AR=${llvm_bin}/llvm-ar
         -DCMAKE_ASM_FLAGS=${runtimes_flags}
@@ -515,28 +534,18 @@ while(library_variants)
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
         -DLIBCXXABI_BAREMETAL=ON
         -DLIBCXXABI_ENABLE_ASSERTIONS=OFF
-        -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
-        -DLIBCXXABI_ENABLE_PIC=OFF
         -DLIBCXXABI_ENABLE_SHARED=OFF
         -DLIBCXXABI_ENABLE_STATIC=ON
-        -DLIBCXXABI_ENABLE_THREADS=OFF
         -DLIBCXXABI_LIBCXX_INCLUDES=${sysroot}/include/c++/v1
         -DLIBCXXABI_USE_COMPILER_RT=ON
         -DLIBCXXABI_USE_LLVM_UNWINDER=ON
         -DLIBCXX_CXX_ABI=libcxxabi
         -DLIBCXX_ENABLE_DEBUG_MODE_SUPPORT=OFF
-        -DLIBCXX_ENABLE_EXCEPTIONS=OFF
         -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
         -DLIBCXX_ENABLE_FILESYSTEM=OFF
-        -DLIBCXX_ENABLE_LOCALIZATION=OFF
-        -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF
         -DLIBCXX_ENABLE_PARALLEL_ALGORITHMS=OFF
-        -DLIBCXX_ENABLE_RANDOM_DEVICE=OFF
-        -DLIBCXX_ENABLE_RTTI=OFF
         -DLIBCXX_ENABLE_SHARED=OFF
         -DLIBCXX_ENABLE_STATIC=ON
-        -DLIBCXX_ENABLE_THREADS=OFF
-        -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
         -DLIBCXX_INCLUDE_BENCHMARKS=OFF
         # libc++ CMake files incorrectly detect that the "-GR-" flag
         # (the clang-cl analog of -fno-rtti) is supported. Manually mark it
@@ -544,12 +553,12 @@ while(library_variants)
         -DLIBCXX_SUPPORTS_GR_FLAG=OFF
         -DLIBUNWIND_ENABLE_SHARED=OFF
         -DLIBUNWIND_ENABLE_STATIC=ON
-        -DLIBUNWIND_ENABLE_THREADS=OFF
         -DLIBUNWIND_IS_BAREMETAL=ON
         -DLIBUNWIND_REMEMBER_HEAP_ALLOC=ON
         -DLIBUNWIND_USE_COMPILER_RT=ON
         -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_ENABLE_RUNTIMES=libcxxabi,libcxx,libunwind
+        ${libc_specific_runtimes_options}
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
@@ -563,7 +572,7 @@ while(library_variants)
     add_dependencies(
         llvm-toolchain-runtimes
         compiler_rt_${variant}
-        picolibc_${variant}
+        ${libc_target}
         runtimes_${variant}
     )
 
