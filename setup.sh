@@ -42,5 +42,3 @@ cd "$(dirname "$0")"
 pip install --upgrade pip
 pip install --upgrade wheel
 pip install --upgrade setuptools
-pip install -r requirements.txt
-pip install -e scripts
