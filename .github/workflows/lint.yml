@@ -12,10 +12,9 @@ on:
 
 jobs:
   lint:
-    # Check with the minumum required Python version and with the latest version
     strategy:
       matrix:
-        python-version: [3.6, 3.9]
+        python-version: [3.9]
 
     runs-on: ubuntu-latest
 
@@ -31,19 +30,10 @@ jobs:
         with:
           path: ~/.cache/pip
           key: pip-${{ matrix.python-version }}-${{ hashFiles('requirements*.txt') }}
-      # Install dependencies for python scripts and linters
+      # Install dependencies for linters
       - name: Install python packages
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          python -m pip install -r requirements.txt
           python -m pip install -r requirements-lint.txt
-      - name: Lint with flake8
-        run: flake8 scripts
-      - name: Lint with pylint
-        run: pylint --rcfile=scripts/.pylintrc --score=n scripts
-      - name: Typecheck with mypy
-        run: mypy scripts
-      - name: Check packaging
-        run: python -m pip install -e scripts --no-cache-dir
       - name: Lint CMakeLists.txt
         run: cmakelint --quiet CMakeLists.txt
