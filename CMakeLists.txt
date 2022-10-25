@@ -397,7 +397,7 @@ while(library_variants)
 
     set(sysroot ${LLVM_BINARY_DIR}/lib/clang-runtimes/${variant})
 
-    if (CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
+    if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
         set(MESON_INSTALL_QUIET "--quiet")
     endif()
 

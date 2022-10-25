@@ -14,3 +14,5 @@ echo "Checking with pylint"
 pylint --rcfile=./scripts/.pylintrc --score=n scripts && echo 'No issues found'
 echo "Checking with mypy"
 mypy scripts
+echo "Checking with CMakeLint"
+cmakelint CMakeLists.txt

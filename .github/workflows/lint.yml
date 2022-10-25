@@ -45,3 +45,5 @@ jobs:
         run: mypy scripts
       - name: Check packaging
         run: python -m pip install -e scripts --no-cache-dir
+      - name: Lint CMakeLists.txt
+        run: cmakelint --quiet CMakeLists.txt
