@@ -433,7 +433,6 @@ while(library_variants)
         set(libc_target picolibc_${variant})
         set(libc_specific_runtimes_options
             -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
-            -DLIBCXXABI_ENABLE_PIC=OFF
             -DLIBCXXABI_ENABLE_THREADS=OFF
             -DLIBCXX_ENABLE_EXCEPTIONS=OFF
             -DLIBCXX_ENABLE_LOCALIZATION=OFF
@@ -541,16 +540,10 @@ while(library_variants)
         -DLIBCXXABI_USE_LLVM_UNWINDER=ON
         -DLIBCXX_CXX_ABI=libcxxabi
         -DLIBCXX_ENABLE_DEBUG_MODE_SUPPORT=OFF
-        -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
         -DLIBCXX_ENABLE_FILESYSTEM=OFF
-        -DLIBCXX_ENABLE_PARALLEL_ALGORITHMS=OFF
         -DLIBCXX_ENABLE_SHARED=OFF
         -DLIBCXX_ENABLE_STATIC=ON
         -DLIBCXX_INCLUDE_BENCHMARKS=OFF
-        # libc++ CMake files incorrectly detect that the "-GR-" flag
-        # (the clang-cl analog of -fno-rtti) is supported. Manually mark it
-        # as unsupported to avoid warnings.
-        -DLIBCXX_SUPPORTS_GR_FLAG=OFF
         -DLIBUNWIND_ENABLE_SHARED=OFF
         -DLIBUNWIND_ENABLE_STATIC=ON
         -DLIBUNWIND_IS_BAREMETAL=ON
