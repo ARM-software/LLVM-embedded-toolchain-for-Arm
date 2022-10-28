@@ -435,22 +435,21 @@ while(library_variants)
             -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
             -DLIBCXXABI_ENABLE_THREADS=OFF
             -DLIBCXX_ENABLE_EXCEPTIONS=OFF
-            -DLIBCXX_ENABLE_LOCALIZATION=OFF
             -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF
             -DLIBCXX_ENABLE_RANDOM_DEVICE=OFF
             -DLIBCXX_ENABLE_RTTI=OFF
             -DLIBCXX_ENABLE_THREADS=OFF
             -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
+            # _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE: Avoids a static assert
+            # failing in <__locale>.
+            -DLIBCXX_EXTRA_SITE_DEFINES=_LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
             -DLIBUNWIND_ENABLE_THREADS=OFF
         )
     endif()
 
     # compiler-rt
 
-    # Defining _DEFAULT_SOURCE means that extensions like posix_memalign
-    # can be used by the C++ runtimes. This is required to implement
-    # C++17's aligned new & delete operators.
-    set(runtimes_flags "${common_flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${sysroot} -D_DEFAULT_SOURCE")
+    set(runtimes_flags "${common_flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${sysroot}")
 
     ExternalProject_Add(
         compiler_rt_${variant}
