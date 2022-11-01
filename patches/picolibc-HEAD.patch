@@ -1,5 +1,5 @@
 diff --git a/meson.build b/meson.build
-index ec55ab4fe..be7924d26 100644
+index ee2411ad2..ca25641d3 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -916,6 +916,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
@@ -15,32 +15,6 @@ index ec55ab4fe..be7924d26 100644
  conf_data.set('_HAVE_CC_INHIBIT_LOOP_TO_LIBCALL',
  	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
  	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
-diff --git a/newlib/libc/tinystdio/strtoi.h b/newlib/libc/tinystdio/strtoi.h
-index 673096940..42195aa06 100644
---- a/newlib/libc/tinystdio/strtoi.h
-+++ b/newlib/libc/tinystdio/strtoi.h
-@@ -30,6 +30,7 @@
-   POSSIBILITY OF SUCH DAMAGE.
- */
- 
-+#define _DEFAULT_SOURCE
- #include <ctype.h>
- #include <limits.h>
- #include <math.h>
-@@ -167,3 +168,13 @@ strtoi(const char *__restrict nptr, char **__restrict endptr, int ibase)
- 
-     return val;
- }
-+
-+
-+#define STRTOI_L1(x) x##_l
-+#define STRTOI_L(x) STRTOI_L1(x)
-+
-+strtoi_type
-+STRTOI_L(strtoi)(const char *__restrict nptr, char **__restrict endptr, int ibase, locale_t loc) {
-+    (void)loc;
-+	return strtoi(nptr, endptr, ibase);
-+}
 diff --git a/picolibc.ld.in b/picolibc.ld.in
 index c69ad3c3a..7f4d2fc43 100644
 --- a/picolibc.ld.in
