@@ -1,5 +1,5 @@
 #include <vector>
-#include <cstdio>
+#include <iostream>
 
 int main(void) {
   std::vector<int> v = {1, 2, 3};
@@ -7,9 +7,9 @@ int main(void) {
   v.insert(v.end(), 5);
 
   for (int elem: v) {
-    printf("%d ", elem);
+    std::cout << elem << " ";
   }
-  printf("\n");
+  std::cout << std::endl;
 
   return 0;
 }
