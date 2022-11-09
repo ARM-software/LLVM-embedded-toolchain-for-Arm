@@ -33,8 +33,9 @@ the QEMU Arm System emulator. On Ubuntu Linux it can be installed as follows:
 The Windows installer can be downloaded from
 https://www.qemu.org/download/#windows.
 
-To debug the samples you will need to install [LLDB](https://lldb.llvm.org/)
-version matching LLVM Embedded Toolchain for Arm.
+To debug the samples you will need to install a debugger 
+that supports Arm targets, for example, 
+[LLDB](https://lldb.llvm.org/) version matching LLVM Embedded Toolchain for Arm.
 Debugging is only supported on Linux.
 
 ## Specifying the location of the installed toolchain
