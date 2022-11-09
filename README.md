@@ -66,7 +66,10 @@ see component links above.
 ## Host platforms
 
 The LLVM Embedded Toolchain for Arm has been built and tested on Linux/Ubuntu
-18.04.5 LTS.
+18.04.5 LTS, including cross-building for Windows.
+
+[Binary packages](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases) 
+are provided for major LLVM releases for Linux and Windows.
 
 ## Getting started
 
