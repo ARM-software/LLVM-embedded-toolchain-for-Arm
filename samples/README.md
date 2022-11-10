@@ -33,8 +33,9 @@ the QEMU Arm System emulator. On Ubuntu Linux it can be installed as follows:
 The Windows installer can be downloaded from
 https://www.qemu.org/download/#windows.
 
-To debug the samples you will need to install GDB provided by the
-[GNU Arm Embedded Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads).
+To debug the samples you will need to install a debugger 
+that supports Arm targets, for example, 
+[LLDB](https://lldb.llvm.org/) version matching LLVM Embedded Toolchain for Arm.
 Debugging is only supported on Linux.
 
 ## Specifying the location of the installed toolchain
@@ -58,16 +59,14 @@ use the following commands to build, run or debug the sample:
 * ``$ make build`` to build the sample.
 * ``$ make run`` to run the sample with QEMU emulator.
 * ``$ make debug`` to run the sample with QEMU emulator with GDB server
-  listening on the default port 1234 (Note: ``debug`` is supported only on
-  Linux).
+  listening on the default port 1234. This option is supported only on
+  Linux.
 
-  To debug attach to QEMU with
-  [GNU Arm Embedded Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads)
-  GDB:
+  To debug attach to QEMU with [LLDB](https://lldb.llvm.org/):
 
   ```
-  $ arm-none-eabi-gdb hello.elf
-  (gdb) target remote :1234
+  $ lldb hello.elf
+  (lldb) gdb-remote 1234
   ```
 * ``$ make clean`` to delete the generated ``.elf`` and ``.hex`` files
 
