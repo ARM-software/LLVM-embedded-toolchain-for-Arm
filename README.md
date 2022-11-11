@@ -102,11 +102,7 @@ $ ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg
 ```
 
 > *Note:* If you are using the toolchain in a shared environment with untrusted input,
-> it is recommended to do the following:
-> * Sandbox the toolchain to limit its access to required files only.
-> * Prevent execution of other binaries.
-> * Segregate different users from each other.
-> * Limit usage of resources and execution time.
+> make sure it is sufficiently sandboxed.
 
 ## Building from source
 
