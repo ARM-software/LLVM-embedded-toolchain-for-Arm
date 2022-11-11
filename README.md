@@ -101,6 +101,9 @@ The available configuration files can be listed using:
 $ ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg
 ```
 
+> *Note:* If you are using the toolchain in a shared environment with untrusted input,
+> make sure it is sufficiently sandboxed.
+
 ## Building from source
 
 LLVM Embedded Toolchain for Arm is an open source project and thus can be built
