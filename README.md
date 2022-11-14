@@ -32,8 +32,6 @@ that are not supported include:
  - Exceptions
  - RTTI
  - Multithreading
- - Locales and input/output streams
- - C++17's aligned operator new
 
 ## Components
 

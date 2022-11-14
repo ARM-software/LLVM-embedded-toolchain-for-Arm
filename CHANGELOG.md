@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Support for locales and input/output streams
+
 ### Changed
 
 - Packages now extract into a LVMEmbeddedToolchainForArm-VERSION-PLATFORM subdirectory.
@@ -20,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - A changelog
 - Support for building with CMake directly
+- Support for C++17's aligned operator new
 
 ### Changed
 
