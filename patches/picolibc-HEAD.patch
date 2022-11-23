@@ -1,8 +1,8 @@
 diff --git a/meson.build b/meson.build
-index ee2411ad2..ca25641d3 100644
+index 4bb20f3af..cf9e564d1 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -916,6 +916,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
+@@ -942,6 +942,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
    error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
  endif
  
@@ -15,36 +15,3 @@ index ee2411ad2..ca25641d3 100644
  conf_data.set('_HAVE_CC_INHIBIT_LOOP_TO_LIBCALL',
  	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
  	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
-diff --git a/picolibc.ld.in b/picolibc.ld.in
-index c69ad3c3a..7f4d2fc43 100644
---- a/picolibc.ld.in
-+++ b/picolibc.ld.in
-@@ -42,8 +42,8 @@ ENTRY(_start)
- 
- MEMORY
- {
--	flash (rxai!w) : ORIGIN = DEFINED(__flash) ? __flash : 0x10000000, LENGTH = DEFINED(__flash_size) ? __flash_size : 0x10000
--	ram (wxa!ri)   : ORIGIN = DEFINED(__ram  ) ? __ram   : 0x20000000, LENGTH = DEFINED(__ram_size  ) ? __ram_size   : 0x08000
-+	flash (rx) : ORIGIN = DEFINED(__flash) ? __flash : 0x10000000, LENGTH = DEFINED(__flash_size) ? __flash_size : 0x10000
-+	ram (rwx)   : ORIGIN = DEFINED(__ram  ) ? __ram   : 0x20000000, LENGTH = DEFINED(__ram_size  ) ? __ram_size   : 0x08000
- }
- 
- PHDRS
-@@ -137,7 +137,7 @@ SECTIONS
- 		PROVIDE(__preserve_end__ = .);
- 	} >ram AT>ram :ram
- 
--	.data : ALIGN_WITH_INPUT {
-+	.data : {
- 		*(.data .data.*)
- 		*(.gnu.linkonce.d.*)
- 
-@@ -159,7 +159,7 @@ SECTIONS
- 	 * into the allocate ram addresses by the existing
- 	 * data initialization code in crt0
- 	 */
--	.tdata : ALIGN_WITH_INPUT {
-+	.tdata : {
- 		*(.tdata .tdata.* .gnu.linkonce.td.*)
- 		PROVIDE(__data_end = .);
- 		PROVIDE(__tdata_end = .);
