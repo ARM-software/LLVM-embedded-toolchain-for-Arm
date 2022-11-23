@@ -1,5 +1,5 @@
 diff --git a/libcxx/include/cmath b/libcxx/include/cmath
-index ef3a67843e10..956bf0789e44 100644
+index ef3a67843e10..485bd284d5ea 100644
 --- a/libcxx/include/cmath
 +++ b/libcxx/include/cmath
 @@ -7,6 +7,9 @@
@@ -22,19 +22,8 @@ index ef3a67843e10..956bf0789e44 100644
  
  template <class _A1, class _A2, class _A3>
  inline _LIBCPP_INLINE_VISIBILITY
-@@ -643,8 +648,10 @@ lerp(float __a, float __b, float __t)                   _NOEXCEPT { return __ler
- _LIBCPP_HIDE_FROM_ABI constexpr double
- lerp(double __a, double __b, double __t)                _NOEXCEPT { return __lerp(__a, __b, __t); }
- 
-+#if !(defined(__NEWLIB__) && (defined(_LDBLD_EQ_DBL) || !defined(__CYGWIN__)))
- _LIBCPP_HIDE_FROM_ABI constexpr long double
- lerp(long double __a, long double __b, long double __t) _NOEXCEPT { return __lerp(__a, __b, __t); }
-+#endif
- 
- template <class _A1, class _A2, class _A3>
- inline _LIBCPP_HIDE_FROM_ABI
 diff --git a/libcxx/include/math.h b/libcxx/include/math.h
-index ac57360cca9e..c8edc8bc8f21 100644
+index 46a0a813ed05..9042959e16fb 100644
 --- a/libcxx/include/math.h
 +++ b/libcxx/include/math.h
 @@ -7,6 +7,9 @@
@@ -47,7 +36,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  #ifndef _LIBCPP_MATH_H
  #define _LIBCPP_MATH_H
  
-@@ -791,8 +794,10 @@ isunordered(_A1 __x, _A2 __y) _NOEXCEPT
+@@ -540,8 +543,10 @@ inline _LIBCPP_HIDE_FROM_ABI bool isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       acos(float __x) _NOEXCEPT       {return ::acosf(__x);}
@@ -58,7 +47,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -803,8 +808,10 @@ acos(_A1 __x) _NOEXCEPT {return ::acos((double)__x);}
+@@ -552,8 +557,10 @@ acos(_A1 __x) _NOEXCEPT {return ::acos((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       asin(float __x) _NOEXCEPT       {return ::asinf(__x);}
@@ -69,7 +58,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -815,8 +822,10 @@ asin(_A1 __x) _NOEXCEPT {return ::asin((double)__x);}
+@@ -564,8 +571,10 @@ asin(_A1 __x) _NOEXCEPT {return ::asin((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       atan(float __x) _NOEXCEPT       {return ::atanf(__x);}
@@ -80,7 +69,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -827,8 +836,10 @@ atan(_A1 __x) _NOEXCEPT {return ::atan((double)__x);}
+@@ -576,8 +585,10 @@ atan(_A1 __x) _NOEXCEPT {return ::atan((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       atan2(float __y, float __x) _NOEXCEPT             {return ::atan2f(__y, __x);}
@@ -91,7 +80,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -850,8 +861,10 @@ atan2(_A1 __y, _A2 __x) _NOEXCEPT
+@@ -599,8 +610,10 @@ atan2(_A1 __y, _A2 __x) _NOEXCEPT
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       ceil(float __x) _NOEXCEPT       {return ::ceilf(__x);}
@@ -102,7 +91,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -862,8 +875,10 @@ ceil(_A1 __x) _NOEXCEPT {return ::ceil((double)__x);}
+@@ -611,8 +624,10 @@ ceil(_A1 __x) _NOEXCEPT {return ::ceil((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       cos(float __x) _NOEXCEPT       {return ::cosf(__x);}
@@ -113,7 +102,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -874,8 +889,10 @@ cos(_A1 __x) _NOEXCEPT {return ::cos((double)__x);}
+@@ -623,8 +638,10 @@ cos(_A1 __x) _NOEXCEPT {return ::cos((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       cosh(float __x) _NOEXCEPT       {return ::coshf(__x);}
@@ -124,7 +113,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -886,8 +903,10 @@ cosh(_A1 __x) _NOEXCEPT {return ::cosh((double)__x);}
+@@ -635,8 +652,10 @@ cosh(_A1 __x) _NOEXCEPT {return ::cosh((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       exp(float __x) _NOEXCEPT       {return ::expf(__x);}
@@ -135,7 +124,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -898,8 +917,10 @@ exp(_A1 __x) _NOEXCEPT {return ::exp((double)__x);}
+@@ -647,8 +666,10 @@ exp(_A1 __x) _NOEXCEPT {return ::exp((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       fabs(float __x) _NOEXCEPT       {return ::fabsf(__x);}
@@ -146,7 +135,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -910,8 +931,10 @@ fabs(_A1 __x) _NOEXCEPT {return ::fabs((double)__x);}
+@@ -659,8 +680,10 @@ fabs(_A1 __x) _NOEXCEPT {return ::fabs((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       floor(float __x) _NOEXCEPT       {return ::floorf(__x);}
@@ -157,7 +146,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -922,8 +945,10 @@ floor(_A1 __x) _NOEXCEPT {return ::floor((double)__x);}
+@@ -671,8 +694,10 @@ floor(_A1 __x) _NOEXCEPT {return ::floor((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       fmod(float __x, float __y) _NOEXCEPT             {return ::fmodf(__x, __y);}
@@ -168,7 +157,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -945,8 +970,10 @@ fmod(_A1 __x, _A2 __y) _NOEXCEPT
+@@ -694,8 +719,10 @@ fmod(_A1 __x, _A2 __y) _NOEXCEPT
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       frexp(float __x, int* __e) _NOEXCEPT       {return ::frexpf(__x, __e);}
@@ -179,7 +168,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -957,8 +984,10 @@ frexp(_A1 __x, int* __e) _NOEXCEPT {return ::frexp((double)__x, __e);}
+@@ -706,8 +733,10 @@ frexp(_A1 __x, int* __e) _NOEXCEPT {return ::frexp((double)__x, __e);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       ldexp(float __x, int __e) _NOEXCEPT       {return ::ldexpf(__x, __e);}
@@ -190,7 +179,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -969,8 +998,10 @@ ldexp(_A1 __x, int __e) _NOEXCEPT {return ::ldexp((double)__x, __e);}
+@@ -718,8 +747,10 @@ ldexp(_A1 __x, int __e) _NOEXCEPT {return ::ldexp((double)__x, __e);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       log(float __x) _NOEXCEPT       {return ::logf(__x);}
@@ -201,7 +190,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -981,8 +1012,10 @@ log(_A1 __x) _NOEXCEPT {return ::log((double)__x);}
+@@ -730,8 +761,10 @@ log(_A1 __x) _NOEXCEPT {return ::log((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       log10(float __x) _NOEXCEPT       {return ::log10f(__x);}
@@ -212,7 +201,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -993,15 +1026,19 @@ log10(_A1 __x) _NOEXCEPT {return ::log10((double)__x);}
+@@ -742,15 +775,19 @@ log10(_A1 __x) _NOEXCEPT {return ::log10((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       modf(float __x, float* __y) _NOEXCEPT             {return ::modff(__x, __y);}
@@ -232,19 +221,17 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1023,8 +1060,10 @@ pow(_A1 __x, _A2 __y) _NOEXCEPT
+@@ -772,7 +809,9 @@ pow(_A1 __x, _A2 __y) _NOEXCEPT
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       sin(float __x) _NOEXCEPT       {return ::sinf(__x);}
 +#    if !(defined(__NEWLIB__) && (defined(_LDBLD_EQ_DBL) || !defined(__CYGWIN__)))
  inline _LIBCPP_HIDE_FROM_ABI long double sin(long double __x) _NOEXCEPT {return ::sinl(__x);}
--#endif
 +#    endif
-+#    endif
+ #endif
  
  template <class _A1>
- inline _LIBCPP_HIDE_FROM_ABI
-@@ -1035,8 +1074,10 @@ sin(_A1 __x) _NOEXCEPT {return ::sin((double)__x);}
+@@ -784,8 +823,10 @@ sin(_A1 __x) _NOEXCEPT {return ::sin((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       sinh(float __x) _NOEXCEPT       {return ::sinhf(__x);}
@@ -255,7 +242,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1047,8 +1088,10 @@ sinh(_A1 __x) _NOEXCEPT {return ::sinh((double)__x);}
+@@ -796,8 +837,10 @@ sinh(_A1 __x) _NOEXCEPT {return ::sinh((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       sqrt(float __x) _NOEXCEPT       {return ::sqrtf(__x);}
@@ -266,7 +253,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1059,8 +1102,10 @@ sqrt(_A1 __x) _NOEXCEPT {return ::sqrt((double)__x);}
+@@ -808,8 +851,10 @@ sqrt(_A1 __x) _NOEXCEPT {return ::sqrt((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       tan(float __x) _NOEXCEPT       {return ::tanf(__x);}
@@ -277,7 +264,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1071,8 +1116,10 @@ tan(_A1 __x) _NOEXCEPT {return ::tan((double)__x);}
+@@ -820,8 +865,10 @@ tan(_A1 __x) _NOEXCEPT {return ::tan((double)__x);}
  
  #    if !defined(__sun__)
  inline _LIBCPP_HIDE_FROM_ABI float       tanh(float __x) _NOEXCEPT       {return ::tanhf(__x);}
@@ -288,7 +275,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1082,7 +1129,9 @@ tanh(_A1 __x) _NOEXCEPT {return ::tanh((double)__x);}
+@@ -831,7 +878,9 @@ tanh(_A1 __x) _NOEXCEPT {return ::tanh((double)__x);}
  // acosh
  
  inline _LIBCPP_HIDE_FROM_ABI float       acosh(float __x) _NOEXCEPT       {return ::acoshf(__x);}
@@ -298,7 +285,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1092,7 +1141,9 @@ acosh(_A1 __x) _NOEXCEPT {return ::acosh((double)__x);}
+@@ -841,7 +890,9 @@ acosh(_A1 __x) _NOEXCEPT {return ::acosh((double)__x);}
  // asinh
  
  inline _LIBCPP_HIDE_FROM_ABI float       asinh(float __x) _NOEXCEPT       {return ::asinhf(__x);}
@@ -308,18 +295,17 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1102,7 +1153,10 @@ asinh(_A1 __x) _NOEXCEPT {return ::asinh((double)__x);}
+@@ -851,7 +902,9 @@ asinh(_A1 __x) _NOEXCEPT {return ::asinh((double)__x);}
  // atanh
  
  inline _LIBCPP_HIDE_FROM_ABI float       atanh(float __x) _NOEXCEPT       {return ::atanhf(__x);}
 +#if !(defined(__NEWLIB__) && (defined(_LDBLD_EQ_DBL) || !defined(__CYGWIN__)))
  inline _LIBCPP_HIDE_FROM_ABI long double atanh(long double __x) _NOEXCEPT {return ::atanhl(__x);}
 +#endif
-+
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1112,7 +1166,9 @@ atanh(_A1 __x) _NOEXCEPT {return ::atanh((double)__x);}
+@@ -861,7 +914,9 @@ atanh(_A1 __x) _NOEXCEPT {return ::atanh((double)__x);}
  // cbrt
  
  inline _LIBCPP_HIDE_FROM_ABI float       cbrt(float __x) _NOEXCEPT       {return ::cbrtf(__x);}
@@ -329,35 +315,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1143,6 +1199,7 @@ inline _LIBCPP_HIDE_FROM_ABI double __libcpp_copysign(double __x, double __y) _N
- #endif
- }
- 
-+#if !(defined(__NEWLIB__) && (defined(_LDBLD_EQ_DBL) || !defined(__CYGWIN__)))
- #if __has_builtin(__builtin_copysignl)
- _LIBCPP_CONSTEXPR
- #endif
-@@ -1153,6 +1210,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double __libcpp_copysign(long double __x, long
-   return ::copysignl(__x, __y);
- #endif
- }
-+#endif
- 
- template <class _A1, class _A2>
- #if __has_builtin(__builtin_copysign)
-@@ -1180,9 +1238,11 @@ inline _LIBCPP_HIDE_FROM_ABI float copysign(float __x, float __y) _NOEXCEPT {
-   return ::__libcpp_copysign(__x, __y);
- }
- 
-+#if !(defined(__NEWLIB__) && (defined(_LDBLD_EQ_DBL) || !defined(__CYGWIN__)))
- inline _LIBCPP_HIDE_FROM_ABI long double copysign(long double __x, long double __y) _NOEXCEPT {
-   return ::__libcpp_copysign(__x, __y);
- }
-+#endif
- 
- template <class _A1, class _A2>
- inline _LIBCPP_HIDE_FROM_ABI
-@@ -1199,7 +1259,9 @@ typename std::__enable_if_t
+@@ -924,7 +979,9 @@ typename std::__enable_if_t
  // erf
  
  inline _LIBCPP_HIDE_FROM_ABI float       erf(float __x) _NOEXCEPT       {return ::erff(__x);}
@@ -367,7 +325,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1209,7 +1271,9 @@ erf(_A1 __x) _NOEXCEPT {return ::erf((double)__x);}
+@@ -934,7 +991,9 @@ erf(_A1 __x) _NOEXCEPT {return ::erf((double)__x);}
  // erfc
  
  inline _LIBCPP_HIDE_FROM_ABI float       erfc(float __x) _NOEXCEPT       {return ::erfcf(__x);}
@@ -377,7 +335,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1219,7 +1283,9 @@ erfc(_A1 __x) _NOEXCEPT {return ::erfc((double)__x);}
+@@ -944,7 +1003,9 @@ erfc(_A1 __x) _NOEXCEPT {return ::erfc((double)__x);}
  // exp2
  
  inline _LIBCPP_HIDE_FROM_ABI float       exp2(float __x) _NOEXCEPT       {return ::exp2f(__x);}
@@ -387,7 +345,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1229,7 +1295,9 @@ exp2(_A1 __x) _NOEXCEPT {return ::exp2((double)__x);}
+@@ -954,7 +1015,9 @@ exp2(_A1 __x) _NOEXCEPT {return ::exp2((double)__x);}
  // expm1
  
  inline _LIBCPP_HIDE_FROM_ABI float       expm1(float __x) _NOEXCEPT       {return ::expm1f(__x);}
@@ -397,7 +355,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1239,7 +1307,9 @@ expm1(_A1 __x) _NOEXCEPT {return ::expm1((double)__x);}
+@@ -964,7 +1027,9 @@ expm1(_A1 __x) _NOEXCEPT {return ::expm1((double)__x);}
  // fdim
  
  inline _LIBCPP_HIDE_FROM_ABI float       fdim(float __x, float __y) _NOEXCEPT             {return ::fdimf(__x, __y);}
@@ -407,23 +365,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1267,6 +1337,7 @@ inline _LIBCPP_HIDE_FROM_ABI float       fma(float __x, float __y, float __z) _N
-     return ::fmaf(__x, __y, __z);
- #endif
- }
-+#if !(defined(__NEWLIB__) && (defined(_LDBLD_EQ_DBL) || !defined(__CYGWIN__)))
- inline _LIBCPP_HIDE_FROM_ABI long double fma(long double __x, long double __y, long double __z) _NOEXCEPT
- {
- #if __has_builtin(__builtin_fmal)
-@@ -1275,6 +1346,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double fma(long double __x, long double __y, l
-     return ::fmal(__x, __y, __z);
- #endif
- }
-+#endif
- 
- template <class _A1, class _A2, class _A3>
- inline _LIBCPP_HIDE_FROM_ABI
-@@ -1301,7 +1373,9 @@ fma(_A1 __x, _A2 __y, _A3 __z) _NOEXCEPT
+@@ -1014,7 +1079,9 @@ fma(_A1 __x, _A2 __y, _A3 __z) _NOEXCEPT
  // fmax
  
  inline _LIBCPP_HIDE_FROM_ABI float       fmax(float __x, float __y) _NOEXCEPT             {return ::fmaxf(__x, __y);}
@@ -433,7 +375,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1322,7 +1396,9 @@ fmax(_A1 __x, _A2 __y) _NOEXCEPT
+@@ -1035,7 +1102,9 @@ fmax(_A1 __x, _A2 __y) _NOEXCEPT
  // fmin
  
  inline _LIBCPP_HIDE_FROM_ABI float       fmin(float __x, float __y) _NOEXCEPT             {return ::fminf(__x, __y);}
@@ -443,7 +385,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1343,7 +1419,9 @@ fmin(_A1 __x, _A2 __y) _NOEXCEPT
+@@ -1056,7 +1125,9 @@ fmin(_A1 __x, _A2 __y) _NOEXCEPT
  // hypot
  
  inline _LIBCPP_HIDE_FROM_ABI float       hypot(float __x, float __y) _NOEXCEPT             {return ::hypotf(__x, __y);}
@@ -453,7 +395,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1364,7 +1442,9 @@ hypot(_A1 __x, _A2 __y) _NOEXCEPT
+@@ -1077,7 +1148,9 @@ hypot(_A1 __x, _A2 __y) _NOEXCEPT
  // ilogb
  
  inline _LIBCPP_HIDE_FROM_ABI int ilogb(float __x) _NOEXCEPT       {return ::ilogbf(__x);}
@@ -463,7 +405,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1374,7 +1454,9 @@ ilogb(_A1 __x) _NOEXCEPT {return ::ilogb((double)__x);}
+@@ -1087,7 +1160,9 @@ ilogb(_A1 __x) _NOEXCEPT {return ::ilogb((double)__x);}
  // lgamma
  
  inline _LIBCPP_HIDE_FROM_ABI float       lgamma(float __x) _NOEXCEPT       {return ::lgammaf(__x);}
@@ -473,39 +415,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1391,6 +1473,7 @@ inline _LIBCPP_HIDE_FROM_ABI long long llrint(float __x) _NOEXCEPT
-     return ::llrintf(__x);
- #endif
- }
-+#if !(defined(__NEWLIB__) && (defined(_LDBLD_EQ_DBL) || !defined(__CYGWIN__)))
- inline _LIBCPP_HIDE_FROM_ABI long long llrint(long double __x) _NOEXCEPT
- {
- #if __has_builtin(__builtin_llrintl)
-@@ -1399,6 +1482,7 @@ inline _LIBCPP_HIDE_FROM_ABI long long llrint(long double __x) _NOEXCEPT
-     return ::llrintl(__x);
- #endif
- }
-+#endif
- 
- template <class _A1>
- inline _LIBCPP_HIDE_FROM_ABI
-@@ -1422,6 +1506,7 @@ inline _LIBCPP_HIDE_FROM_ABI long long llround(float __x) _NOEXCEPT
-     return ::llroundf(__x);
- #endif
- }
-+#if !(defined(__NEWLIB__) && (defined(_LDBLD_EQ_DBL) || !defined(__CYGWIN__)))
- inline _LIBCPP_HIDE_FROM_ABI long long llround(long double __x) _NOEXCEPT
- {
- #if __has_builtin(__builtin_llroundl)
-@@ -1430,6 +1515,7 @@ inline _LIBCPP_HIDE_FROM_ABI long long llround(long double __x) _NOEXCEPT
-     return ::llroundl(__x);
- #endif
- }
-+#endif
- 
- template <class _A1>
- inline _LIBCPP_HIDE_FROM_ABI
-@@ -1446,7 +1532,9 @@ llround(_A1 __x) _NOEXCEPT
+@@ -1135,7 +1210,9 @@ llround(_A1 __x) _NOEXCEPT
  // log1p
  
  inline _LIBCPP_HIDE_FROM_ABI float       log1p(float __x) _NOEXCEPT       {return ::log1pf(__x);}
@@ -515,7 +425,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1456,7 +1544,9 @@ log1p(_A1 __x) _NOEXCEPT {return ::log1p((double)__x);}
+@@ -1145,7 +1222,9 @@ log1p(_A1 __x) _NOEXCEPT {return ::log1p((double)__x);}
  // log2
  
  inline _LIBCPP_HIDE_FROM_ABI float       log2(float __x) _NOEXCEPT       {return ::log2f(__x);}
@@ -525,7 +435,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1466,7 +1556,9 @@ log2(_A1 __x) _NOEXCEPT {return ::log2((double)__x);}
+@@ -1155,7 +1234,9 @@ log2(_A1 __x) _NOEXCEPT {return ::log2((double)__x);}
  // logb
  
  inline _LIBCPP_HIDE_FROM_ABI float       logb(float __x) _NOEXCEPT       {return ::logbf(__x);}
@@ -535,7 +445,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1540,7 +1632,9 @@ lround(_A1 __x) _NOEXCEPT
+@@ -1205,7 +1286,9 @@ lround(_A1 __x) _NOEXCEPT
  // nearbyint
  
  inline _LIBCPP_HIDE_FROM_ABI float       nearbyint(float __x) _NOEXCEPT       {return ::nearbyintf(__x);}
@@ -545,7 +455,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1550,7 +1644,9 @@ nearbyint(_A1 __x) _NOEXCEPT {return ::nearbyint((double)__x);}
+@@ -1215,7 +1298,9 @@ nearbyint(_A1 __x) _NOEXCEPT {return ::nearbyint((double)__x);}
  // nextafter
  
  inline _LIBCPP_HIDE_FROM_ABI float       nextafter(float __x, float __y) _NOEXCEPT             {return ::nextafterf(__x, __y);}
@@ -555,7 +465,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1570,6 +1666,7 @@ nextafter(_A1 __x, _A2 __y) _NOEXCEPT
+@@ -1235,6 +1320,7 @@ nextafter(_A1 __x, _A2 __y) _NOEXCEPT
  
  // nexttoward
  
@@ -563,7 +473,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  inline _LIBCPP_HIDE_FROM_ABI float       nexttoward(float __x, long double __y) _NOEXCEPT       {return ::nexttowardf(__x, __y);}
  inline _LIBCPP_HIDE_FROM_ABI long double nexttoward(long double __x, long double __y) _NOEXCEPT {return ::nexttowardl(__x, __y);}
  
-@@ -1577,11 +1674,14 @@ template <class _A1>
+@@ -1242,11 +1328,14 @@ template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
  typename std::enable_if<std::is_integral<_A1>::value, double>::type
  nexttoward(_A1 __x, long double __y) _NOEXCEPT {return ::nexttoward((double)__x, __y);}
@@ -578,7 +488,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1602,7 +1702,9 @@ remainder(_A1 __x, _A2 __y) _NOEXCEPT
+@@ -1267,7 +1356,9 @@ remainder(_A1 __x, _A2 __y) _NOEXCEPT
  // remquo
  
  inline _LIBCPP_HIDE_FROM_ABI float       remquo(float __x, float __y, int* __z) _NOEXCEPT             {return ::remquof(__x, __y, __z);}
@@ -588,7 +498,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1, class _A2>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1685,7 +1787,9 @@ round(_A1 __x) _NOEXCEPT
+@@ -1326,7 +1417,9 @@ round(_A1 __x) _NOEXCEPT
  // scalbln
  
  inline _LIBCPP_HIDE_FROM_ABI float       scalbln(float __x, long __y) _NOEXCEPT       {return ::scalblnf(__x, __y);}
@@ -598,7 +508,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1695,7 +1799,9 @@ scalbln(_A1 __x, long __y) _NOEXCEPT {return ::scalbln((double)__x, __y);}
+@@ -1336,7 +1429,9 @@ scalbln(_A1 __x, long __y) _NOEXCEPT {return ::scalbln((double)__x, __y);}
  // scalbn
  
  inline _LIBCPP_HIDE_FROM_ABI float       scalbn(float __x, int __y) _NOEXCEPT       {return ::scalbnf(__x, __y);}
@@ -608,7 +518,7 @@ index ac57360cca9e..c8edc8bc8f21 100644
  
  template <class _A1>
  inline _LIBCPP_HIDE_FROM_ABI
-@@ -1705,7 +1811,9 @@ scalbn(_A1 __x, int __y) _NOEXCEPT {return ::scalbn((double)__x, __y);}
+@@ -1346,7 +1441,9 @@ scalbn(_A1 __x, int __y) _NOEXCEPT {return ::scalbn((double)__x, __y);}
  // tgamma
  
  inline _LIBCPP_HIDE_FROM_ABI float       tgamma(float __x) _NOEXCEPT       {return ::tgammaf(__x);}
