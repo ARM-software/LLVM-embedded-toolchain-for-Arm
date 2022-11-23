@@ -440,9 +440,6 @@ while(library_variants)
             -DLIBCXX_ENABLE_RTTI=OFF
             -DLIBCXX_ENABLE_THREADS=OFF
             -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
-            # _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE: Avoids a static assert
-            # failing in <__locale>.
-            -DLIBCXX_EXTRA_SITE_DEFINES=_LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
             -DLIBUNWIND_ENABLE_THREADS=OFF
         )
     endif()
