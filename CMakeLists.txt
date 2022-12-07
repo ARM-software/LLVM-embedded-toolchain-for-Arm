@@ -162,6 +162,12 @@ if(CCACHE_EXECUTABLE)
     set(LLVM_CCACHE_BUILD ON CACHE BOOL "")
 endif()
 
+# If lld is available then use it by default.
+find_program(LLD_EXECUTABLE lld)
+if(LLD_EXECUTABLE)
+    set(LLVM_ENABLE_LLD ON CACHE BOOL "")
+endif()
+
 # A lot of files get installed which makes the install messages too
 # noisy to be useful so default to disabling them.
 set(CMAKE_INSTALL_MESSAGE NEVER CACHE STRING "")
