@@ -172,24 +172,6 @@ endif()
 # noisy to be useful so default to disabling them.
 set(CMAKE_INSTALL_MESSAGE NEVER CACHE STRING "")
 
-
-# Define which library variants to build and which flags to use
-# The order is <arch> <name suffix> <flags>
-set(library_variants
-    aarch64         ""                  "-march=armv8-a"
-    armv6m          _soft_nofp          "-mfloat-abi=soft -march=armv6m"
-    armv7em         _hard_fpv4_sp_d16   "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"
-    armv7em         _hard_fpv5_d16      "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"
-    armv7em         _soft_nofp          "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    armv7m          _soft_nofp          "-mfloat-abi=soft -march=armv7m+nofp"
-    armv8m.main     _hard_fp            "-mfloat-abi=hard -march=armv8m.main+fp"
-    armv8m.main     _soft_nofp          "-mfloat-abi=soft -march=armv8m.main+nofp"
-    armv8.1m.main   _hard_fp            "-mfloat-abi=hard -march=armv8.1m.main+fp"
-    armv8.1m.main   _hard_nofp_mve      "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"
-    armv8.1m.main   _soft_nofp_nomve    "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"
-)
-
-
 include(ExternalProject)
 include(FetchContent)
 
@@ -363,9 +345,63 @@ foreach(variant ${LLVM_TOOLCHAIN_LIBRARY_VARIANTS})
     set(enable_${variant} TRUE)
 endforeach()
 
-# Destructively iterate over the 3-tuples defining the variants.
-while(library_variants)
-    list(POP_FRONT library_variants target_arch variant_suffix flags)
+# Define which library variants to build and which flags to use.
+# The order is <parent directory name> <libc_type> <arch> <variant name> <flags>
+# e.g. "arm-none-eabi" "picolibc" "armv6m" "armv6m_soft_nofp" "-mfloat-abi=soft -march=armv6m"
+set(library_variants)
+
+# Add to the library_variants list libraries that share a common parent
+# directory and type of C library.
+# See after the function for examples of how it is used.
+function(add_library_variants parent_dir_name libc_type)
+    set(variant_args "${ARGN}")
+    while(variant_args)
+        list(POP_FRONT variant_args target_arch variant_suffix flags)
+
+        if(variant_suffix)
+            set(variant "${target_arch}_${variant_suffix}")
+        else()
+            set(variant "${target_arch}")
+        endif()
+
+        if(LLVM_TOOLCHAIN_LIBRARY_VARIANTS)
+            if(NOT enable_${variant})
+                message("Disabling library variant ${variant}")
+                continue()
+            else()
+                message("Enabling library variant ${variant}")
+            endif()
+        endif()
+
+        list(APPEND library_variants "${parent_dir_name}" "${libc_type}" "${target_arch}" "${variant}" "${flags}")
+    endwhile()
+
+    set(library_variants "${library_variants}" PARENT_SCOPE)
+endfunction()
+
+# Define which library variants to build and which flags to use.
+# The order is <arch> <name suffix> <flags>
+add_library_variants(aarch64-none-elf picolibc
+    aarch64         ""                  "-march=armv8-a"
+)
+add_library_variants(arm-none-eabi picolibc
+    armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"
+    armv7em         hard_fpv4_sp_d16    "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"
+    armv7em         hard_fpv5_d16       "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"
+    armv7em         soft_nofp           "-mfloat-abi=soft -march=armv7em -mfpu=none"
+    armv7m          soft_nofp           "-mfloat-abi=soft -march=armv7m+nofp"
+    armv8m.main     hard_fp             "-mfloat-abi=hard -march=armv8m.main+fp"
+    armv8m.main     soft_nofp           "-mfloat-abi=soft -march=armv8m.main+nofp"
+    armv8.1m.main   hard_fp             "-mfloat-abi=hard -march=armv8.1m.main+fp"
+    armv8.1m.main   hard_nofp_mve       "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"
+    armv8.1m.main   soft_nofp_nomve     "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"
+)
+
+
+set(library_variants_copy "${library_variants}")
+# Destructively iterate over a copy of the tuples defining the variants.
+while(library_variants_copy)
+    list(POP_FRONT library_variants_copy parent_dir_name libc_type target_arch variant flags)
 
     if(target_arch STREQUAL "aarch64")
         set(target "aarch64-none-elf")
@@ -374,17 +410,9 @@ while(library_variants)
         set(target "${target_arch}-none-eabi")
         set(cpu_family arm)
     endif()
-    set(variant "${target_arch}${variant_suffix}")
+    set(variant_directory "${parent_dir_name}/${variant}")
+    set(install_directory "${LLVM_BINARY_DIR}/lib/clang-runtimes/${variant_directory}")
     set(common_flags "--target=${target} ${flags}")
-
-    if(LLVM_TOOLCHAIN_LIBRARY_VARIANTS)
-        if(NOT enable_${variant})
-            message("Disabling library variant ${variant}")
-            continue()
-        else()
-            message("Enabling library variant ${variant}")
-        endif()
-    endif()
 
     # Create clang configuration files
     # https://clang.llvm.org/docs/UsersManual.html#configuration-files
@@ -401,20 +429,15 @@ while(library_variants)
         COMPONENT llvm-toolchain
     )
 
-    set(sysroot ${LLVM_BINARY_DIR}/lib/clang-runtimes/${variant})
-
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
         set(MESON_INSTALL_QUIET "--quiet")
     endif()
-
-    # Can change this per library variant, if desired
-    set(libc_type picolibc)
 
     if(libc_type STREQUAL "picolibc")
         ExternalProject_Add(
             picolibc_${variant}
             SOURCE_DIR ${picolibc_SOURCE_DIR}
-            INSTALL_DIR ${sysroot}
+            INSTALL_DIR ${install_directory}
             PREFIX picolibc/${variant}
             DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib llvm-strip
             CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
@@ -452,7 +475,7 @@ while(library_variants)
 
     # compiler-rt
 
-    set(runtimes_flags "${common_flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${sysroot}")
+    set(runtimes_flags "${common_flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${install_directory}")
 
     ExternalProject_Add(
         compiler_rt_${variant}
@@ -504,9 +527,9 @@ while(library_variants)
     add_custom_command(
         TARGET compiler_rt_${variant}
         POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory ${INSTALL_DIR} ${sysroot}
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory ${sysroot}/lib/generic ${sysroot}/lib
-        COMMAND "${CMAKE_COMMAND}" -E rm -rf ${sysroot}/lib/generic
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory ${INSTALL_DIR} ${install_directory}
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory ${install_directory}/lib/generic ${install_directory}/lib
+        COMMAND "${CMAKE_COMMAND}" -E rm -rf ${install_directory}/lib/generic
     )
 
     # Other LLVM runtimes
@@ -514,7 +537,7 @@ while(library_variants)
     ExternalProject_Add(
         runtimes_${variant}
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/runtimes
-        INSTALL_DIR ${sysroot}
+        INSTALL_DIR ${install_directory}
         PREFIX runtimes/${variant}
         DEPENDS clang compiler_rt_${variant} lld llvm-ar llvm-config llvm-nm llvm-ranlib ${libc_target}
         CMAKE_ARGS
@@ -537,7 +560,7 @@ while(library_variants)
         -DLIBCXXABI_ENABLE_ASSERTIONS=OFF
         -DLIBCXXABI_ENABLE_SHARED=OFF
         -DLIBCXXABI_ENABLE_STATIC=ON
-        -DLIBCXXABI_LIBCXX_INCLUDES=${sysroot}/include/c++/v1
+        -DLIBCXXABI_LIBCXX_INCLUDES=${install_directory}/include/c++/v1
         -DLIBCXXABI_USE_COMPILER_RT=ON
         -DLIBCXXABI_USE_LLVM_UNWINDER=ON
         -DLIBCXX_CXX_ABI=libcxxabi
@@ -572,8 +595,8 @@ while(library_variants)
     )
 
     install(
-        DIRECTORY ${sysroot}
-        DESTINATION lib/clang-runtimes
+        DIRECTORY ${install_directory}
+        DESTINATION lib/clang-runtimes/${parent_dir_name}
         COMPONENT llvm-toolchain
     )
 endwhile()
