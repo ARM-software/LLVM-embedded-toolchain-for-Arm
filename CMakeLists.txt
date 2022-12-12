@@ -512,6 +512,7 @@ while(library_variants_copy)
         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
         -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_CONFIG_PATH=${llvm_bin}/llvm-config
+        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
@@ -522,14 +523,13 @@ while(library_variants_copy)
         CONFIGURE_HANDLED_BY_BUILD TRUE
     )
     ExternalProject_Get_Property(compiler_rt_${variant} INSTALL_DIR)
-    # Copy compiler-rt install into sysroot, moving
-    # generic/libclang_rt.builtins-<arch>.a out of its subdirectory.
+    # Copy compiler-rt lib directory, moving libraries out of their
+    # target-specific subdirectory.
     add_custom_command(
         TARGET compiler_rt_${variant}
         POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory ${INSTALL_DIR} ${install_directory}
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory ${install_directory}/lib/generic ${install_directory}/lib
-        COMMAND "${CMAKE_COMMAND}" -E rm -rf ${install_directory}/lib/generic
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory
+            ${INSTALL_DIR}/lib/${target} ${install_directory}/lib
     )
 
     # Other LLVM runtimes
