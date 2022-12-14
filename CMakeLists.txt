@@ -442,7 +442,7 @@ while(library_variants_copy)
             DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib llvm-strip
             CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
             BUILD_COMMAND ninja
-            INSTALL_COMMAND meson install ${MESON_INSTALL_QUIET}
+            INSTALL_COMMAND ${MESON_EXECUTABLE} install ${MESON_INSTALL_QUIET}
             USES_TERMINAL_CONFIGURE TRUE
             USES_TERMINAL_BUILD TRUE
             USES_TERMINAL_TEST TRUE
