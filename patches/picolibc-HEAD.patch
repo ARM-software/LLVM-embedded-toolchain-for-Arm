@@ -1,8 +1,8 @@
 diff --git a/meson.build b/meson.build
-index 4bb20f3af..cf9e564d1 100644
+index 10465b666..d748fb95f 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -942,6 +942,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
+@@ -945,6 +945,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
    error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
  endif
  
@@ -15,3 +15,20 @@ index 4bb20f3af..cf9e564d1 100644
  conf_data.set('_HAVE_CC_INHIBIT_LOOP_TO_LIBCALL',
  	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
  	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
+diff --git a/picolibc.ld.in b/picolibc.ld.in
+index c757f7665..e262e1c21 100644
+--- a/picolibc.ld.in
++++ b/picolibc.ld.in
+@@ -207,10 +207,12 @@ SECTIONS
+ 	 * across them.  We actually need memory allocated for tbss,
+ 	 * so we create a special segment here just to make room
+ 	 */
++	/*
+ 	.tbss_space (NOLOAD) : {
+ 		. = ADDR(.tbss);
+ 		. = . + SIZEOF(.tbss);
+ 	} >ram AT>ram :ram
++	*/
+ 
+ 	.bss (NOLOAD) : {
+ 		*(.sbss*)
