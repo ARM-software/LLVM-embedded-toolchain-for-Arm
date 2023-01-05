@@ -765,6 +765,7 @@ endforeach()
 # Samples
 # Don't run the baremetal-uart sample because it never terminates.
 foreach(test
+    baremetal-semihosting-aarch64
     baremetal-semihosting
     cpp-baremetal-semihosting
 )
