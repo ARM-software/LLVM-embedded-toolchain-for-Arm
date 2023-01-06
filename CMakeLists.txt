@@ -148,6 +148,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
 set(LLVM_ENABLE_PROJECTS clang;lld CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD AArch64;ARM CACHE STRING "")
 set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-linux-gnu CACHE STRING "")
+set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 
 # Default to a release build
 # (CMAKE_BUILD_TYPE is a special CMake variable so if you want to set
@@ -517,7 +518,6 @@ while(library_variants_copy)
         -DCMAKE_C_COMPILER=${llvm_bin}/clang
         -DCMAKE_C_COMPILER_TARGET=${target}
         -DCMAKE_C_FLAGS=${runtimes_flags}
-        -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld
         -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_NM=${llvm_bin}/llvm-nm
@@ -573,7 +573,6 @@ while(library_variants_copy)
         -DCMAKE_C_COMPILER=${llvm_bin}/clang
         -DCMAKE_C_COMPILER_TARGET=${target}
         -DCMAKE_C_FLAGS=${runtimes_flags}
-        -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld
         -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_NM=${llvm_bin}/llvm-nm

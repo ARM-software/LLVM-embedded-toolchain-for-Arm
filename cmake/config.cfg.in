@@ -1,5 +1,4 @@
 ${common_flags}
--fuse-ld=lld
 -fno-exceptions
 -fno-rtti
 --sysroot <CFGDIR>/../lib/clang-runtimes/${variant_directory}
