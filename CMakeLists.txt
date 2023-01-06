@@ -45,9 +45,9 @@
 # If you prefer you can check out and patch the repos manually and use those:
 #   mkdir repos
 #   git -C repos clone https://github.com/llvm/llvm-project.git
-#   git -C repos/llvm-project apply ../../patches/llvm-HEAD.patch
+#   git -C repos/llvm-project apply ../../patches/llvm-project.patch
 #   git -C repos clone https://github.com/picolibc/picolibc.git
-#   git -C repos/picolibc apply ../../patches/picolibc-HEAD.patch
+#   git -C repos/picolibc apply ../../patches/picolibc.patch
 #   mkdir build
 #   cd build
 #   cmake .. -GNinja -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=../repos/llvm-project -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=../repos/picolibc
@@ -187,12 +187,35 @@ include(FetchContent)
 # If you want to stop cmake updating the repos then run
 # cmake . -DFETCHCONTENT_FULLY_DISCONNECTED=ON
 
+# Read which revisions of the repos to use.
+file(READ versions.json VERSIONS_JSON)
+function(read_repo_version output_variable_prefix repo)
+    string(JSON tag GET ${VERSIONS_JSON} "repos" "${repo}" "tag")
+    string(JSON tagType GET ${VERSIONS_JSON} "repos" "${repo}" "tagType")
+    if(tagType STREQUAL "commithash")
+        # GIT_SHALLOW doesn't work with commit hashes.
+        set(shallow OFF)
+    elseif(tagType STREQUAL "tag" OR tagType STREQUAL "branch")
+        set(shallow ON)
+        # CMake docs recommend that "branch names and tags should
+        # generally be specified as remote names"
+        set(tag "origin/${tag}")
+    else()
+        message(FATAL_ERROR "Unrecognised tagType ${tagType}")
+    endif()
+
+    set(${output_variable_prefix}_TAG "${tag}" PARENT_SCOPE)
+    set(${output_variable_prefix}_SHALLOW "${shallow}" PARENT_SCOPE)
+endfunction()
+read_repo_version(llvmproject llvm-project)
+read_repo_version(picolibc picolibc)
+
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
-    GIT_TAG origin/main
-    GIT_SHALLOW TRUE
+    GIT_TAG "${llvmproject_TAG}"
+    GIT_SHALLOW "${llvmproject_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-HEAD.patch
+    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project.patch
     # Add the llvm subdirectory later to ensure that
     # LLVMEmbeddedToolchainForArm is the first project declared.
     # Otherwise CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT
@@ -202,10 +225,10 @@ FetchContent_Declare(llvmproject
 
 FetchContent_Declare(picolibc
     GIT_REPOSITORY https://github.com/picolibc/picolibc.git
-    GIT_TAG origin/main
-    GIT_SHALLOW TRUE
+    GIT_TAG "${picolibc_TAG}"
+    GIT_SHALLOW "${picolibc_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc-HEAD.patch
+    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc.patch
     # We only want to download the content, not configure it at this
     # stage. picolibc will be built in many configurations using
     # ExternalProject_Add using the sources that are checked out here.

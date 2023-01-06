@@ -9,6 +9,6 @@ additional or alternate licenses:
  - Picolibc: third-party-licenses/COPYING.NEWLIB, third-party-licenses/COPYING.picolibc${mingw_runtime_dlls}
 
 Newlib and picolibc licenses refer to the source files of the corresponding
-libraries. To examine the source code please download the source package of 
-the LLVM Embedded Toolchain for Arm HEAD from
+libraries. To examine the source code please download the source package of
+the LLVM Embedded Toolchain for Arm from
 https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases.

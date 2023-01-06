@@ -1,0 +1,19 @@
+{
+  "comment": [
+    "Release branches of LLVM Embedded Toolchain for Arm will use",
+    "specific revisions of the repos it depends on. This file provides",
+    "a single source of truth for which revisions to use that can be",
+    "queried by CMake and other automation software."
+  ],
+  "repos": {
+    "llvm-project": {
+      "comment": "tagType can be branch, tag or commithash",
+      "tagType": "branch",
+      "tag": "main"
+    },
+    "picolibc": {
+      "tagType": "branch",
+      "tag": "main"
+    }
+  }
+}
