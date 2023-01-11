@@ -380,7 +380,7 @@ set(library_variants)
 function(add_library_variants parent_dir_name libc_type)
     set(variant_args "${ARGN}")
     while(variant_args)
-        list(POP_FRONT variant_args target_arch variant_suffix flags)
+        list(POP_FRONT variant_args target_arch variant_suffix flags qemu_params)
 
         if(variant_suffix)
             set(variant "${target_arch}_${variant_suffix}")
@@ -397,7 +397,7 @@ function(add_library_variants parent_dir_name libc_type)
             endif()
         endif()
 
-        list(APPEND library_variants "${parent_dir_name}" "${libc_type}" "${target_arch}" "${variant}" "${flags}")
+        list(APPEND library_variants "${parent_dir_name}" "${libc_type}" "${target_arch}" "${variant}" "${flags}" "${qemu_params}")
     endwhile()
 
     set(library_variants "${library_variants}" PARENT_SCOPE)
@@ -406,26 +406,26 @@ endfunction()
 # Define which library variants to build and which flags to use.
 # The order is <arch> <name suffix> <flags>
 add_library_variants(aarch64-none-elf picolibc
-    aarch64         ""                  "-march=armv8-a"
+    aarch64         ""                  "-march=armv8-a"                                        "-M raspi3b"
 )
 add_library_variants(arm-none-eabi picolibc
-    armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"
-    armv7em         hard_fpv4_sp_d16    "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"
-    armv7em         hard_fpv5_d16       "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"
-    armv7em         soft_nofp           "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    armv7m          soft_nofp           "-mfloat-abi=soft -march=armv7m+nofp"
-    armv8m.main     hard_fp             "-mfloat-abi=hard -march=armv8m.main+fp"
-    armv8m.main     soft_nofp           "-mfloat-abi=soft -march=armv8m.main+nofp"
-    armv8.1m.main   hard_fp             "-mfloat-abi=hard -march=armv8.1m.main+fp"
-    armv8.1m.main   hard_nofp_mve       "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"
-    armv8.1m.main   soft_nofp_nomve     "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"
+    armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"                        "-M microbit"
+    armv7em         hard_fpv4_sp_d16    "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"     "-M mps2-an386 -cpu cortex-m4"
+    armv7em         hard_fpv5_d16       "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"        "-M mps2-an500 -cpu cortex-m7"
+    armv7em         soft_nofp           "-mfloat-abi=soft -march=armv7em -mfpu=none"            "-M mps2-an386 -cpu cortex-m4"
+    armv7m          soft_nofp           "-mfloat-abi=soft -march=armv7m+nofp"                   "-M mps2-an385 -cpu cortex-m3"
+    armv8m.main     hard_fp             "-mfloat-abi=hard -march=armv8m.main+fp"                "-M mps3-an524 -cpu cortex-m33"
+    armv8m.main     soft_nofp           "-mfloat-abi=soft -march=armv8m.main+nofp"              "-M mps2-an505 -cpu cortex-m33"
+    armv8.1m.main   hard_fp             "-mfloat-abi=hard -march=armv8.1m.main+fp"              "-M mps3-an547 -cpu cortex-m55"
+    armv8.1m.main   hard_nofp_mve       "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"        "-M mps3-an547 -cpu cortex-m55"
+    armv8.1m.main   soft_nofp_nomve     "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"      "-M mps3-an547 -cpu cortex-m55"
 )
 
-
+add_custom_target(check-picolibc)
 set(library_variants_copy "${library_variants}")
 # Destructively iterate over a copy of the tuples defining the variants.
 while(library_variants_copy)
-    list(POP_FRONT library_variants_copy parent_dir_name libc_type target_arch variant flags)
+    list(POP_FRONT library_variants_copy parent_dir_name libc_type target_arch variant flags qemu_params)
 
     if(target_arch STREQUAL "aarch64")
         set(target "aarch64-none-elf")
@@ -517,6 +517,83 @@ while(library_variants_copy)
             -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
             -DLIBUNWIND_ENABLE_THREADS=OFF
         )
+
+        # picolibc tests
+        string(REPLACE " " ";" qemu_params "${qemu_params}")
+        add_custom_target(check-picolibc_${variant})
+        set(qemu_command "qemu-system-${cpu_family}")
+        # Tests disabled due to fact it fails at least at one variant
+        set(picolibc_tests
+            #abort # False negatve it returns non zero code which is expected
+            atexit
+            complex-funcs
+            constructor
+            #constructor-skip
+            fenv
+            ffs
+            hosted-exit
+            #long_double
+            #malloc
+            #malloc_stress
+            #math_errhandling
+            math-funcs
+            on_exit
+            posix-io
+            printf_scanf
+            printf-tests
+            rand
+            regex
+            setjmp
+            stack-smash
+            test-efcvt
+            #test-except
+            test-fopen
+            test-memset
+            test-mktemp
+            test-put
+            test-strchr
+            test-strtod
+            #timegm
+            time-sprintf
+            time-tests
+            #tls
+            ungetc
+        )
+
+        function(picolibc_test test)
+            # -Oz parameter is added just like picolibc is doing, otherwise there is a build issue
+            # ld.lld: error: undefined symbol: __issignalingl  while building math_errhandling test.
+            add_custom_command(
+                    OUTPUT picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
+                    COMMAND ${llvm_bin}/clang --config ${llvm_bin}/${variant}_semihost.cfg
+                    -T ../samples/ldscripts/${variant}.ld
+                    -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
+                    ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
+                    COMMENT "Building: ${test} for ${variant}"
+                    DEPENDS ${picolibc_SOURCE_DIR}/test/${test}.c ${libc_target} compiler_rt_${variant}
+            )
+            add_custom_target(
+                    check-picolibc_${variant}-${test}
+                    ${qemu_command} ${qemu_params} -semihosting -nographic -kernel check-picolibc_${variant}_build_${test}.out
+                    DEPENDS picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
+                    WORKING_DIRECTORY picolibc_tests_${variant}
+                    COMMENT "TEST: ${variant} ${test}"
+            )
+            add_dependencies(check-picolibc_${variant} check-picolibc_${variant}-${test})
+        endfunction()
+
+        if(${variant} MATCHES "^armv8" OR ${variant} MATCHES "^aarch")
+            message("Picolibc tests disabled for ${variant}")
+        else()
+            execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory picolibc_tests_${variant})
+            foreach(test IN LISTS picolibc_tests)
+                picolibc_test(${test})
+            endforeach()
+            # Test disabled due to duplicated symbol name div in test file and in picolibc
+            # picolibc_test(rounding-mode ${picolibc_SOURCE_DIR}/test/rounding-mode-sub.c)
+            picolibc_test(try-ilp32 ${picolibc_SOURCE_DIR}/test/try-ilp32-sub.c)
+            add_dependencies(check-picolibc check-picolibc_${variant})
+        endif()
     endif()
 
     # compiler-rt
@@ -775,6 +852,7 @@ add_dependencies(
 
 # Run tests on the built toolchain.
 add_custom_target(check-llvm-toolchain)
+add_dependencies(check-llvm-toolchain check-picolibc)
 
 # Run tests on the packaged and unpacked toolchain.
 add_custom_target(check-package-llvm-toolchain)
