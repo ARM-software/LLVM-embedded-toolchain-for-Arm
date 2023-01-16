@@ -431,7 +431,29 @@ while(library_variants_copy)
         set(target "aarch64-none-elf")
         set(cpu_family aarch64)
     else()
-        set(target "${target_arch}-none-eabi")
+        # Choose the target triple so that compiler-rt will do the
+        # right thing. We can't always put the exact target
+        # architecture in the triple, because compiler-rt's cmake
+        # system doesn't recognize every possible Arm architecture
+        # version. So mostly we just say 'arm' and control the arch
+        # version via -march=armv7m (or whatever).
+        if(target_arch STREQUAL "armv6m")
+            # An exception is armv6m, which compiler-rt expects to see
+            # in the triple because that's where it looks to decide
+            # whether to use the v6-M specific assembly sources.
+            set(target "armv6m-none-eabi")
+        elseif(flags MATCHES "-mfloat-abi=hard")
+            # Also, compiler-rt looks in the ABI component of the
+            # triple to decide whether to use the hard float ABI.
+            #
+            # (Of course, there is no case that requires both armv6m
+            # _and_ eabihf, because v6-M never has hardware FP.)
+            set(target "arm-none-eabihf")
+        else()
+            # The default case, with any other AArch32 architecture
+            # version and the default soft float ABI.
+            set(target "arm-none-eabi")
+        endif()
         set(cpu_family arm)
     endif()
     set(variant_directory "${parent_dir_name}/${variant}")
