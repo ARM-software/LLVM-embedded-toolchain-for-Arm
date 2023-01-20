@@ -1,7 +1,7 @@
-extern "C" {
-    #include <stdio.h>
-    #include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+extern "C" {
     static void message(const char *msg)
     {
         puts(msg);
