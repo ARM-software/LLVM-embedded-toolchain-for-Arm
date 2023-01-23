@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2022, Arm Limited and affiliates.
+# Copyright (c) 2020, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,20 +15,23 @@
 # limitations under the License.
 #
 
----
-SourceType: "standalone-build-scripts"
-Revisions:
-  - Revision: HEAD
-    Modules:
-      - Name: llvm.git
-        FriendlyName: LLVM
-        URL:  https://github.com/llvm/llvm-project.git
-        Branch: main
-        Revision: HEAD
-        Patch: llvm-HEAD.patch
-      - Name: picolibc.git
-        FriendlyName: Picolibc
-        URL:  https://github.com/picolibc/picolibc.git
-        Branch: main
-        Revision: HEAD
-        Patch: picolibc-HEAD.patch
+include ../../Makefile.conf
+
+build: hello.elf
+
+hello.elf: *.c
+	$(BIN_PATH)/clang --config aarch64_semihost.cfg -g -T ../../ldscripts/raspi3b.ld -o hello.elf $^
+
+%.img: %.elf
+	$(BIN_PATH)/llvm-objcopy -O binary $< $@
+
+run: hello.img
+	qemu-system-aarch64 -M raspi3b -semihosting -nographic -kernel $<
+
+debug: hello.img
+	qemu-system-aarch64 -M raspi3b -semihosting -nographic -kernel $< -s -S
+
+clean:
+	rm -f *.elf *.img
+
+.PHONY: clean run debug

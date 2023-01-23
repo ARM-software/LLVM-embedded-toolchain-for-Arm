@@ -45,9 +45,9 @@
 # If you prefer you can check out and patch the repos manually and use those:
 #   mkdir repos
 #   git -C repos clone https://github.com/llvm/llvm-project.git
-#   git -C repos/llvm-project apply ../../patches/llvm-HEAD.patch
+#   git -C repos/llvm-project apply ../../patches/llvm-project.patch
 #   git -C repos clone https://github.com/picolibc/picolibc.git
-#   git -C repos/picolibc apply ../../patches/picolibc-HEAD.patch
+#   git -C repos/picolibc apply ../../patches/picolibc.patch
 #   mkdir build
 #   cd build
 #   cmake .. -GNinja -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=../repos/llvm-project -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=../repos/picolibc
@@ -148,6 +148,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
 set(LLVM_ENABLE_PROJECTS clang;lld CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD AArch64;ARM CACHE STRING "")
 set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-linux-gnu CACHE STRING "")
+set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 
 # Default to a release build
 # (CMAKE_BUILD_TYPE is a special CMake variable so if you want to set
@@ -187,12 +188,35 @@ include(FetchContent)
 # If you want to stop cmake updating the repos then run
 # cmake . -DFETCHCONTENT_FULLY_DISCONNECTED=ON
 
+# Read which revisions of the repos to use.
+file(READ versions.json VERSIONS_JSON)
+function(read_repo_version output_variable_prefix repo)
+    string(JSON tag GET ${VERSIONS_JSON} "repos" "${repo}" "tag")
+    string(JSON tagType GET ${VERSIONS_JSON} "repos" "${repo}" "tagType")
+    if(tagType STREQUAL "commithash")
+        # GIT_SHALLOW doesn't work with commit hashes.
+        set(shallow OFF)
+    elseif(tagType STREQUAL "tag" OR tagType STREQUAL "branch")
+        set(shallow ON)
+        # CMake docs recommend that "branch names and tags should
+        # generally be specified as remote names"
+        set(tag "origin/${tag}")
+    else()
+        message(FATAL_ERROR "Unrecognised tagType ${tagType}")
+    endif()
+
+    set(${output_variable_prefix}_TAG "${tag}" PARENT_SCOPE)
+    set(${output_variable_prefix}_SHALLOW "${shallow}" PARENT_SCOPE)
+endfunction()
+read_repo_version(llvmproject llvm-project)
+read_repo_version(picolibc picolibc)
+
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
-    GIT_TAG origin/main
-    GIT_SHALLOW TRUE
+    GIT_TAG "${llvmproject_TAG}"
+    GIT_SHALLOW "${llvmproject_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-HEAD.patch
+    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project.patch
     # Add the llvm subdirectory later to ensure that
     # LLVMEmbeddedToolchainForArm is the first project declared.
     # Otherwise CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT
@@ -202,10 +226,10 @@ FetchContent_Declare(llvmproject
 
 FetchContent_Declare(picolibc
     GIT_REPOSITORY https://github.com/picolibc/picolibc.git
-    GIT_TAG origin/main
-    GIT_SHALLOW TRUE
+    GIT_TAG "${picolibc_TAG}"
+    GIT_SHALLOW "${picolibc_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc-HEAD.patch
+    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc.patch
     # We only want to download the content, not configure it at this
     # stage. picolibc will be built in many configurations using
     # ExternalProject_Add using the sources that are checked out here.
@@ -407,7 +431,29 @@ while(library_variants_copy)
         set(target "aarch64-none-elf")
         set(cpu_family aarch64)
     else()
-        set(target "${target_arch}-none-eabi")
+        # Choose the target triple so that compiler-rt will do the
+        # right thing. We can't always put the exact target
+        # architecture in the triple, because compiler-rt's cmake
+        # system doesn't recognize every possible Arm architecture
+        # version. So mostly we just say 'arm' and control the arch
+        # version via -march=armv7m (or whatever).
+        if(target_arch STREQUAL "armv6m")
+            # An exception is armv6m, which compiler-rt expects to see
+            # in the triple because that's where it looks to decide
+            # whether to use the v6-M specific assembly sources.
+            set(target "armv6m-none-eabi")
+        elseif(flags MATCHES "-mfloat-abi=hard")
+            # Also, compiler-rt looks in the ABI component of the
+            # triple to decide whether to use the hard float ABI.
+            #
+            # (Of course, there is no case that requires both armv6m
+            # _and_ eabihf, because v6-M never has hardware FP.)
+            set(target "arm-none-eabihf")
+        else()
+            # The default case, with any other AArch32 architecture
+            # version and the default soft float ABI.
+            set(target "arm-none-eabi")
+        endif()
         set(cpu_family arm)
     endif()
     set(variant_directory "${parent_dir_name}/${variant}")
@@ -494,7 +540,6 @@ while(library_variants_copy)
         -DCMAKE_C_COMPILER=${llvm_bin}/clang
         -DCMAKE_C_COMPILER_TARGET=${target}
         -DCMAKE_C_FLAGS=${runtimes_flags}
-        -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld
         -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_NM=${llvm_bin}/llvm-nm
@@ -550,7 +595,6 @@ while(library_variants_copy)
         -DCMAKE_C_COMPILER=${llvm_bin}/clang
         -DCMAKE_C_COMPILER_TARGET=${target}
         -DCMAKE_C_FLAGS=${runtimes_flags}
-        -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld
         -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_NM=${llvm_bin}/llvm-nm
@@ -765,8 +809,10 @@ endforeach()
 # Samples
 # Don't run the baremetal-uart sample because it never terminates.
 foreach(test
+    baremetal-semihosting-aarch64
     baremetal-semihosting
     cpp-baremetal-semihosting
+    cpp-baremetal-semihosting-cfi
     cpp-baremetal-semihosting-ubsan
 )
     add_custom_target(
