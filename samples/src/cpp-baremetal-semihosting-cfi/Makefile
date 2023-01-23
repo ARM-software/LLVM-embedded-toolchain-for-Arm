@@ -32,7 +32,7 @@ hello-no-cfi.elf: *.cpp
 	$(BIN_PATH)/llvm-objcopy -O ihex $< $@
 
 run: hello.hex
-	qemu-system-arm -M microbit -semihosting -nographic -device loader,file=$<
+	-qemu-system-arm -M microbit -semihosting -nographic -device loader,file=$<
 
 debug: hello.hex
 	qemu-system-arm -M microbit -semihosting -nographic -device loader,file=$< -s -S
