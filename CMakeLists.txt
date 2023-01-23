@@ -812,6 +812,7 @@ foreach(test
     baremetal-semihosting-aarch64
     baremetal-semihosting
     cpp-baremetal-semihosting
+    cpp-baremetal-semihosting-cfi
 )
     add_custom_target(
         check-llvm-toolchain-samples-${test}
