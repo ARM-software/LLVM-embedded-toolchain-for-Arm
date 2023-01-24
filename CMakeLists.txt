@@ -409,6 +409,8 @@ add_library_variants(aarch64-none-elf picolibc
     aarch64         ""                  "-march=armv8-a"                                        "-M raspi3b"
 )
 add_library_variants(arm-none-eabi picolibc
+    armv4t          ""                  "-march=armv4t"                                         "-M musicpal -cpu arm926"
+    armv5te         ""                  "-march=armv5te"                                        "-M musicpal -cpu arm926"
     armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"                        "-M microbit"
     armv7em         hard_fpv4_sp_d16    "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"     "-M mps2-an386 -cpu cortex-m4"
     armv7em         hard_fpv5_d16       "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"        "-M mps2-an500 -cpu cortex-m7"
@@ -437,11 +439,11 @@ while(library_variants_copy)
         # system doesn't recognize every possible Arm architecture
         # version. So mostly we just say 'arm' and control the arch
         # version via -march=armv7m (or whatever).
-        if(target_arch STREQUAL "armv6m")
-            # An exception is armv6m, which compiler-rt expects to see
-            # in the triple because that's where it looks to decide
-            # whether to use the v6-M specific assembly sources.
-            set(target "armv6m-none-eabi")
+        # Exceptions are architectures pre-armv7, which compiler-rt expects to
+        # see in the triple because that's where it looks to decide whether to
+        # use specific assembly sources.
+        if(target_arch MATCHES "^armv[4-6]")
+            set(target "${target_arch}-none-eabi")
         elseif(flags MATCHES "-mfloat-abi=hard")
             # Also, compiler-rt looks in the ABI component of the
             # triple to decide whether to use the hard float ABI.
@@ -581,8 +583,7 @@ while(library_variants_copy)
             )
             add_dependencies(check-picolibc_${variant} check-picolibc_${variant}-${test})
         endfunction()
-
-        if(${variant} MATCHES "^armv8" OR ${variant} MATCHES "^aarch")
+        if(target_arch MATCHES "^(armv8|aarch64)")
             message("Picolibc tests disabled for ${variant}")
         else()
             execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory picolibc_tests_${variant})
