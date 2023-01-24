@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Support for locales and input/output streams
+- Experimental support for Armv4T and Armv5TE architectures
 
 ### Changed
 

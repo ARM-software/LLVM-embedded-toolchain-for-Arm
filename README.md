@@ -23,6 +23,9 @@ embedded and realtime operating systems.
 - Armv7E-M
 - Armv8-M Mainline
 - Armv8.1-M Mainline
+- Armv4T (experimental)
+- Armv5TE (experimental)
+- Armv6 (experimental, using the Armv5TE library variant)
 - AArch64 armv8.0 (experimental)
 
 ## C++ support
