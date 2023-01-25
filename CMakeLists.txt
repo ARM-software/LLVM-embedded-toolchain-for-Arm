@@ -566,7 +566,7 @@ while(library_variants_copy)
             add_custom_command(
                     OUTPUT picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
                     COMMAND ${llvm_bin}/clang --config ${llvm_bin}/${variant}_semihost.cfg
-                    -T ../samples/ldscripts/${variant}.ld
+                    -T ${CMAKE_CURRENT_SOURCE_DIR}/samples/ldscripts/${variant}.ld
                     -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
                     ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
                     COMMENT "Building: ${test} for ${variant}"
