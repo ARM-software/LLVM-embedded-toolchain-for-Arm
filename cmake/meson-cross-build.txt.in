@@ -1,8 +1,8 @@
 [binaries]
 c = [@meson_c_args@]
-ar = '@llvm_bin@/llvm-ar'
-nm = '@llvm_bin@/llvm-nm'
-strip = '@llvm_bin@/llvm-strip'
+ar = '@LLVM_BINARY_DIR@/bin/llvm-ar'
+nm = '@LLVM_BINARY_DIR@/bin/llvm-nm'
+strip = '@LLVM_BINARY_DIR@/bin/llvm-strip'
 # only needed to run tests
 exe_wrapper = ['sh', '-c', 'test -z "$PICOLIBC_TEST" || run-@cpu_family@ "$@"', 'run-@cpu_family@']
 
