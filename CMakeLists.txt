@@ -355,6 +355,11 @@ add_custom_target(llvm-toolchain ALL)
 # Groups all the runtime targets
 add_custom_target(llvm-toolchain-runtimes)
 
+# Groups all C++ runtime libraries tests
+add_custom_target(check-cxxabi)
+add_custom_target(check-unwind)
+add_custom_target(check-cxx)
+
 if(NOT LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
     add_dependencies(
         llvm-toolchain
@@ -376,20 +381,23 @@ endforeach()
 set(picolibc_specific_runtimes_options
     -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
     -DLIBCXXABI_ENABLE_THREADS=OFF
+    -DLIBCXX_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libc++-picolibc.cfg.in
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF
+    -DLIBCXXABI_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libc++abi-picolibc.cfg.in
     -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF
     -DLIBCXX_ENABLE_RANDOM_DEVICE=OFF
     -DLIBCXX_ENABLE_RTTI=OFF
     -DLIBCXX_ENABLE_THREADS=OFF
     -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
     -DLIBUNWIND_ENABLE_THREADS=OFF
+    -DLIBUNWIND_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libunwind-picolibc.cfg.in
 )
 
 add_custom_target(check-picolibc)
 
-function(add_picolibc directory variant target_triple flags qemu_params)
+function(add_picolibc directory variant target_triple flags qemu_params variant_runtime_options_var)
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
-    set(MESON_INSTALL_QUIET "--quiet")
+        set(MESON_INSTALL_QUIET "--quiet")
     endif()
 
     if(target_triple MATCHES "^aarch64")
@@ -425,7 +433,7 @@ function(add_picolibc directory variant target_triple flags qemu_params)
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
 
     # picolibc tests
-    string(REPLACE " " ";" qemu_params "${qemu_params}")
+    string(REPLACE " " ";" qemu_params_list "${qemu_params}")
     add_custom_target(check-picolibc_${variant})
     set(qemu_command "qemu-system-${cpu_family}")
     # Tests disabled due to fact it fails at least at one variant
@@ -480,7 +488,7 @@ function(add_picolibc directory variant target_triple flags qemu_params)
         )
         add_custom_target(
                 check-picolibc_${variant}-${test}
-                ${qemu_command} ${qemu_params} -semihosting -nographic -kernel check-picolibc_${variant}_build_${test}.out
+                ${qemu_command} ${qemu_params_list} -semihosting -nographic -kernel check-picolibc_${variant}_build_${test}.out
                 DEPENDS picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
                 WORKING_DIRECTORY picolibc_tests_${variant}
                 COMMENT "TEST: ${variant} ${test}"
@@ -498,6 +506,18 @@ function(add_picolibc directory variant target_triple flags qemu_params)
         # picolibc_test(rounding-mode ${picolibc_SOURCE_DIR}/test/rounding-mode-sub.c)
         picolibc_test(try-ilp32 ${picolibc_SOURCE_DIR}/test/try-ilp32-sub.c)
         add_dependencies(check-picolibc check-picolibc_${variant})
+
+        # Use colon as a separator because comma and semicolon are used for
+        # other purposes in CMake.
+        string(REPLACE " " ":" qemu_params_colon "${qemu_params}")
+        set(test_executor
+            "${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-params=${qemu_params_colon}")
+        set(${variant_runtime_options_var}
+            -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/samples/ldscripts/${variant}.ld
+            -DLIBCXX_EXECUTOR=${test_executor}
+            -DLIBCXXABI_EXECUTOR=${test_executor}
+            -DLIBUNWIND_EXECUTOR=${test_executor}
+            PARENT_SCOPE)
     endif()
 
     add_dependencies(
@@ -638,6 +658,7 @@ function(add_libcxx_libcxxabi_libunwind directory variant target_triple flags li
         -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_ENABLE_RUNTIMES=libcxxabi,libcxx,libunwind
         ${extra_cmake_options}
+        STEP_TARGETS build
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
@@ -652,6 +673,25 @@ function(add_libcxx_libcxxabi_libunwind directory variant target_triple flags li
         llvm-toolchain-runtimes
         libcxx_libcxxabi_libunwind_${variant}
     )
+endfunction()
+
+function(add_libcxx_libcxxabi_libunwind_tests variant)
+    foreach(check_target check-cxxabi check-unwind check-cxx)
+        ExternalProject_Add_Step(
+            libcxx_libcxxabi_libunwind_${variant}
+            ${check_target}
+            COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target ${check_target}
+            USES_TERMINAL TRUE
+            EXCLUDE_FROM_MAIN TRUE
+        )
+        ExternalProject_Add_StepTargets(libcxx_libcxxabi_libunwind_${variant} ${check_target})
+        ExternalProject_Add_StepDependencies(
+            libcxx_libcxxabi_libunwind_${variant}
+            ${check_target}
+            libcxx_libcxxabi_libunwind_${variant}-build
+        )
+        add_dependencies(${check_target} libcxx_libcxxabi_libunwind_${variant}-${check_target})
+    endforeach()
 endfunction()
 
 function(make_config_cfg directory variant flags)
@@ -729,9 +769,16 @@ function(add_library_variants)
         set(directory "lib/clang-runtimes/${parent_dir_name}/${variant}")
         set(flags "--target=${target_triple} ${flags}")
         make_config_cfg("${directory}" "${variant}" "${flags}")
-        add_picolibc("${directory}" "${variant}" "${target_triple}" "${flags}" "${qemu_params}")
+        set(variant_options)
+        add_picolibc("${directory}" "${variant}" "${target_triple}" "${flags}" "${qemu_params}" variant_options)
         add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}")
-        add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}" "${picolibc_specific_runtimes_options}")
+        list(APPEND variant_options ${picolibc_specific_runtimes_options})
+        add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}" "${variant_options}")
+        if(flags MATCHES "-march=armv8")
+            message("C++ runtime libraries tests disabled for ${variant}")
+        else()
+            add_libcxx_libcxxabi_libunwind_tests("${variant}")
+        endif()
 
         install(
             DIRECTORY "${LLVM_BINARY_DIR}/${directory}/"
