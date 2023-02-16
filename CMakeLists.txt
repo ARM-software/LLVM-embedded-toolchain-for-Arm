@@ -657,6 +657,7 @@ function(add_libcxx_libcxxabi_libunwind directory variant target_triple flags li
         -DLIBUNWIND_USE_COMPILER_RT=ON
         -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_ENABLE_RUNTIMES=libcxxabi,libcxx,libunwind
+        -DRUNTIME_TEST_ARCH_FLAGS=${flags}
         ${extra_cmake_options}
         STEP_TARGETS build
         USES_TERMINAL_CONFIGURE TRUE

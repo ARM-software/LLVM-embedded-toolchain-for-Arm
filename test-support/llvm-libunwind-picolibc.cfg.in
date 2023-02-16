@@ -21,7 +21,8 @@ compile_flags.append('-funwind-tables')
 
 local_sysroot = '@CMAKE_OSX_SYSROOT@' or '@CMAKE_SYSROOT@'
 config.substitutions.append(('%{flags}',
-    '-isysroot {}'.format(local_sysroot) if local_sysroot else ''
+    '@RUNTIME_TEST_ARCH_FLAGS@' +
+    (' -isysroot {}'.format(local_sysroot) if local_sysroot else '')
 ))
 config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{{include}} {}'.format(' '.join(compile_flags))
