@@ -686,6 +686,7 @@ function(add_libcxx_libcxxabi_libunwind_tests variant)
             COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target ${check_target}
             USES_TERMINAL TRUE
             EXCLUDE_FROM_MAIN TRUE
+            ALWAYS TRUE
         )
         ExternalProject_Add_StepTargets(libcxx_libcxxabi_libunwind_${variant} ${check_target})
         ExternalProject_Add_StepDependencies(
