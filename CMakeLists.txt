@@ -585,6 +585,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         -DCOMPILER_RT_BUILD_SANITIZERS=OFF
         -DCOMPILER_RT_BUILD_XRAY=OFF
         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
+        -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
         -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_CONFIG_PATH=${LLVM_BINARY_DIR}/bin/llvm-config
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
@@ -655,6 +656,7 @@ function(add_libcxx_libcxxabi_libunwind directory variant target_triple flags li
         -DLIBUNWIND_IS_BAREMETAL=ON
         -DLIBUNWIND_REMEMBER_HEAP_ALLOC=ON
         -DLIBUNWIND_USE_COMPILER_RT=ON
+        -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
         -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_ENABLE_RUNTIMES=libcxxabi,libcxx,libunwind
         -DRUNTIME_TEST_ARCH_FLAGS=${flags}
