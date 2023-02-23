@@ -412,7 +412,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
         PREFIX picolibc/${variant}
         DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib llvm-strip
-        CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
+        CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib -Dspecsdir=none --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
         BUILD_COMMAND ninja
         INSTALL_COMMAND ${MESON_EXECUTABLE} install ${MESON_INSTALL_QUIET}
         USES_TERMINAL_CONFIGURE TRUE
@@ -428,7 +428,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
     # '-march=armv6m'
     set(meson_c_args "${flags}")
     string(REPLACE " " "', '" meson_c_args "${meson_c_args}")
-    set(meson_c_args "'${LLVM_BINARY_DIR}/bin/clang', '${meson_c_args}'")
+    set(meson_c_args "'${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}', '${meson_c_args}'")
     ExternalProject_Get_Property(picolibc_${variant} BINARY_DIR)
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
 
