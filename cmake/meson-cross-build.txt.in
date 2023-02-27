@@ -1,7 +1,6 @@
 [binaries]
 c = [@meson_c_args@]
 ar = '@LLVM_BINARY_DIR@/bin/llvm-ar@CMAKE_EXECUTABLE_SUFFIX@'
-nm = '@LLVM_BINARY_DIR@/bin/llvm-nm@CMAKE_EXECUTABLE_SUFFIX@'
 strip = '@LLVM_BINARY_DIR@/bin/llvm-strip@CMAKE_EXECUTABLE_SUFFIX@'
 # only needed to run tests
 exe_wrapper = ['sh', '-c', 'test -z "$PICOLIBC_TEST" || run-@cpu_family@ "$@"', 'run-@cpu_family@']
