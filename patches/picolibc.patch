@@ -1,17 +1,8 @@
 diff --git a/meson.build b/meson.build
-index 9a24b1737..a85a0f9d9 100644
+index 729baeed9..a242da5bf 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -41,7 +41,7 @@ project('picolibc', 'c',
-           'warning_level=2',
- 	],
- 	license : 'BSD',
--	meson_version : '>= 0.53',
-+	meson_version : '>= 0.57',
- 	version: '1.8'
-        )
- 
-@@ -960,6 +960,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
+@@ -965,6 +965,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
    error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
  endif
  
@@ -24,31 +15,26 @@ index 9a24b1737..a85a0f9d9 100644
  conf_data.set('_HAVE_CC_INHIBIT_LOOP_TO_LIBCALL',
  	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
  	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
-@@ -1120,7 +1126,14 @@ endif
+@@ -1125,7 +1131,18 @@ endif
  # Dig out the list of available encodings from the encoding.aliases file. Only
  # accept the first entry from each line
  
 -available_encodings = run_command(['sed', '-e', '/^#/d', '-e', '/^$/d', '-e', 's/ .*$//', files('newlib/libc/iconv/encoding.aliases')[0]], check : true).stdout().split('\n')
 +available_encodings = []
-+foreach line : fs.read('newlib/libc/iconv/encoding.aliases').split('\n')
-+  line = line.strip()
-+  if line == '' or line.startswith('#')
-+    continue
-+  endif
-+  available_encodings += [line.split()[0]]
-+endforeach
++# fs.read was added in meson version 0.57.0. The sed invocation can be
++# removed once picolibc requires a version of meson newer than that.
++if meson.version().version_compare('>=0.57')
++  foreach line : fs.read('newlib/libc/iconv/encoding.aliases').split('\n')
++    if line != '' and not line.startswith('#')
++      available_encodings += [line.split()[0]]
++    endif
++  endforeach
++else
++  available_encodings = run_command(['sed', '-e', '/^#/d', '-e', '/^$/d', '-e', 's/ .*$//', files('newlib/libc/iconv/encoding.aliases')[0]], check : true).stdout().split('\n')
++endif
  
  # Include all available encodings if none were specified on the command line
  
-@@ -1264,7 +1277,7 @@ endif
- # of meson newer than that.
- 
- test_env = environment({'PICOLIBC_TEST' : '1'})
--test_env.prepend('PATH', meson.source_root() / 'scripts')
-+test_env.prepend('PATH', meson.current_source_dir() / 'scripts')
- 
- # CompCert needs the '-WUl,' prefix to correctly pass the --spec parameters to the linker
- specs_prefix = ''
 diff --git a/picolibc.ld.in b/picolibc.ld.in
 index f7e7fa80c..75d7a9aaf 100644
 --- a/picolibc.ld.in
