@@ -479,7 +479,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         # ld.lld: error: undefined symbol: __issignalingl  while building math_errhandling test.
         add_custom_command(
                 OUTPUT picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
-                COMMAND ${LLVM_BINARY_DIR}/bin/clang --config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg
+                COMMAND ${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX} --config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg
                 -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/samples/ldscripts/${variant}.ld
                 -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
                 ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
@@ -560,23 +560,21 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         INSTALL_DIR compiler-rt/${variant}/install
         DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib ${libc_target}
         CMAKE_ARGS
-        -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar
+        -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
         -DCMAKE_ASM_COMPILER_TARGET=${target_triple}
         -DCMAKE_ASM_FLAGS=${runtimes_flags}
         -DCMAKE_BUILD_TYPE=Release
-        -DCMAKE_CXX_COMPILER=${LLVM_BINARY_DIR}/bin/clang++
+        -DCMAKE_CXX_COMPILER=${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}
         -DCMAKE_CXX_COMPILER_TARGET=${target_triple}
         -DCMAKE_CXX_FLAGS=${runtimes_flags}
-        -DCMAKE_C_COMPILER=${LLVM_BINARY_DIR}/bin/clang
+        -DCMAKE_C_COMPILER=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}
         -DCMAKE_C_COMPILER_TARGET=${target_triple}
         -DCMAKE_C_FLAGS=${runtimes_flags}
         -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-        -DCMAKE_NM=${LLVM_BINARY_DIR}/bin/llvm-nm
-        -DCMAKE_RANLIB=${LLVM_BINARY_DIR}/bin/llvm-ranlib
-        # Set the cmake system name to Generic so that no host system
-        # include files are searched. At least on OSX this problem
-        # occurs.
+        -DCMAKE_NM=${LLVM_BINARY_DIR}/bin/llvm-nm${CMAKE_EXECUTABLE_SUFFIX}
+        -DCMAKE_RANLIB=${LLVM_BINARY_DIR}/bin/llvm-ranlib${CMAKE_EXECUTABLE_SUFFIX}
+        # Let CMake know we're cross-compiling
         -DCMAKE_SYSTEM_NAME=Generic
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
         -DCOMPILER_RT_BAREMETAL_BUILD=ON
@@ -587,7 +585,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
         -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
         -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
-        -DLLVM_CONFIG_PATH=${LLVM_BINARY_DIR}/bin/llvm-config
+        -DLLVM_CONFIG_PATH=${LLVM_BINARY_DIR}/bin/llvm-config${CMAKE_EXECUTABLE_SUFFIX}
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
@@ -624,19 +622,21 @@ function(add_libcxx_libcxxabi_libunwind directory variant target_triple flags li
         PREFIX libcxx_libcxxabi_libunwind/${variant}
         DEPENDS clang compiler_rt_${variant} lld llvm-ar llvm-config llvm-nm llvm-ranlib ${libc_target}
         CMAKE_ARGS
-        -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar
+        -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
         -DCMAKE_ASM_FLAGS=${runtimes_flags}
         -DCMAKE_BUILD_TYPE=MinSizeRel
-        -DCMAKE_CXX_COMPILER=${LLVM_BINARY_DIR}/bin/clang++
+        -DCMAKE_CXX_COMPILER=${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}
         -DCMAKE_CXX_COMPILER_TARGET=${target_triple}
         -DCMAKE_CXX_FLAGS=${runtimes_flags}
-        -DCMAKE_C_COMPILER=${LLVM_BINARY_DIR}/bin/clang
+        -DCMAKE_C_COMPILER=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}
         -DCMAKE_C_COMPILER_TARGET=${target_triple}
         -DCMAKE_C_FLAGS=${runtimes_flags}
         -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-        -DCMAKE_NM=${LLVM_BINARY_DIR}/bin/llvm-nm
-        -DCMAKE_RANLIB=${LLVM_BINARY_DIR}/bin/llvm-ranlib
+        -DCMAKE_NM=${LLVM_BINARY_DIR}/bin/llvm-nm${CMAKE_EXECUTABLE_SUFFIX}
+        -DCMAKE_RANLIB=${LLVM_BINARY_DIR}/bin/llvm-ranlib${CMAKE_EXECUTABLE_SUFFIX}
+        # Let CMake know we're cross-compiling
+        -DCMAKE_SYSTEM_NAME=Generic
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
         -DLIBCXXABI_BAREMETAL=ON
         -DLIBCXXABI_ENABLE_ASSERTIONS=OFF
@@ -1029,12 +1029,12 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
         -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_SYSTEM_NAME=Windows
-        -DCLANG_TABLEGEN=${LLVM_BINARY_DIR}/bin/clang-tblgen
+        -DCLANG_TABLEGEN=${LLVM_BINARY_DIR}/bin/clang-tblgen${CMAKE_EXECUTABLE_SUFFIX}
         -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
-        -DLLVM_CONFIG_PATH=${LLVM_BINARY_DIR}/bin/llvm-config
+        -DLLVM_CONFIG_PATH=${LLVM_BINARY_DIR}/bin/llvm-config${CMAKE_EXECUTABLE_SUFFIX}
         -DLLVM_DISTRIBUTION_COMPONENTS=${LLVM_DISTRIBUTION_COMPONENTS_comma}
         -DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS_comma}
-        -DLLVM_TABLEGEN=${LLVM_BINARY_DIR}/bin/llvm-tblgen
+        -DLLVM_TABLEGEN=${LLVM_BINARY_DIR}/bin/llvm-tblgen${CMAKE_EXECUTABLE_SUFFIX}
         -DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD_comma}
         BUILD_COMMAND "" # Let the install command build whatever it needs
         INSTALL_COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target install-distribution-stripped
