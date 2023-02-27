@@ -5,25 +5,31 @@
 The LLVM Embedded Toolchain for Arm has been built and tested on Linux/Ubuntu
 18.04.5 LTS.
 
+Building and testing on macOS is functional but experimental.
+
 ## Installing prerequisites
 
 The build requires the following software to be installed, in addition
-to the [LLVM requirements|https://llvm.org/docs/GettingStarted.html#software]:
+to the [LLVM requirements](https://llvm.org/docs/GettingStarted.html#software):
 * CMake 3.20 or above
 * Meson
 * Git
 * Ninja
 * Python
+* QEMU (for running the test suite, so optional)
 
 On a Ubuntu 18.04.5 LTS machine you can use the following commands to install
 the software mentioned above:
 ```
+$ apt-get install python3 git make ninja-build qemu
 $ apt-get install clang # If the Clang version installed by the package manager is older than 6.0.0, download a recent version from https://releases.llvm.org or build from source
-$ apt-get install python3
-$ apt-get install git
-$ apt-get install make
-$ apt-get install ninja-build
 $ apt-get install cmake # If the CMake version installed by the package manager is too old, download a recent version from https://cmake.org/download and add it to PATH
+$ pip install meson
+```
+
+On macOS, you can use homebrew:
+```
+$ brew install llvm python3 git make ninja qemu cmake
 $ pip install meson
 ```
 
