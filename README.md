@@ -69,6 +69,9 @@ see component links above.
 The LLVM Embedded Toolchain for Arm has been built and tested on Linux/Ubuntu
 18.04.5 LTS, including cross-building for Windows.
 
+Building on macOS is functional but experimental. Currently it is only lightly tested on
+a Macbook Pro with M1 on macOS 12.3.1. Cross-building for Windows from Mac is untested.
+
 [Binary packages](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases) 
 are provided for major LLVM releases for Linux and Windows.
 
