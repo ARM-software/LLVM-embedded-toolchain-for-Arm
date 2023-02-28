@@ -1,8 +1,39 @@
-diff --git a/.gitignore b/.gitignore
-index 20c4f52cd378..eefdedbcb4f4 100644
---- a/.gitignore
-+++ b/.gitignore
-@@ -1,2 +1,2 @@
--#==============================================================================#
-+#==============================================================================#
- # This file specifies intentionally untracked files that git should ignore.
+diff --git a/llvm/cmake/modules/HandleLLVMOptions.cmake b/llvm/cmake/modules/HandleLLVMOptions.cmake
+index 6119ecdce0f4..35779ffbc95e 100644
+--- a/llvm/cmake/modules/HandleLLVMOptions.cmake
++++ b/llvm/cmake/modules/HandleLLVMOptions.cmake
+@@ -137,19 +137,21 @@ if(WIN32)
+     set(LLVM_ON_WIN32 1)
+     set(LLVM_ON_UNIX 0)
+   endif(CYGWIN)
+-else(WIN32)
+-  if(FUCHSIA OR UNIX)
+-    set(LLVM_ON_WIN32 0)
+-    set(LLVM_ON_UNIX 1)
+-    if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+-      set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
+-    else()
+-      set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
+-    endif()
+-  else(FUCHSIA OR UNIX)
+-    MESSAGE(SEND_ERROR "Unable to determine platform")
+-  endif(FUCHSIA OR UNIX)
+-endif(WIN32)
++elseif(FUCHSIA OR UNIX)
++  set(LLVM_ON_WIN32 0)
++  set(LLVM_ON_UNIX 1)
++  if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
++    set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
++  else()
++    set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
++  endif()
++elseif(CMAKE_SYSTEM_NAME STREQUAL "Generic")
++  set(LLVM_ON_WIN32 0)
++  set(LLVM_ON_UNIX 0)
++  set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
++else()
++  MESSAGE(SEND_ERROR "Unable to determine platform")
++endif()
+ 
+ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
