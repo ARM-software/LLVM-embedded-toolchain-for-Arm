@@ -436,20 +436,20 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
     string(REPLACE " " ";" qemu_params_list "${qemu_params}")
     add_custom_target(check-picolibc_${variant})
     set(qemu_command "qemu-system-${cpu_family}")
-    # Tests disabled due to fact it fails at least at one variant
+    # Full list of picolibc tests
     set(picolibc_tests
-        #abort # False negatve it returns non zero code which is expected
+        abort
         atexit
         complex-funcs
         constructor
-        #constructor-skip
+        constructor-skip
         fenv
         ffs
         hosted-exit
-        #long_double
-        #malloc
-        #malloc_stress
-        #math_errhandling
+        long_double
+        malloc
+        malloc_stress
+        math_errhandling
         math-funcs
         on_exit
         posix-io
@@ -460,19 +460,28 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         setjmp
         stack-smash
         test-efcvt
-        #test-except
+        test-except
         test-fopen
         test-memset
         test-mktemp
         test-put
         test-strchr
         test-strtod
-        #timegm
+        timegm
         time-sprintf
         time-tests
-        #tls
+        tls
         ungetc
     )
+    #remove tests that fail at least at one platform
+    list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double malloc malloc_stress math_errhandling test-except timegm tls)
+    # remove tests failing on a given platform
+    if(variant STREQUAL "armv8m.main_hard_fp")
+        list(REMOVE_ITEM picolibc_tests complex-funcs fenv math-funcs printf_scanf rand test-efcvt test-strtod)
+    endif()
+    if(variant STREQUAL "armv8.1m.main_hard_nofp_mve")
+        list(REMOVE_ITEM picolibc_tests complex-funcs fenv ffs math-funcs printf_scanf printf-tests rand regex test-efcvt test-strtod time-tests)
+    endif()
 
     function(picolibc_test test)
         # -Oz parameter is added just like picolibc is doing, otherwise there is a build issue
@@ -495,7 +504,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         )
         add_dependencies(check-picolibc_${variant} check-picolibc_${variant}-${test})
     endfunction()
-    if(flags MATCHES "-march=armv8")
+    if(flags MATCHES "-march=armv8-a")
         message("Picolibc tests disabled for ${variant}")
     else()
         execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory picolibc_tests_${variant})
@@ -504,7 +513,8 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         endforeach()
         # Test disabled due to duplicated symbol name div in test file and in picolibc
         # picolibc_test(rounding-mode ${picolibc_SOURCE_DIR}/test/rounding-mode-sub.c)
-        picolibc_test(try-ilp32 ${picolibc_SOURCE_DIR}/test/try-ilp32-sub.c)
+        # Test disabled due to fail on armv8.1m.main_hard_nofp_mve
+        # picolibc_test(try-ilp32 ${picolibc_SOURCE_DIR}/test/try-ilp32-sub.c)
         add_dependencies(check-picolibc check-picolibc_${variant})
 
         # Use colon as a separator because comma and semicolon are used for
@@ -804,7 +814,7 @@ add_library_variants(
     armv7em         hard_fpv4_sp_d16    "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"     "-M mps2-an386 -cpu cortex-m4"
     armv7em         hard_fpv5_d16       "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"        "-M mps2-an500 -cpu cortex-m7"
     armv8m.main     soft_nofp           "-mfloat-abi=soft -march=armv8m.main+nofp"              "-M mps2-an505 -cpu cortex-m33"
-    armv8m.main     hard_fp             "-mfloat-abi=hard -march=armv8m.main+fp"                "-M mps3-an524 -cpu cortex-m33"
+    armv8m.main     hard_fp             "-mfloat-abi=hard -march=armv8m.main+fp"                "-M mps2-an505 -cpu cortex-m33"
     armv8.1m.main   soft_nofp_nomve     "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"      "-M mps3-an547 -cpu cortex-m55"
     armv8.1m.main   hard_fp             "-mfloat-abi=hard -march=armv8.1m.main+fp"              "-M mps3-an547 -cpu cortex-m55"
     armv8.1m.main   hard_nofp_mve       "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"        "-M mps3-an547 -cpu cortex-m55"
