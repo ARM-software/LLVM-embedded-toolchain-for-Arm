@@ -115,6 +115,10 @@ option(
     LLVM_TOOLCHAIN_CROSS_BUILD_MINGW
     "Cross-build for Windows. Using this option implies that you accept the GCC & MinGW licenses."
 )
+option(
+    PREBUILT_TARGET_LIBRARIES
+    "Target libraries are prebuilt so no need to build them"
+)
 set(LLVM_TOOLCHAIN_LIBRARY_VARIANTS
     "" CACHE STRING
     "Build only the specified library variants. If not specified then build all variants."
@@ -774,14 +778,16 @@ function(add_library_variants)
         set(flags "--target=${target_triple} ${flags}")
         make_config_cfg("${directory}" "${variant}" "${flags}")
         set(variant_options)
-        add_picolibc("${directory}" "${variant}" "${target_triple}" "${flags}" "${qemu_params}" variant_options)
-        add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}")
-        list(APPEND variant_options ${picolibc_specific_runtimes_options})
-        add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}" "${variant_options}")
-        if(flags MATCHES "-march=armv8")
-            message("C++ runtime libraries tests disabled for ${variant}")
-        else()
-            add_libcxx_libcxxabi_libunwind_tests("${variant}")
+        if(NOT PREBUILT_TARGET_LIBRARIES)
+            add_picolibc("${directory}" "${variant}" "${target_triple}" "${flags}" "${qemu_params}" variant_options)
+            add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}")
+            list(APPEND variant_options ${picolibc_specific_runtimes_options})
+            add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}" "${variant_options}")
+            if(flags MATCHES "-march=armv8")
+                message("C++ runtime libraries tests disabled for ${variant}")
+            else()
+                add_libcxx_libcxxabi_libunwind_tests("${variant}")
+            endif()
         endif()
 
         install(
