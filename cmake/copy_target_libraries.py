@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+
+"""
+Script to copy target libraries into the build tree.
+Building libraries can take a very long time on some platforms so
+building them on another platform and copying them in can be a big
+time saver.
+"""
+
+import argparse
+import glob
+import os
+import shutil
+import tarfile
+import tempfile
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--distribution-tgz",
+        required=True,
+        help="""Copy from this LLVM Embedded Toolchain for Arm distribution
+        tar.gz file. This is a glob to make things easier on Windows.""",
+    )
+    parser.add_argument(
+        "--build-dir",
+        required=True,
+        help="The build root directory to copy into",
+    )
+    args = parser.parse_args()
+
+    # Find the distribution. This is a glob because scripts may not
+    # know the version number and we can't rely on the Windows shell to
+    # do it.
+    for distribution_tgz in glob.glob(args.distribution_tgz):
+        break
+    else:
+        raise RuntimeError(
+            f"Distribution glob '{args.distribution_tgz}' not found"
+        )
+
+    lib_dir = os.path.join(args.build_dir, "llvm", "lib")
+    os.makedirs(lib_dir, exist_ok=True)
+
+    destination = os.path.join(lib_dir, "clang-runtimes")
+
+    if os.path.isdir(destination):
+        shutil.rmtree(destination)
+
+    with tempfile.TemporaryDirectory(
+        dir=args.build_dir,
+    ) as tmp:
+        # Extract the distribution package.
+        with tarfile.open(distribution_tgz) as tf:
+            tf.extractall(tmp)
+
+        # Find the distribution directory.
+        # It should have a name like
+        # "LLVMEmbeddedToolchainForArm-16.0.0-Linux-x86_64"
+        for extracted in glob.glob(os.path.join(tmp, "LLVM*")):
+            break
+        else:
+            raise RuntimeError("Extracted distribution directory not found")
+
+        # Move the directory containing the target libraries into
+        # position. The rest of the files in the distribution folder
+        # will be deleted automatically when the tmp object goes out of
+        # scope.
+        shutil.move(os.path.join(extracted, "lib", "clang-runtimes"), lib_dir)
+
+
+if __name__ == "__main__":
+    main()
