@@ -1,3 +1,46 @@
+diff --git a/llvm/cmake/modules/AddLLVM.cmake b/llvm/cmake/modules/AddLLVM.cmake
+index 9eef4eb7e35d..11106ba582fb 100644
+--- a/llvm/cmake/modules/AddLLVM.cmake
++++ b/llvm/cmake/modules/AddLLVM.cmake
+@@ -2043,13 +2043,19 @@ function(llvm_install_library_symlink name dest type)
+   set(full_name ${CMAKE_${type}_LIBRARY_PREFIX}${name}${CMAKE_${type}_LIBRARY_SUFFIX})
+   set(full_dest ${CMAKE_${type}_LIBRARY_PREFIX}${dest}${CMAKE_${type}_LIBRARY_SUFFIX})
+ 
++  if(LLVM_USE_SYMLINKS)
++    set(LLVM_LINK_OR_COPY create_symlink)
++  else()
++    set(LLVM_LINK_OR_COPY copy)
++  endif()
++
+   set(output_dir lib${LLVM_LIBDIR_SUFFIX})
+   if(WIN32 AND "${type}" STREQUAL "SHARED")
+     set(output_dir "${CMAKE_INSTALL_BINDIR}")
+   endif()
+ 
+   install(SCRIPT ${INSTALL_SYMLINK}
+-          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\")"
++          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\" \"${LLVM_LINK_OR_COPY}\")"
+           COMPONENT ${component})
+ 
+ endfunction()
+@@ -2086,10 +2092,16 @@ function(llvm_install_symlink project name dest)
+     set(full_dest llvm${CMAKE_EXECUTABLE_SUFFIX})
+   endif()
+ 
++  if(LLVM_USE_SYMLINKS)
++    set(LLVM_LINK_OR_COPY create_symlink)
++  else()
++    set(LLVM_LINK_OR_COPY copy)
++  endif()
++
+   set(output_dir "${${project}_TOOLS_INSTALL_DIR}")
+ 
+   install(SCRIPT ${INSTALL_SYMLINK}
+-          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\")"
++          CODE "install_symlink(\"${full_name}\" \"${full_dest}\" \"${output_dir}\" \"${LLVM_LINK_OR_COPY}\")"
+           COMPONENT ${component})
+ 
+   if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
 diff --git a/llvm/cmake/modules/HandleLLVMOptions.cmake b/llvm/cmake/modules/HandleLLVMOptions.cmake
 index 6119ecdce0f4..35779ffbc95e 100644
 --- a/llvm/cmake/modules/HandleLLVMOptions.cmake
@@ -37,3 +80,34 @@ index 6119ecdce0f4..35779ffbc95e 100644
  
  if (CMAKE_SYSTEM_NAME MATCHES "OS390")
    set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
+diff --git a/llvm/cmake/modules/LLVMInstallSymlink.cmake b/llvm/cmake/modules/LLVMInstallSymlink.cmake
+index 274cef64b3e7..0ef4b82474ce 100644
+--- a/llvm/cmake/modules/LLVMInstallSymlink.cmake
++++ b/llvm/cmake/modules/LLVMInstallSymlink.cmake
+@@ -7,7 +7,10 @@
+ set(CMAKE_INSTALL_LIBDIR "lib")
+ include(GNUInstallDirs)
+ 
+-function(install_symlink name target outdir)
++function(install_symlink name target outdir link_or_copy)
++  # link_or_copy is the "command" to pass to cmake -E.
++  # It should be either "create_symlink" or "copy".
++
+   set(DESTDIR $ENV{DESTDIR})
+   if(NOT IS_ABSOLUTE "${outdir}")
+     set(outdir "${CMAKE_INSTALL_PREFIX}/${outdir}")
+@@ -17,12 +20,7 @@ function(install_symlink name target outdir)
+   message(STATUS "Creating ${name}")
+ 
+   execute_process(
+-    COMMAND "${CMAKE_COMMAND}" -E create_symlink "${target}" "${name}"
+-    WORKING_DIRECTORY "${outdir}" ERROR_VARIABLE has_err)
+-  if(CMAKE_HOST_WIN32 AND has_err)
+-    execute_process(
+-      COMMAND "${CMAKE_COMMAND}" -E copy "${target}" "${name}"
+-      WORKING_DIRECTORY "${outdir}")
+-  endif()
++    COMMAND "${CMAKE_COMMAND}" -E ${link_or_copy} "${target}" "${name}"
++    WORKING_DIRECTORY "${outdir}")
+ 
+ endfunction()
