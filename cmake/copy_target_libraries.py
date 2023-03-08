@@ -55,10 +55,11 @@ def main():
         with tarfile.open(distribution_tgz) as tf:
             tf.extractall(tmp)
 
-        # Find the distribution directory.
-        # It should have a name like
-        # "LLVMEmbeddedToolchainForArm-16.0.0-Linux-x86_64"
-        for extracted in glob.glob(os.path.join(tmp, "LLVM*")):
+        # Find the clang-runtimes directory in the extracted package
+        # directory.
+        for clang_runtimes in glob.glob(
+            os.path.join(tmp, "*", "lib", "clang-runtimes")
+        ):
             break
         else:
             raise RuntimeError("Extracted distribution directory not found")
@@ -67,7 +68,7 @@ def main():
         # position. The rest of the files in the distribution folder
         # will be deleted automatically when the tmp object goes out of
         # scope.
-        shutil.move(os.path.join(extracted, "lib", "clang-runtimes"), lib_dir)
+        shutil.move(clang_runtimes, lib_dir)
 
 
 if __name__ == "__main__":
