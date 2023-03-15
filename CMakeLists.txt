@@ -480,14 +480,36 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         tls
         ungetc
     )
-    #remove tests that fail at least at one platform
-    list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double malloc malloc_stress math_errhandling test-except timegm tls)
     # remove tests failing on a given platform
+    if(variant STREQUAL "armv6m_soft_nofp")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except tls)
+    endif()
+    if(variant STREQUAL "armv7m_soft_nofp")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except tls)
+    endif()
+    if(variant STREQUAL "armv7em_soft_nofp")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except tls)
+    endif()
+    if(variant STREQUAL "armv7em_hard_fpv4_sp_d16")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip math_errhandling test-except tls)
+    endif()
+    if(variant STREQUAL "armv7em_hard_fpv5_d16")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip math_errhandling test-except tls)
+    endif()
+    if(variant STREQUAL "armv8m.main_soft_nofp")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double math_errhandling malloc_stress test-except timegm tls)
+    endif()
     if(variant STREQUAL "armv8m.main_hard_fp")
-        list(REMOVE_ITEM picolibc_tests complex-funcs fenv math-funcs printf_scanf rand test-efcvt test-strtod)
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip complex-funcs fenv long_double math_errhandling math-funcs malloc_stress printf_scanf rand test-efcvt test-except test-strtod timegm tls)
+    endif()
+    if(variant STREQUAL "armv8.1m.main_soft_nofp_nomve")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double math_errhandling malloc_stress test-except timegm tls)
+    endif()
+    if(variant STREQUAL "armv8.1m.main_hard_fp")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double math_errhandling malloc_stress test-except timegm tls)
     endif()
     if(variant STREQUAL "armv8.1m.main_hard_nofp_mve")
-        list(REMOVE_ITEM picolibc_tests complex-funcs fenv ffs math-funcs printf_scanf printf-tests rand regex test-efcvt test-strtod time-tests)
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip complex-funcs fenv ffs long_double math_errhandling math-funcs malloc_stress printf_scanf printf-tests rand regex test-efcvt test-except test-strtod timegm time-tests tls)
     endif()
 
     function(picolibc_test test)
@@ -519,9 +541,9 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
             picolibc_test(${test})
         endforeach()
         # Test disabled due to duplicated symbol name div in test file and in picolibc
-        # picolibc_test(rounding-mode ${picolibc_SOURCE_DIR}/test/rounding-mode-sub.c)
+        # picolibc_test(rounding-mode)
         # Test disabled due to fail on armv8.1m.main_hard_nofp_mve
-        # picolibc_test(try-ilp32 ${picolibc_SOURCE_DIR}/test/try-ilp32-sub.c)
+        # picolibc_test(try-ilp32)
         add_dependencies(check-picolibc check-picolibc_${variant})
 
         # Use colon as a separator because comma and semicolon are used for
@@ -816,7 +838,7 @@ add_library_variants(
     aarch64         ""                  "-march=armv8-a"                                        "-M raspi3b"
     armv4t          ""                  "-march=armv4t"                                         "-M musicpal -cpu arm926"
     armv5te         ""                  "-march=armv5te"                                        "-M musicpal -cpu arm926"
-    armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"                        "-M microbit"
+    armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"                        "-M mps2-an385"
     armv7m          soft_nofp           "-mfloat-abi=soft -march=armv7m+nofp"                   "-M mps2-an385 -cpu cortex-m3"
     armv7em         soft_nofp           "-mfloat-abi=soft -march=armv7em -mfpu=none"            "-M mps2-an386 -cpu cortex-m4"
     armv7em         hard_fpv4_sp_d16    "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"     "-M mps2-an386 -cpu cortex-m4"
