@@ -246,24 +246,20 @@ FetchContent_Declare(picolibc
 FetchContent_MakeAvailable(llvmproject)
 FetchContent_MakeAvailable(picolibc)
 
-# Grab the version out of LLVM sources
-file(
-    STRINGS ${llvmproject_SOURCE_DIR}/llvm/CMakeLists.txt version_strings
-    REGEX [[set\(LLVM_VERSION_[A-Z]+ [0-9]+\)]]
-)
-string(REGEX MATCH [[MAJOR ([0-9]+)]] unused "${version_strings}")
-set(LLVM_VERSION_MAJOR ${CMAKE_MATCH_1})
-string(REGEX MATCH [[MINOR ([0-9]+)]] unused "${version_strings}")
-set(LLVM_VERSION_MINOR ${CMAKE_MATCH_1})
-string(REGEX MATCH [[PATCH ([0-9]+)]] unused "${version_strings}")
-set(LLVM_VERSION_PATCH ${CMAKE_MATCH_1})
-
-# Allow using these variables from CMakeFiles that add this as a subproject.
-set(llvmproject_SOURCE_DIR "${llvmproject_SOURCE_DIR}" PARENT_SCOPE)
-set(LLVM_VERSION_MAJOR ${LLVM_VERSION_MAJOR} PARENT_SCOPE)
-set(LLVM_VERSION_MINOR ${LLVM_VERSION_MINOR} PARENT_SCOPE)
-set(LLVM_VERSION_PATCH ${LLVM_VERSION_PATCH} PARENT_SCOPE)
-
+function(get_llvm_version_numbers llvmproject_SOURCE_DIR)
+    # Grab the version out of LLVM sources
+    file(
+        STRINGS ${llvmproject_SOURCE_DIR}/llvm/CMakeLists.txt version_strings
+        REGEX [[set\(LLVM_VERSION_[A-Z]+ [0-9]+\)]]
+    )
+    string(REGEX MATCH [[MAJOR ([0-9]+)]] unused "${version_strings}")
+    set(LLVM_VERSION_MAJOR ${CMAKE_MATCH_1} PARENT_SCOPE)
+    string(REGEX MATCH [[MINOR ([0-9]+)]] unused "${version_strings}")
+    set(LLVM_VERSION_MINOR ${CMAKE_MATCH_1} PARENT_SCOPE)
+    string(REGEX MATCH [[PATCH ([0-9]+)]] unused "${version_strings}")
+    set(LLVM_VERSION_PATCH ${CMAKE_MATCH_1} PARENT_SCOPE)
+endfunction()
+get_llvm_version_numbers(${llvmproject_SOURCE_DIR})
 
 project(
     LLVMEmbeddedToolchainForArm
@@ -382,7 +378,6 @@ add_dependencies(
 
 foreach(variant ${LLVM_TOOLCHAIN_LIBRARY_VARIANTS})
     set(enable_${variant} TRUE)
-    set(enable_${variant} TRUE PARENT_SCOPE)
 endforeach()
 
 set(picolibc_specific_runtimes_options
