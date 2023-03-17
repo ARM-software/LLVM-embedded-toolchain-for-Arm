@@ -9,13 +9,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Support for locales and input/output streams
-- Experimental support for Armv4T and Armv5TE architectures
+- Experimental support for Armv4T and Armv5TE architectures (#177)
+- Support for building locally on Windows & macOS (#188)
+
+### Fixed
+
+- lld freezing on Windows (#83)
 
 ### Changed
 
 - Packages now extract into a LVMEmbeddedToolchainForArm-VERSION-PLATFORM subdirectory.
+- Windows release packages are now signed.
 
-### Removed
 
 ## [15.0.2]
 
@@ -49,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Initial release of LLVM Embedded Toolchain for Arm
 
-[unreleased]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/compare/release-14.0.0...HEAD
+[unreleased]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/compare/release-15.0.2...HEAD
+[15.0.2]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/compare/release-14.0.0...release-15.0.2
 [14.0.0]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/compare/release-13.0.0...release-14.0.0
 [13.0.0]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/tag/release-13.0.0
