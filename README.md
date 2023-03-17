@@ -45,17 +45,6 @@ Component  | Link
 LLVM       | https://github.com/llvm/llvm-project
 picolibc   | https://github.com/picolibc/picolibc
 
-### Windows runtime DLLs
-
-On Windows the toolchain also uses several DLLs that are part of the Mingw-w64
-project (based on GCC):
-
-Library             | Project   | Link
---------------------|-----------|---------------------
-libstdc++-6.dll     | GCC       | https://gcc.gnu.org
-libgcc_s_seh-1.dll  | GCC       | https://gcc.gnu.org
-libwinpthread-1.dll | Mingw-w64 | http://mingw-w64.org
-
 ## License
 
 Content of this repository is licensed under Apache-2.0. See
@@ -66,13 +55,14 @@ see component links above.
 
 ## Host platforms
 
-The LLVM Embedded Toolchain for Arm has been built and tested on Linux/Ubuntu
-18.04.5 LTS, including cross-building for Windows.
+LLVM Embedded Toolchain for Arm is built and tested on Ubuntu 18.04 LTS.
+
+The Windows version is built on Windows Server 2019 and lightly tested on Windows 10.
 
 Building on macOS is functional but experimental. Currently it is only lightly tested on
-a Macbook Pro with M1 on macOS 12.3.1. Cross-building for Windows from Mac is untested.
+a Macbook Pro with M1 on macOS 12.3.1.
 
-[Binary packages](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases) 
+[Binary packages](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases)
 are provided for major LLVM releases for Linux and Windows.
 
 ## Getting started

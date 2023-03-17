@@ -2,8 +2,9 @@
 
 ## Host platforms
 
-The LLVM Embedded Toolchain for Arm has been built and tested on Linux/Ubuntu
-18.04.5 LTS.
+LLVM Embedded Toolchain for Arm is built and tested on Ubuntu 18.04 LTS.
+
+The Windows version is built on Windows Server 2019 and lightly tested on Windows 10.
 
 Building and testing on macOS is functional but experimental.
 
