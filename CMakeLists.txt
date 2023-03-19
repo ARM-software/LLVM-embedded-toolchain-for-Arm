@@ -146,12 +146,16 @@ set(LLVM_DISTRIBUTION_COMPONENTS
     llvm-size
     llvm-strip
     llvm-symbolizer
+    llvm-link
+    llc
+    opt
     LTO
     CACHE STRING ""
 )
 set(LLVM_ENABLE_PROJECTS clang;lld CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD AArch64;ARM CACHE STRING "")
-set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-linux-gnu CACHE STRING "")
+set(LLVM_DEFAULT_TARGET_TRIPLE arm-none-eabi CACHE STRING "")
+set(LLVM_TARGET_ARCH arm CACHE STRING "")
 set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 
 # Default to a release build
@@ -715,6 +719,8 @@ function(add_libcxx_libcxxabi_libunwind_tests variant)
     endforeach()
 endfunction()
 
+include(contrib/contrib.cmake)
+
 function(make_config_cfg directory variant flags)
     # Create clang configuration files
     # https://clang.llvm.org/docs/UsersManual.html#configuration-files
@@ -801,6 +807,7 @@ function(add_library_variants)
             else()
                 add_libcxx_libcxxabi_libunwind_tests("${variant}")
             endif()
+            add_contrib_libs("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}")
         endif()
 
         install(
