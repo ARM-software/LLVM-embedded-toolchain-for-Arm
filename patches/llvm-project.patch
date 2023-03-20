@@ -1,3 +1,4460 @@
+diff --git a/clang/docs/Multilib.rst b/clang/docs/Multilib.rst
+new file mode 100644
+index 0000000000..3b111ecd01
+--- /dev/null
++++ b/clang/docs/Multilib.rst
+@@ -0,0 +1,327 @@
++========
++Multilib
++========
++
++Introduction
++============
++
++This document describes how multilib is implemented in Clang.
++
++What is multilib and why might you care?
++If you're :doc:`cross compiling<CrossCompilation>` then you can't use native
++system headers and libraries. To address this, you can use a combination of
++``--sysroot``, ``-isystem`` and ``-L`` options to point Clang at suitable
++directories for your target.
++However, when there are many possible directories to choose from, it's not
++necessarily obvious which one to pick.
++Multilib allows a toolchain designer to imbue the toolchain with the ability to
++pick a suitable directory automatically, based on the options the user provides
++to Clang. For example, if the user specifies
++``--target=arm-none-eabi -mcpu=cortex-m4`` the toolchain can choose a directory
++containing headers and libraries suitable for Armv7E-M, because it knows that's
++a suitable architecture for Arm Cortex-M4.
++Multilib can also choose between libraries for the same architecture based on
++other options. For example if the user specifies ``-fno-exceptions`` then a
++toolchain could select libraries built without exception support, thereby
++reducing the size of the resulting binary.
++
++Design
++======
++
++Clang supports GCC's ``-print-multi-lib`` and ``-print-multi-directory``
++options. These are described in
++`GCC Developer Options <https://gcc.gnu.org/onlinedocs/gcc-12.2.0/gcc/Developer-Options.html>`_.
++
++There are two ways to configure multilib in Clang: hard-coded or via a
++configuration file.
++
++Hard-coded Multilib
++===================
++
++The available libraries can be hard-coded in Clang. Typically this is done
++using the ``MultilibBuilder`` interface in
++``clang/include/clang/Driver/MultilibBuilder.h``.
++There are many examples of this in ``lib/Driver/ToolChains/Gnu.cpp``.
++The remainder of this document will not focus on this type of multilib.
++
++EXPERIMENTAL Multilib via configuration file
++============================================
++
++Some Clang toolchains support loading multilib configuration from a
++``multilib.yaml`` configuration file.
++
++A ``multilib.yaml`` configuration file specifies which multilib variants are
++available, their relative location, what compilation options were used to build
++them, and the criteria by which they are selected.
++
++Multilib processing
++===================
++
++Clang goes through the following steps to use multilib from a configuration
++file:
++#. Convert command line options to flags. Clang can accept the same
++   information via different options - for example,
++   ``--target=arm-none-eabi -march=armv7-m`` and
++   ``--target=armv7m-none-eabi`` are equivalent. Clang can also accept many
++   independent pieces of information within a single option - for example
++   ``-march=armv8.1m.main+fp+mve`` specifies the architecture and two
++   extensions in a single command line option.
++   To make it easier for the multilib system, Clang converts the command line
++   options into a standard set of simpler "flags". In many cases these flags
++   will look like a command line option with the leading ``-`` stripped off,
++   but where a suitable form for the flag doesn't exist in command line
++   options then its form will be different. For example, an Arm architecture
++   extension is represented like ``march=+mve`` since there's no way to specify
++   it in isolation in a command line option.
++   To see what flags are emitted for a given set of command line options, use
++   the ``-print-multi-selection-flags-experimental`` command line option
++   along with the rest of the options you want to use.
++#. Load ``multilib.yaml`` from sysroot.
++#. Generate additional flags. ``multilib.yaml`` contains a ``FlagMap`` section,
++   which specifies how to generate additional flags based on the flags derived
++   from command line options. Flags are matched using regular expressions.
++   These regular expressions shall use the POSIX extended regular expression
++   syntax.
++#. Match flags against multilib variants. If the generated flags are a superset
++   of the flags specified for a multilib variant then the variant is considered
++   a match.
++   If more than one variant matches then a toolchain may opt to either use only
++   the *last* matching multilib variant, or may use all matching variants,
++   thereby :ref:`layering<Multilib layering>` them.
++#. Generate ``-isystem`` and ``-L`` options. Iterate in reverse order over
++   the matching multilib variants, and generate ``-isystem`` and ``-L``
++   options based on the multilib variant's directory.
++
++Multilib layering
++=================
++
++When Clang selects multilib variants, it may find that more than one variant
++matches.
++
++It is up to the ToolChain subclass to decide what to do in this case.
++There are two options permitted:
++#. Use only the *last* matching multilib variant. This option exists primarily
++   for compatibility with the previous multilib design.
++#. Use all matching variants, thereby layering them.
++
++This decision is hard-coded per ToolChain subclass. The latter option is
++preferred for ToolChain subclasses without backwards compatibility
++requirements.
++
++If the latter option is chosen then ``-isystem`` and ``-L`` options will be
++generated for each matching multilib variant, in reverse order.
++
++This means that the compiler or linker will find files in the last matching
++multilib variant that has the given file.
++This behaviour permits multilib variants with only a partial set of files.
++This means a toolchain can be distributed with one base multilib variant
++containing all system headers and includes, and more specialised multilib
++variants containing only files that are different to those in the base variant.
++
++For example, a multilib variant could be compiled with ``-fno-exceptions``.
++This option doesn't affect the content of header files, nor does it affect the
++C libraries. Therefore if multilib layering is supported by the ToolChain
++subclass and a suitable base multilib variant is present then the
++``-fno-exceptions`` multilib variant need only contain C++ libraries.
++
++It is the responsibility of layered multilib authors to ensure that headers and
++libraries in each layer are complete enough to mask any incompatibilities.
++
++Stability
++=========
++
++Multilib via configuration file shall be considered an experimental feature
++until LLVM 18, at which point ``-print-multi-selection-flags-experimental``
++should be renamed to ``-print-multi-selection-flags``.
++A toolchain can opt in to using this feature by including a ``multilib.yaml``
++file in its distribution, once support for it is added in relevant ToolChain
++subclasses.
++Once stability is reached, flags emitted by ``-print-multi-selection-flags``
++should not be removed or changed, although new flags may be added.
++
++Restrictions
++============
++
++Despite the name, multilib is used to locate both ``include`` and ``lib``
++directories. Therefore it is important that consistent options are passed to
++the Clang driver when both compiling and linking. Otherwise inconsistent
++``include`` and ``lib`` directories may be used, and the results will be
++undefined.
++
++EXPERIMENTAL multilib.yaml
++==========================
++
++The below example serves as a small of a possible multilib, and documents
++the available options.
++
++For a more comprehensive example see
++``clang/test/Driver/baremetal-multilib.yaml`` in the ``llvm-project`` sources.
++
++.. code-block:: yaml
++  # multilib.yaml
++
++  # This format is experimental and is likely to change!
++
++  # Syntax is YAML 1.2
++
++  # This required field defines the version of the multilib.yaml format.
++  # Clang will emit an error if this number is greater than its current multilib
++  # version or if its major version differs, but will accept lesser minor
++  # versions.
++  MultilibVersion: 0.1
++
++  # The rest of this file is in two parts:
++  # 1. A list of multilib variants.
++  # 2. A list of regular expressions that may match flags generated from
++  #    command line options, and further flags that shall be added if the
++  #    regex matches.
++  # It is acceptable for the file to contain properties not documented here,
++  # and these will be ignored by Clang.
++
++  # List of multilib variants. Required.
++  # The ordering of items in the variants list is important if more than one
++  # variant can match the same set of flags. See the docs on multilib layering
++  # for more info.
++  Variants:
++
++  # Example of a multilib variant targeting Arm v6-M.
++  # Dir is the relative location of the directory containing the headers
++  # and/or libraries.
++  # Exactly how Dir is used is left up to the ToolChain subclass to define, but
++  # typically it will be joined to the sysroot.
++  - Dir: thumb/v6-m
++    # List of one or more "flags", as generated by Clang from the command line
++    # options or from FlagMap below.
++    # Here, if the flags are a superset of {target=thumbv6m-none-unknown-eabi}
++    # then this multilib variant will be considered a match.
++    Flags: [target=thumbv6m-none-unknown-eabi]
++    # If a user invokes Clang with -print-multi-lib then the options it
++    # prints will be derived from PrintOptions. For example:
++    #   thumb/v6-m;@-target=thumbv6m-none-eabi
++    # PrintOptions is not used by Clang otherwise.
++    PrintOptions: [--target=thumbv6m-none-eabi]
++
++  # Similarly, a multilib variant targeting Arm v7-M with an FPU (floating
++  # point unit).
++  - Dir: thumb/v7-m
++    # Here, the flags generated by Clang must be a superset of
++    # {V7MorLater, HasFPU} for this multilib variant to be a match.
++    Flags: [V7MorLater, HasFPU]
++    PrintOptions: [--target=thumbv7m-none-eabi, -mfpu=fpv4-sp-d16]
++
++
++  # The second section of the file is a list of regular expressions that are
++  # used to map from flags generated from command line options to custom flags.
++  # This is optional.
++  # Each regular expression must match a whole flag string.
++  # One or both of "MatchFlags" & "NoMatchFlags" must be specified.
++  # "MatchFlags" flags will be added if any flag generated from command line
++  # options matches the regular expression, otherwise "NoMatchFlags" flags will
++  # be added.
++  FlagMap:
++
++  # Set a "V7MorLater" flag if the regular expression matches any of the flags
++  # generated from the command line options.
++  # Regex is a POSIX extended regular expression strings.
++  - Regex: target=thumbv([7-9]|[1-9][0-9]+).*
++    # MatchFlags is a list of one or more strings.
++    MatchFlags: [V7MorLater]
++
++  # Set HasFPU if mfpu=none *doesn't* match.
++  - Regex: mfpu=none
++    # NoMatchFlags is a list of one or more strings.
++    NoMatchFlags: [HasFPU]
++
++Design principles
++=================
++
++Stable interface
++----------------
++
++``multilib.yaml`` and ``-print-multi-selection-flags-experimental`` are new
++interfaces to Clang. In order for them to be usable over time and across LLVM
++versions their interfaces should be stable.
++The new multilib system will be considered experimental in LLVM 17, but in
++LLVM 18 it will be stable. In particular this is important to which multilib
++selection flags Clang generates from command line options. Once a flag is
++generated by a released version of Clang it may be used in ``multilib.yaml``
++files that exist independently of the LLVM release cycle, and therefore
++ceasing to generate the flag would be a breaking change and should be
++avoided.
++
++Incomplete interface
++--------------------
++
++The new multilib system does multilib selection based on only a limited set of
++command line options, and limits which flags can be used for multilib
++selection. This is in order to avoid committing to too large an interface.
++Later LLVM versions can add support for multilib selection from more command
++line options as needed.
++
++Extensible
++----------
++
++It is likely that the configuration format will need to evolve in future to
++adapt to new requirements.
++Using a format like YAML that supports key-value pairs helps here as it's
++trivial to add new keys alongside existing ones.
++
++Backwards compatibility
++-----------------------
++
++New versions of Clang should be able to use configuration written for earlier
++Clang versions.
++To avoid behaving in a way that may be subtly incorrect, Clang should be able
++to detect if the configuration is too new and emit an error.
++
++Forwards compatibility
++----------------------
++
++As an author of a multilib configuration, it should be possible to design the
++configuration in such a way that it is likely to work well with future Clang
++versions. For example, if a future version of Clang is likely to add support
++for newer versions of an architecture and the architecture is known to be
++designed for backwards compatibility then it should be possible to express
++compatibility for such architecture versions in the multilib configuration.
++
++Not GNU spec files
++------------------
++
++The GNU spec files standard is large and complex and there's little desire to
++import that complexity to LLVM. It's also heavily oriented towards processing
++command line argument strings which is hard to do correctly, hence the large
++amount of logic dedicated to that task in the Clang driver. While compatibility
++with GNU would bring benefits, the cost in this case is deemed too high.
++
++Avoid re-inventing feature detection in the configuration
++---------------------------------------------------------
++
++A large amount of logic in the Clang driver is dedicated to inferring which
++architectural features are available based on the given command line options.
++It is neither desirable nor practical to repeat such logic in each multilib
++configuration. Instead the configuration should be able to benefit from the
++heavy lifting Clang already does to detect features.
++
++Low maintenance
++---------------
++
++Multilib is a relatively small feature in the scheme of things so supporting it
++should accordingly take little time. Where possible this should be achieved by
++implementing it in terms of existing features in the LLVM codebase.
++
++Minimal additional API surface
++------------------------------
++
++The greater the API surface, the greater the difficulty of keeping it stable.
++Where possible the additional API surface should be kept small by defining it
++in relation to existing APIs. An example of this is keeping a simple
++relationship between flag names and command line options where possible.
++Since the command line options are part of a stable API they are unlikely
++to change, and therefore the flag names get the same stability.
++
++Low compile-time overhead
++-------------------------
++
++If the process of selecting multilib directories must be done on every
++invocation of the Clang driver then it must have a negligible impact on
++overall compile time.
+diff --git a/clang/docs/index.rst b/clang/docs/index.rst
+index e572f706c0..9fc7c6fff7 100644
+--- a/clang/docs/index.rst
++++ b/clang/docs/index.rst
+@@ -100,6 +100,7 @@ Design Documents
+    CodeOwners
+    InternalsManual
+    DriverInternals
++   Multilib
+    OffloadingDesign
+    PCHInternals
+    ItaniumMangleAbiTags
+diff --git a/clang/include/clang/Driver/Multilib.h b/clang/include/clang/Driver/Multilib.h
+index cf2dbf6ff5..b42d911f0f 100644
+--- a/clang/include/clang/Driver/Multilib.h
++++ b/clang/include/clang/Driver/Multilib.h
+@@ -13,7 +13,9 @@
+ #include "llvm/ADT/ArrayRef.h"
+ #include "llvm/ADT/STLExtras.h"
+ #include "llvm/ADT/StringRef.h"
++#include "llvm/ADT/StringSet.h"
+ #include "llvm/Support/Compiler.h"
++#include "llvm/Support/SourceMgr.h"
+ #include <cassert>
+ #include <functional>
+ #include <string>
+@@ -24,84 +26,63 @@ namespace clang {
+ namespace driver {
+ 
+ /// This corresponds to a single GCC Multilib, or a segment of one controlled
+-/// by a command line flag
++/// by a command line flag.
++/// See also MultilibBuilder for building a multilib by mutating it
++/// incrementally.
+ class Multilib {
+ public:
+   using flags_list = std::vector<std::string>;
++  using print_options_callback = flags_list (*)(const flags_list &);
+ 
+ private:
+   std::string GCCSuffix;
+   std::string OSSuffix;
+   std::string IncludeSuffix;
+   flags_list Flags;
+-  int Priority;
++  flags_list PrintOptions;
++  print_options_callback PrintOptionsCallback;
+ 
+ public:
++  /// GCCSuffix, OSSuffix & IncludeSuffix will be appended directly to the
++  /// sysroot string so they must either be empty or begin with a '/' character.
++  /// This is enforced with an assert in the constructor.
++  /// PrintOptions and PrintOptionsCallback are mutually exclusive.
++  /// If PrintOptionsCallback is non-null then it will be used when needed for
++  /// -print-multi-lib functionality. Otherwise -print-multi-lib will use the
++  /// content from PrintOptions.
+   Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
+-           StringRef IncludeSuffix = {}, int Priority = 0);
++           StringRef IncludeSuffix = {}, const flags_list &Flags = flags_list(),
++           const flags_list &PrintOptions = flags_list(),
++           print_options_callback PrintOptionsCallback = nullptr);
+ 
+   /// Get the detected GCC installation path suffix for the multi-arch
+   /// target variant. Always starts with a '/', unless empty
+-  const std::string &gccSuffix() const {
+-    assert(GCCSuffix.empty() ||
+-           (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
+-    return GCCSuffix;
+-  }
+-
+-  /// Set the GCC installation path suffix.
+-  Multilib &gccSuffix(StringRef S);
++  const std::string &gccSuffix() const { return GCCSuffix; }
+ 
+   /// Get the detected os path suffix for the multi-arch
+   /// target variant. Always starts with a '/', unless empty
+-  const std::string &osSuffix() const {
+-    assert(OSSuffix.empty() ||
+-           (StringRef(OSSuffix).front() == '/' && OSSuffix.size() > 1));
+-    return OSSuffix;
+-  }
+-
+-  /// Set the os path suffix.
+-  Multilib &osSuffix(StringRef S);
++  const std::string &osSuffix() const { return OSSuffix; }
+ 
+   /// Get the include directory suffix. Always starts with a '/', unless
+   /// empty
+-  const std::string &includeSuffix() const {
+-    assert(IncludeSuffix.empty() ||
+-           (StringRef(IncludeSuffix).front() == '/' && IncludeSuffix.size() > 1));
+-    return IncludeSuffix;
+-  }
+-
+-  /// Set the include directory suffix
+-  Multilib &includeSuffix(StringRef S);
+-
+-  /// Get the flags that indicate or contraindicate this multilib's use
+-  /// All elements begin with either '+' or '-'
++  const std::string &includeSuffix() const { return IncludeSuffix; }
++
++  /// Get the set of flags that indicate this multilib's use.
++  /// Flags are arbitrary strings, some of which are derived from command-line
++  /// options and look similar to them, and others can be defined by a
++  /// particular multilib.yaml. A multilib is considered compatible if its flags
++  /// are a subset of the flags derived from the Clang command line options.
++  /// See clang/docs/Multilib.rst for further explanation of how flags may be
++  /// generated and used.
+   const flags_list &flags() const { return Flags; }
+-  flags_list &flags() { return Flags; }
+-
+-  /// Returns the multilib priority. When more than one multilib matches flags,
+-  /// the one with the highest priority is selected, with 0 being the default.
+-  int priority() const { return Priority; }
+-
+-  /// Add a flag to the flags list
+-  /// \p Flag must be a flag accepted by the driver with its leading '-' removed,
+-  ///     and replaced with either:
+-  ///       '-' which contraindicates using this multilib with that flag
+-  ///     or:
+-  ///       '+' which promotes using this multilib in the presence of that flag
+-  ///     otherwise '-print-multi-lib' will not emit them correctly.
+-  Multilib &flag(StringRef F) {
+-    assert(F.front() == '+' || F.front() == '-');
+-    Flags.push_back(std::string(F));
+-    return *this;
+-  }
++
++  /// Returns the options that should be used for clang -print-multi-lib
++  flags_list getPrintOptions() const;
+ 
+   LLVM_DUMP_METHOD void dump() const;
+   /// print summary of the Multilib
+   void print(raw_ostream &OS) const;
+ 
+-  /// Check whether any of the 'against' flags contradict the 'for' flags.
+-  bool isValid() const;
+-
+   /// Check whether the default is selected
+   bool isDefault() const
+   { return GCCSuffix.empty() && OSSuffix.empty() && IncludeSuffix.empty(); }
+@@ -111,63 +92,62 @@ public:
+ 
+ raw_ostream &operator<<(raw_ostream &OS, const Multilib &M);
+ 
++/// See also MultilibSetBuilder for combining multilibs into a set.
+ class MultilibSet {
+ public:
+   using multilib_list = std::vector<Multilib>;
+-  using iterator = multilib_list::iterator;
+   using const_iterator = multilib_list::const_iterator;
+   using IncludeDirsFunc =
+       std::function<std::vector<std::string>(const Multilib &M)>;
+   using FilterCallback = llvm::function_ref<bool(const Multilib &)>;
+ 
++  /// Uses regular expressions to simplify flags used for multilib selection.
++  /// For example, we may wish to simplify armv8, armv8.1, armv8.2 etc. to
++  /// simply "v8". It's also possible to negate matches. For example, it may be
++  /// appropriate to infer that if mfpu=none *doesn't* match then an FPU is
++  /// available. NoMatchFlags can be used for this purpose.
++  struct FlagMatcher {
++    std::string Regex;
++    std::vector<std::string> MatchFlags, NoMatchFlags;
++  };
++
+ private:
+   multilib_list Multilibs;
++  std::vector<FlagMatcher> FlagMatchers;
+   IncludeDirsFunc IncludeCallback;
+   IncludeDirsFunc FilePathsCallback;
+ 
+ public:
+   MultilibSet() = default;
++  MultilibSet(multilib_list &&Multilibs) : Multilibs(Multilibs) {}
+ 
+-  /// Add an optional Multilib segment
+-  MultilibSet &Maybe(const Multilib &M);
+-
+-  /// Add a set of mutually incompatible Multilib segments
+-  MultilibSet &Either(const Multilib &M1, const Multilib &M2);
+-  MultilibSet &Either(const Multilib &M1, const Multilib &M2,
+-                      const Multilib &M3);
+-  MultilibSet &Either(const Multilib &M1, const Multilib &M2,
+-                      const Multilib &M3, const Multilib &M4);
+-  MultilibSet &Either(const Multilib &M1, const Multilib &M2,
+-                      const Multilib &M3, const Multilib &M4,
+-                      const Multilib &M5);
+-  MultilibSet &Either(ArrayRef<Multilib> Ms);
++  const multilib_list &getMultilibs() { return Multilibs; }
+ 
+   /// Filter out some subset of the Multilibs using a user defined callback
+   MultilibSet &FilterOut(FilterCallback F);
+ 
+-  /// Filter out those Multilibs whose gccSuffix matches the given expression
+-  MultilibSet &FilterOut(const char *Regex);
+-
+   /// Add a completed Multilib to the set
+   void push_back(const Multilib &M);
+ 
+-  /// Union this set of multilibs with another
+-  void combineWith(const MultilibSet &MS);
+-
+-  /// Remove all of the multilibs from the set
+-  void clear() { Multilibs.clear(); }
+-
+-  iterator begin() { return Multilibs.begin(); }
+   const_iterator begin() const { return Multilibs.begin(); }
+-
+-  iterator end() { return Multilibs.end(); }
+   const_iterator end() const { return Multilibs.end(); }
+ 
+-  /// Pick the best multilib in the set, \returns false if none are compatible
+-  bool select(const Multilib::flags_list &Flags, Multilib &M) const;
++  /// Select compatible variants, \returns false if none are compatible
++  bool select(const Multilib::flags_list &Flags,
++              llvm::SmallVector<Multilib> &) const;
+ 
+   unsigned size() const { return Multilibs.size(); }
+ 
++  /// Get the given flags plus flags found by matching them against the
++  /// FlagMatchers and choosing the MatchFlags or NoMatchFlags of each
++  /// accordingly. The select method calls this method so in most cases it's not
++  /// necessary to call it directly.
++  llvm::StringSet<> expandFlags(const Multilib::flags_list &) const;
++
++  bool parseYaml(llvm::MemoryBufferRef,
++                 llvm::SourceMgr::DiagHandlerTy = nullptr,
++                 void *DiagHandlerCtxt = nullptr);
++
+   LLVM_DUMP_METHOD void dump() const;
+   void print(raw_ostream &OS) const;
+ 
+@@ -184,13 +164,6 @@ public:
+   }
+ 
+   const IncludeDirsFunc &filePathsCallback() const { return FilePathsCallback; }
+-
+-private:
+-  /// Apply the filter to Multilibs and return the subset that remains
+-  static multilib_list filterCopy(FilterCallback F, const multilib_list &Ms);
+-
+-  /// Apply the filter to the multilib_list, removing those that don't match
+-  static void filterInPlace(FilterCallback F, multilib_list &Ms);
+ };
+ 
+ raw_ostream &operator<<(raw_ostream &OS, const MultilibSet &MS);
+diff --git a/clang/include/clang/Driver/MultilibBuilder.h b/clang/include/clang/Driver/MultilibBuilder.h
+new file mode 100644
+index 0000000000..f4875f2e03
+--- /dev/null
++++ b/clang/include/clang/Driver/MultilibBuilder.h
+@@ -0,0 +1,143 @@
++//===- MultilibBuilder.h
++//-----------------------------------------------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_CLANG_DRIVER_MULTILIBBUILDER_H
++#define LLVM_CLANG_DRIVER_MULTILIBBUILDER_H
++
++#include "clang/Driver/Multilib.h"
++
++namespace clang {
++namespace driver {
++
++/// This corresponds to a single GCC multilib, or a segment of one controlled
++/// by a command line flag. This class can be used to create a Multilib, and
++/// contains helper functions to mutate it before creating a Multilib instance
++/// with makeMultilib().
++class MultilibBuilder {
++public:
++  using flags_list = std::vector<std::string>;
++
++private:
++  std::string GCCSuffix;
++  std::string OSSuffix;
++  std::string IncludeSuffix;
++  flags_list Flags;
++
++public:
++  MultilibBuilder(StringRef GCCSuffix, StringRef OSSuffix,
++                  StringRef IncludeSuffix);
++
++  /// Initializes GCCSuffix, OSSuffix & IncludeSuffix to the same value.
++  MultilibBuilder(StringRef Suffix = {});
++
++  /// Get the detected GCC installation path suffix for the multi-arch
++  /// target variant. Always starts with a '/', unless empty
++  const std::string &gccSuffix() const {
++    assert(GCCSuffix.empty() ||
++           (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
++    return GCCSuffix;
++  }
++
++  /// Set the GCC installation path suffix.
++  MultilibBuilder &gccSuffix(StringRef S);
++
++  /// Get the detected os path suffix for the multi-arch
++  /// target variant. Always starts with a '/', unless empty
++  const std::string &osSuffix() const {
++    assert(OSSuffix.empty() ||
++           (StringRef(OSSuffix).front() == '/' && OSSuffix.size() > 1));
++    return OSSuffix;
++  }
++
++  /// Set the os path suffix.
++  MultilibBuilder &osSuffix(StringRef S);
++
++  /// Get the include directory suffix. Always starts with a '/', unless
++  /// empty
++  const std::string &includeSuffix() const {
++    assert(IncludeSuffix.empty() || (StringRef(IncludeSuffix).front() == '/' &&
++                                     IncludeSuffix.size() > 1));
++    return IncludeSuffix;
++  }
++
++  /// Set the include directory suffix
++  MultilibBuilder &includeSuffix(StringRef S);
++
++  /// Get the flags that indicate or contraindicate this multilib's use
++  /// All elements begin with either '+' or '-'
++  const flags_list &flags() const { return Flags; }
++  flags_list &flags() { return Flags; }
++
++  /// Add a flag to the flags list
++  /// \p Flag must be a flag accepted by the driver with its leading '-'
++  /// removed,
++  ///     and replaced with either:
++  ///       '-' which contraindicates using this multilib with that flag
++  ///     or:
++  ///       '+' which promotes using this multilib in the presence of that flag
++  ///     otherwise '-print-multi-lib' will not emit them correctly.
++  MultilibBuilder &flag(StringRef F) {
++    assert(F.front() == '+' || F.front() == '-');
++    Flags.push_back(std::string(F));
++    return *this;
++  }
++
++  Multilib makeMultilib() const;
++
++  /// Check whether any of the 'against' flags contradict the 'for' flags.
++  bool isValid() const;
++
++  /// Check whether the default is selected
++  bool isDefault() const {
++    return GCCSuffix.empty() && OSSuffix.empty() && IncludeSuffix.empty();
++  }
++};
++
++/// This class can be used to create a MultilibSet, and contains helper
++/// functions to add combinations of multilibs before creating a MultilibSet
++/// instance with makeMultilibSet().
++class MultilibSetBuilder {
++public:
++  using multilib_list = std::vector<MultilibBuilder>;
++
++  MultilibSetBuilder() = default;
++
++  /// Add an optional Multilib segment
++  MultilibSetBuilder &Maybe(const MultilibBuilder &M);
++
++  /// Add a set of mutually incompatible Multilib segments
++  MultilibSetBuilder &Either(const MultilibBuilder &M1,
++                             const MultilibBuilder &M2);
++  MultilibSetBuilder &Either(const MultilibBuilder &M1,
++                             const MultilibBuilder &M2,
++                             const MultilibBuilder &M3);
++  MultilibSetBuilder &Either(const MultilibBuilder &M1,
++                             const MultilibBuilder &M2,
++                             const MultilibBuilder &M3,
++                             const MultilibBuilder &M4);
++  MultilibSetBuilder &Either(const MultilibBuilder &M1,
++                             const MultilibBuilder &M2,
++                             const MultilibBuilder &M3,
++                             const MultilibBuilder &M4,
++                             const MultilibBuilder &M5);
++  MultilibSetBuilder &Either(ArrayRef<MultilibBuilder> Ms);
++
++  /// Filter out those Multilibs whose gccSuffix matches the given expression
++  MultilibSetBuilder &FilterOut(const char *Regex);
++
++  MultilibSet makeMultilibSet() const;
++
++private:
++  multilib_list Multilibs;
++};
++
++} // namespace driver
++} // namespace clang
++
++#endif // LLVM_CLANG_DRIVER_MULTILIBBUILDER_H
+diff --git a/clang/include/clang/Driver/Options.td b/clang/include/clang/Driver/Options.td
+index 652c15afcc..9eb6e2ef5a 100644
+--- a/clang/include/clang/Driver/Options.td
++++ b/clang/include/clang/Driver/Options.td
+@@ -4155,6 +4155,8 @@ def print_libgcc_file_name : Flag<["-", "--"], "print-libgcc-file-name">,
+            "library (\"libgcc.a\" or \"libclang_rt.builtins.*.a\")">;
+ def print_multi_directory : Flag<["-", "--"], "print-multi-directory">;
+ def print_multi_lib : Flag<["-", "--"], "print-multi-lib">;
++def print_multi_selection_flags : Flag<["-", "--"], "print-multi-selection-flags-experimental">,
++  HelpText<"Print the flags used for selecting multilibs (experimental)">;
+ def print_multi_os_directory : Flag<["-", "--"], "print-multi-os-directory">,
+   Flags<[Unsupported]>;
+ def print_target_triple : Flag<["-", "--"], "print-target-triple">,
+diff --git a/clang/include/clang/Driver/ToolChain.h b/clang/include/clang/Driver/ToolChain.h
+index f75f35dc9e..33c4b76628 100644
+--- a/clang/include/clang/Driver/ToolChain.h
++++ b/clang/include/clang/Driver/ToolChain.h
+@@ -187,7 +187,7 @@ private:
+ 
+ protected:
+   MultilibSet Multilibs;
+-  Multilib SelectedMultilib;
++  llvm::SmallVector<Multilib> SelectedMultilibs;
+ 
+   ToolChain(const Driver &D, const llvm::Triple &T,
+             const llvm::opt::ArgList &Args);
+@@ -283,7 +283,30 @@ public:
+ 
+   const MultilibSet &getMultilibs() const { return Multilibs; }
+ 
+-  const Multilib &getMultilib() const { return SelectedMultilib; }
++  const llvm::SmallVector<Multilib> &getSelectedMultilibs() const {
++    return SelectedMultilibs;
++  }
++
++  /// Get flags suitable for multilib selection, based on the provided clang
++  /// command line arguments. The command line arguments aren't suitable to be
++  /// used directly for multilib selection because they are not normalized and
++  /// normalization is a complex process. The result of this function is similar
++  /// to clang command line arguments but different:
++  /// * It's incomplete. Only certain command line arguments are processed. If
++  ///   more command line arguments are needed for multilib selection then this
++  ///   function should be extended.
++  /// * The flags aren't prefixed with "-".
++  /// * Where a single command line argument would contain a list, the elements
++  ///   are split out. For example, Arm extensions are appended to -march like
++  ///   -march=armv8m.main+crc+crypto+sha2+mve. Since this function is
++  ///   incomplete, a later clang version may infer the presence of more
++  ///   extensions than an earlier version. If all extensions were in a single
++  ///   flag then that would be unstable. Instead, each extension will be
++  ///   returned separately. There may not be valid syntax to express this as a
++  ///   clang argument so a pseudo argument syntax must be used instead.
++  /// To allow users to find out what flags are returned, clang accepts a
++  /// -print-multi-selection-flags-experimental argument.
++  Multilib::flags_list getMultiSelectionFlags(const llvm::opt::ArgList &) const;
+ 
+   SanitizerArgs getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const;
+ 
+diff --git a/clang/lib/Driver/CMakeLists.txt b/clang/lib/Driver/CMakeLists.txt
+index ba56a93234..e0bf3efc44 100644
+--- a/clang/lib/Driver/CMakeLists.txt
++++ b/clang/lib/Driver/CMakeLists.txt
+@@ -22,6 +22,7 @@ add_clang_library(clangDriver
+   DriverOptions.cpp
+   Job.cpp
+   Multilib.cpp
++  MultilibBuilder.cpp
+   OffloadBundler.cpp
+   OptionUtils.cpp
+   Phases.cpp
+diff --git a/clang/lib/Driver/Driver.cpp b/clang/lib/Driver/Driver.cpp
+index a268f2fa8f..df4575bd6e 100644
+--- a/clang/lib/Driver/Driver.cpp
++++ b/clang/lib/Driver/Driver.cpp
+@@ -2207,14 +2207,26 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
+     return false;
+   }
+ 
++  if (C.getArgs().hasArg(options::OPT_print_multi_selection_flags)) {
++    Multilib::flags_list ArgFlags = TC.getMultiSelectionFlags(C.getArgs());
++    llvm::StringSet<> ExpandedFlags = TC.getMultilibs().expandFlags(ArgFlags);
++    std::set<llvm::StringRef> SortedFlags;
++    for (const auto &FlagEntry : ExpandedFlags)
++      SortedFlags.insert(FlagEntry.getKey());
++    for (auto Flag : SortedFlags)
++      llvm::outs() << Flag << '\n';
++    return false;
++  }
++
+   if (C.getArgs().hasArg(options::OPT_print_multi_directory)) {
+-    const Multilib &Multilib = TC.getMultilib();
+-    if (Multilib.gccSuffix().empty())
+-      llvm::outs() << ".\n";
+-    else {
+-      StringRef Suffix(Multilib.gccSuffix());
+-      assert(Suffix.front() == '/');
+-      llvm::outs() << Suffix.substr(1) << "\n";
++    for (const Multilib &Multilib : TC.getSelectedMultilibs()) {
++      if (Multilib.gccSuffix().empty())
++        llvm::outs() << ".\n";
++      else {
++        StringRef Suffix(Multilib.gccSuffix());
++        assert(Suffix.front() == '/');
++        llvm::outs() << Suffix.substr(1) << "\n";
++      }
+     }
+     return false;
+   }
+diff --git a/clang/lib/Driver/Multilib.cpp b/clang/lib/Driver/Multilib.cpp
+index ec619874ad..216ad52c9d 100644
+--- a/clang/lib/Driver/Multilib.cpp
++++ b/clang/lib/Driver/Multilib.cpp
+@@ -8,73 +8,47 @@
+ 
+ #include "clang/Driver/Multilib.h"
+ #include "clang/Basic/LLVM.h"
++#include "clang/Basic/Version.h"
+ #include "llvm/ADT/SmallString.h"
+ #include "llvm/ADT/StringMap.h"
+ #include "llvm/ADT/StringRef.h"
+-#include "llvm/ADT/StringSet.h"
+ #include "llvm/Support/Compiler.h"
+ #include "llvm/Support/ErrorHandling.h"
+ #include "llvm/Support/Path.h"
+ #include "llvm/Support/Regex.h"
++#include "llvm/Support/VersionTuple.h"
++#include "llvm/Support/YAMLParser.h"
++#include "llvm/Support/YAMLTraits.h"
+ #include "llvm/Support/raw_ostream.h"
+-#include <algorithm>
+ #include <cassert>
+-#include <string>
+ 
+ using namespace clang;
+ using namespace driver;
+ using namespace llvm::sys;
+ 
+-/// normalize Segment to "/foo/bar" or "".
+-static void normalizePathSegment(std::string &Segment) {
+-  StringRef seg = Segment;
+-
+-  // Prune trailing "/" or "./"
+-  while (true) {
+-    StringRef last = path::filename(seg);
+-    if (last != ".")
+-      break;
+-    seg = path::parent_path(seg);
+-  }
+-
+-  if (seg.empty() || seg == "/") {
+-    Segment.clear();
+-    return;
+-  }
+-
+-  // Add leading '/'
+-  if (seg.front() != '/') {
+-    Segment = "/" + seg.str();
+-  } else {
+-    Segment = std::string(seg);
+-  }
+-}
+-
+ Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
+-                   StringRef IncludeSuffix, int Priority)
++                   StringRef IncludeSuffix, const flags_list &Flags,
++                   const flags_list &PrintOptions,
++                   print_options_callback PrintOptionsCallback)
+     : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix),
+-      Priority(Priority) {
+-  normalizePathSegment(this->GCCSuffix);
+-  normalizePathSegment(this->OSSuffix);
+-  normalizePathSegment(this->IncludeSuffix);
+-}
+-
+-Multilib &Multilib::gccSuffix(StringRef S) {
+-  GCCSuffix = std::string(S);
+-  normalizePathSegment(GCCSuffix);
+-  return *this;
+-}
+-
+-Multilib &Multilib::osSuffix(StringRef S) {
+-  OSSuffix = std::string(S);
+-  normalizePathSegment(OSSuffix);
+-  return *this;
+-}
+-
+-Multilib &Multilib::includeSuffix(StringRef S) {
+-  IncludeSuffix = std::string(S);
+-  normalizePathSegment(IncludeSuffix);
+-  return *this;
++      Flags(Flags), PrintOptions(PrintOptions),
++      PrintOptionsCallback(PrintOptionsCallback) {
++  assert(GCCSuffix.empty() ||
++         (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
++  assert(OSSuffix.empty() ||
++         (StringRef(OSSuffix).front() == '/' && OSSuffix.size() > 1));
++  assert(IncludeSuffix.empty() ||
++         (StringRef(IncludeSuffix).front() == '/' && IncludeSuffix.size() > 1));
++  // PrintOptionsCallback should not be provided at the same time as a non-empty
++  // PrintOptions. They are mutually exclusive.
++  assert(PrintOptions.empty() || PrintOptionsCallback == nullptr);
++}
++
++Multilib::flags_list Multilib::getPrintOptions() const {
++  if (PrintOptionsCallback) {
++    return (*PrintOptionsCallback)(Flags);
++  }
++  return PrintOptions;
+ }
+ 
+ LLVM_DUMP_METHOD void Multilib::dump() const {
+@@ -82,33 +56,13 @@ LLVM_DUMP_METHOD void Multilib::dump() const {
+ }
+ 
+ void Multilib::print(raw_ostream &OS) const {
+-  assert(GCCSuffix.empty() || (StringRef(GCCSuffix).front() == '/'));
+   if (GCCSuffix.empty())
+     OS << ".";
+-  else {
++  else
+     OS << StringRef(GCCSuffix).drop_front();
+-  }
+   OS << ";";
+-  for (StringRef Flag : Flags) {
+-    if (Flag.front() == '+')
+-      OS << "@" << Flag.substr(1);
+-  }
+-}
+-
+-bool Multilib::isValid() const {
+-  llvm::StringMap<int> FlagSet;
+-  for (unsigned I = 0, N = Flags.size(); I != N; ++I) {
+-    StringRef Flag(Flags[I]);
+-    llvm::StringMap<int>::iterator SI = FlagSet.find(Flag.substr(1));
+-
+-    assert(StringRef(Flag).front() == '+' || StringRef(Flag).front() == '-');
+-
+-    if (SI == FlagSet.end())
+-      FlagSet[Flag.substr(1)] = I;
+-    else if (Flags[I] != Flags[SI->getValue()])
+-      return false;
+-  }
+-  return true;
++  for (StringRef Option : getPrintOptions())
++    OS << "@" << Option.substr(1);
+ }
+ 
+ bool Multilib::operator==(const Multilib &Other) const {
+@@ -139,146 +93,145 @@ raw_ostream &clang::driver::operator<<(raw_ostream &OS, const Multilib &M) {
+   return OS;
+ }
+ 
+-MultilibSet &MultilibSet::Maybe(const Multilib &M) {
+-  Multilib Opposite;
+-  // Negate any '+' flags
+-  for (StringRef Flag : M.flags()) {
+-    if (Flag.front() == '+')
+-      Opposite.flags().push_back(("-" + Flag.substr(1)).str());
+-  }
+-  return Either(M, Opposite);
+-}
+-
+-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2) {
+-  return Either({M1, M2});
+-}
+-
+-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2,
+-                                 const Multilib &M3) {
+-  return Either({M1, M2, M3});
+-}
+-
+-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2,
+-                                 const Multilib &M3, const Multilib &M4) {
+-  return Either({M1, M2, M3, M4});
+-}
+-
+-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2,
+-                                 const Multilib &M3, const Multilib &M4,
+-                                 const Multilib &M5) {
+-  return Either({M1, M2, M3, M4, M5});
+-}
+-
+-static Multilib compose(const Multilib &Base, const Multilib &New) {
+-  SmallString<128> GCCSuffix;
+-  llvm::sys::path::append(GCCSuffix, "/", Base.gccSuffix(), New.gccSuffix());
+-  SmallString<128> OSSuffix;
+-  llvm::sys::path::append(OSSuffix, "/", Base.osSuffix(), New.osSuffix());
+-  SmallString<128> IncludeSuffix;
+-  llvm::sys::path::append(IncludeSuffix, "/", Base.includeSuffix(),
+-                          New.includeSuffix());
+-
+-  Multilib Composed(GCCSuffix, OSSuffix, IncludeSuffix);
+-
+-  Multilib::flags_list &Flags = Composed.flags();
+-
+-  Flags.insert(Flags.end(), Base.flags().begin(), Base.flags().end());
+-  Flags.insert(Flags.end(), New.flags().begin(), New.flags().end());
+-
+-  return Composed;
+-}
+-
+-MultilibSet &MultilibSet::Either(ArrayRef<Multilib> MultilibSegments) {
+-  multilib_list Composed;
+-
+-  if (Multilibs.empty())
+-    Multilibs.insert(Multilibs.end(), MultilibSegments.begin(),
+-                     MultilibSegments.end());
+-  else {
+-    for (const auto &New : MultilibSegments) {
+-      for (const auto &Base : *this) {
+-        Multilib MO = compose(Base, New);
+-        if (MO.isValid())
+-          Composed.push_back(MO);
+-      }
+-    }
+-
+-    Multilibs = Composed;
+-  }
+-
+-  return *this;
+-}
+-
+ MultilibSet &MultilibSet::FilterOut(FilterCallback F) {
+-  filterInPlace(F, Multilibs);
+-  return *this;
+-}
+-
+-MultilibSet &MultilibSet::FilterOut(const char *Regex) {
+-  llvm::Regex R(Regex);
+-#ifndef NDEBUG
+-  std::string Error;
+-  if (!R.isValid(Error)) {
+-    llvm::errs() << Error;
+-    llvm_unreachable("Invalid regex!");
+-  }
+-#endif
+-
+-  filterInPlace([&R](const Multilib &M) { return R.match(M.gccSuffix()); },
+-                Multilibs);
++  llvm::erase_if(Multilibs, F);
+   return *this;
+ }
+ 
+ void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
+ 
+-void MultilibSet::combineWith(const MultilibSet &Other) {
+-  Multilibs.insert(Multilibs.end(), Other.begin(), Other.end());
++bool MultilibSet::select(const Multilib::flags_list &Flags,
++                         llvm::SmallVector<Multilib> &Selected) const {
++  llvm::StringSet<> FlagSet(expandFlags(Flags));
++  Selected.clear();
++  llvm::copy_if(Multilibs, std::back_inserter(Selected),
++                [&FlagSet](const Multilib &M) {
++                  for (const std::string &F : M.flags())
++                    if (!FlagSet.contains(F))
++                      return false;
++                  return true;
++                });
++  return !Selected.empty();
++}
++
++llvm::StringSet<>
++MultilibSet::expandFlags(const Multilib::flags_list &InFlags) const {
++  llvm::StringSet<> Result;
++  for (const auto &F : InFlags)
++    Result.insert(F);
++  for (const FlagMatcher &M : FlagMatchers) {
++    std::string RegexString(M.Regex);
++
++    // Make the regular expression match the whole string.
++    if (!StringRef(M.Regex).starts_with("^"))
++      RegexString.insert(RegexString.begin(), '^');
++    if (!StringRef(M.Regex).ends_with("$"))
++      RegexString.push_back('$');
++
++    const llvm::Regex Regex(RegexString);
++    assert(Regex.isValid());
++    if (llvm::find_if(InFlags, [&Regex](StringRef F) {
++          return Regex.match(F);
++        }) != InFlags.end()) {
++      Result.insert(M.MatchFlags.begin(), M.MatchFlags.end());
++    } else {
++      Result.insert(M.NoMatchFlags.begin(), M.NoMatchFlags.end());
++    }
++  }
++  return Result;
+ }
+ 
+-static bool isFlagEnabled(StringRef Flag) {
+-  char Indicator = Flag.front();
+-  assert(Indicator == '+' || Indicator == '-');
+-  return Indicator == '+';
+-}
++namespace {
+ 
+-bool MultilibSet::select(const Multilib::flags_list &Flags, Multilib &M) const {
+-  llvm::StringMap<bool> FlagSet;
++// When updating this also update MULTILIB_VERSION in MultilibTest.cpp
++static const VersionTuple MultilibVersionCurrent(0, 1);
+ 
+-  // Stuff all of the flags into the FlagSet such that a true mappend indicates
+-  // the flag was enabled, and a false mappend indicates the flag was disabled.
+-  for (StringRef Flag : Flags)
+-    FlagSet[Flag.substr(1)] = isFlagEnabled(Flag);
++struct MultilibSerialization {
++  std::string Dir;
++  std::vector<std::string> Flags, PrintOptions;
++};
+ 
+-  multilib_list Filtered = filterCopy([&FlagSet](const Multilib &M) {
+-    for (StringRef Flag : M.flags()) {
+-      llvm::StringMap<bool>::const_iterator SI = FlagSet.find(Flag.substr(1));
+-      if (SI != FlagSet.end())
+-        if (SI->getValue() != isFlagEnabled(Flag))
+-          return true;
+-    }
+-    return false;
+-  }, Multilibs);
++struct MultilibSetSerialization {
++  llvm::VersionTuple MultilibVersion;
++  std::vector<MultilibSerialization> Multilibs;
++  std::vector<MultilibSet::FlagMatcher> FlagMatchers;
++};
+ 
+-  if (Filtered.empty())
+-    return false;
+-  if (Filtered.size() == 1) {
+-    M = Filtered[0];
+-    return true;
++} // end anonymous namespace
++
++template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
++  static void mapping(llvm::yaml::IO &io, MultilibSerialization &V) {
++    io.mapRequired("Dir", V.Dir);
++    io.mapRequired("Flags", V.Flags);
++    io.mapRequired("PrintOptions", V.PrintOptions);
+   }
++  static std::string validate(IO &io, MultilibSerialization &V) {
++    if (StringRef(V.Dir).starts_with("/"))
++      return "paths must be relative. \"" + V.Dir + "\" starts with \"/\"\n";
++    return std::string{};
++  }
++};
+ 
+-  // Sort multilibs by priority and select the one with the highest priority.
+-  llvm::sort(Filtered, [](const Multilib &a, const Multilib &b) -> bool {
+-    return a.priority() > b.priority();
+-  });
++template <> struct llvm::yaml::MappingTraits<MultilibSet::FlagMatcher> {
++  static void mapping(llvm::yaml::IO &io, MultilibSet::FlagMatcher &M) {
++    io.mapRequired("Regex", M.Regex);
++    io.mapOptional("MatchFlags", M.MatchFlags);
++    io.mapOptional("NoMatchFlags", M.NoMatchFlags);
++  }
++  static std::string validate(IO &io, MultilibSet::FlagMatcher &M) {
++    llvm::Regex Regex(M.Regex);
++    std::string RegexError;
++    if (!Regex.isValid(RegexError))
++      return RegexError;
++    if (M.MatchFlags.empty() && M.NoMatchFlags.empty())
++      return "value required for 'MatchFlags' or 'NoMatchFlags'";
++    return std::string{};
++  }
++};
+ 
+-  if (Filtered[0].priority() > Filtered[1].priority()) {
+-    M = Filtered[0];
+-    return true;
++template <> struct llvm::yaml::MappingTraits<MultilibSetSerialization> {
++  static void mapping(llvm::yaml::IO &io, MultilibSetSerialization &M) {
++    io.mapRequired("MultilibVersion", M.MultilibVersion);
++    io.mapRequired("Variants", M.Multilibs);
++    io.mapOptional("FlagMap", M.FlagMatchers);
++  }
++  static std::string validate(IO &io, MultilibSetSerialization &M) {
++    if (M.MultilibVersion.empty())
++      return "missing required key 'MultilibVersion'";
++    if (M.MultilibVersion.getMajor() != MultilibVersionCurrent.getMajor())
++      return "Multilib version " + M.MultilibVersion.getAsString() +
++             " is unsupported.";
++    if (M.MultilibVersion.getMinor() > MultilibVersionCurrent.getMinor())
++      return "Multilib version " + M.MultilibVersion.getAsString() +
++             " is unsupported.";
++    return std::string{};
+   }
++};
++
++LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibSerialization)
++LLVM_YAML_IS_SEQUENCE_VECTOR(MultilibSet::FlagMatcher)
++
++bool MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
++                            llvm::SourceMgr::DiagHandlerTy DiagHandler,
++                            void *DiagHandlerCtxt) {
++  MultilibSetSerialization MS;
++  llvm::yaml::Input YamlInput(Input, nullptr, DiagHandler, DiagHandlerCtxt);
++  YamlInput >> MS;
++  if (YamlInput.error())
++    return false;
+ 
+-  // TODO: We should consider returning llvm::Error rather than aborting.
+-  assert(false && "More than one multilib with the same priority");
+-  return false;
++  Multilibs.clear();
++  Multilibs.reserve(MS.Multilibs.size());
++  for (const auto &M : MS.Multilibs) {
++    std::string Dir;
++    if (M.Dir != ".")
++      Dir = "/" + M.Dir;
++    Multilibs.emplace_back(Dir, Dir, Dir,
++                           Multilib::flags_list(M.Flags.begin(), M.Flags.end()),
++                           M.PrintOptions);
++  }
++  FlagMatchers = std::move(MS.FlagMatchers);
++  return true;
+ }
+ 
+ LLVM_DUMP_METHOD void MultilibSet::dump() const {
+@@ -290,17 +243,6 @@ void MultilibSet::print(raw_ostream &OS) const {
+     OS << M << "\n";
+ }
+ 
+-MultilibSet::multilib_list MultilibSet::filterCopy(FilterCallback F,
+-                                                   const multilib_list &Ms) {
+-  multilib_list Copy(Ms);
+-  filterInPlace(F, Copy);
+-  return Copy;
+-}
+-
+-void MultilibSet::filterInPlace(FilterCallback F, multilib_list &Ms) {
+-  llvm::erase_if(Ms, F);
+-}
+-
+ raw_ostream &clang::driver::operator<<(raw_ostream &OS, const MultilibSet &MS) {
+   MS.print(OS);
+   return OS;
+diff --git a/clang/lib/Driver/MultilibBuilder.cpp b/clang/lib/Driver/MultilibBuilder.cpp
+new file mode 100644
+index 0000000000..b527154da7
+--- /dev/null
++++ b/clang/lib/Driver/MultilibBuilder.cpp
+@@ -0,0 +1,206 @@
++//===- MultilibBuilder.cpp - MultilibBuilder Implementation -===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "clang/Driver/MultilibBuilder.h"
++#include "llvm/ADT/SmallString.h"
++#include "llvm/ADT/StringMap.h"
++#include "llvm/Support/Path.h"
++#include "llvm/Support/Regex.h"
++#include "llvm/Support/raw_ostream.h"
++
++using namespace clang;
++using namespace driver;
++
++/// normalize Segment to "/foo/bar" or "".
++static void normalizePathSegment(std::string &Segment) {
++  StringRef seg = Segment;
++
++  // Prune trailing "/" or "./"
++  while (true) {
++    StringRef last = llvm::sys::path::filename(seg);
++    if (last != ".")
++      break;
++    seg = llvm::sys::path::parent_path(seg);
++  }
++
++  if (seg.empty() || seg == "/") {
++    Segment.clear();
++    return;
++  }
++
++  // Add leading '/'
++  if (seg.front() != '/') {
++    Segment = "/" + seg.str();
++  } else {
++    Segment = std::string(seg);
++  }
++}
++
++MultilibBuilder::MultilibBuilder(StringRef GCC, StringRef OS, StringRef Include)
++    : GCCSuffix(GCC), OSSuffix(OS), IncludeSuffix(Include) {
++  normalizePathSegment(GCCSuffix);
++  normalizePathSegment(OSSuffix);
++  normalizePathSegment(IncludeSuffix);
++}
++
++MultilibBuilder::MultilibBuilder(StringRef Suffix)
++    : MultilibBuilder(Suffix, Suffix, Suffix) {}
++
++MultilibBuilder &MultilibBuilder::gccSuffix(StringRef S) {
++  GCCSuffix = std::string(S);
++  normalizePathSegment(GCCSuffix);
++  return *this;
++}
++
++MultilibBuilder &MultilibBuilder::osSuffix(StringRef S) {
++  OSSuffix = std::string(S);
++  normalizePathSegment(OSSuffix);
++  return *this;
++}
++
++MultilibBuilder &MultilibBuilder::includeSuffix(StringRef S) {
++  IncludeSuffix = std::string(S);
++  normalizePathSegment(IncludeSuffix);
++  return *this;
++}
++
++bool MultilibBuilder::isValid() const {
++  llvm::StringMap<int> FlagSet;
++  for (unsigned I = 0, N = Flags.size(); I != N; ++I) {
++    StringRef Flag(Flags[I]);
++    llvm::StringMap<int>::iterator SI = FlagSet.find(Flag.substr(1));
++
++    assert(StringRef(Flag).front() == '+' || StringRef(Flag).front() == '-');
++
++    if (SI == FlagSet.end())
++      FlagSet[Flag.substr(1)] = I;
++    else if (Flags[I] != Flags[SI->getValue()])
++      return false;
++  }
++  return true;
++}
++
++static Multilib::flags_list getPrintOptions(const Multilib::flags_list &Flags) {
++  // Derive print options from flags.
++  // In general, flags in the Multilib class are not required to be valid
++  // command line options, but for the MultilibBuilder class flags are expected
++  // to form valid command line options when their first character is replaced
++  // with '-'.
++  Multilib::flags_list PrintOptions;
++  for (StringRef Flag : Flags) {
++    if (Flag.front() == '+')
++      PrintOptions.push_back(("-" + Flag.substr(1)).str());
++  }
++  return PrintOptions;
++}
++
++Multilib MultilibBuilder::makeMultilib() const {
++  return Multilib(GCCSuffix, OSSuffix, IncludeSuffix, Flags,
++                  Multilib::flags_list(), &::getPrintOptions);
++}
++
++MultilibSetBuilder &MultilibSetBuilder::Maybe(const MultilibBuilder &M) {
++  MultilibBuilder Opposite;
++  // Negate any '+' flags
++  for (StringRef Flag : M.flags()) {
++    if (Flag.front() == '+')
++      Opposite.flags().push_back(("-" + Flag.substr(1)).str());
++  }
++  return Either(M, Opposite);
++}
++
++MultilibSetBuilder &MultilibSetBuilder::Either(const MultilibBuilder &M1,
++                                               const MultilibBuilder &M2) {
++  return Either({M1, M2});
++}
++
++MultilibSetBuilder &MultilibSetBuilder::Either(const MultilibBuilder &M1,
++                                               const MultilibBuilder &M2,
++                                               const MultilibBuilder &M3) {
++  return Either({M1, M2, M3});
++}
++
++MultilibSetBuilder &MultilibSetBuilder::Either(const MultilibBuilder &M1,
++                                               const MultilibBuilder &M2,
++                                               const MultilibBuilder &M3,
++                                               const MultilibBuilder &M4) {
++  return Either({M1, M2, M3, M4});
++}
++
++MultilibSetBuilder &MultilibSetBuilder::Either(const MultilibBuilder &M1,
++                                               const MultilibBuilder &M2,
++                                               const MultilibBuilder &M3,
++                                               const MultilibBuilder &M4,
++                                               const MultilibBuilder &M5) {
++  return Either({M1, M2, M3, M4, M5});
++}
++
++static MultilibBuilder compose(const MultilibBuilder &Base,
++                               const MultilibBuilder &New) {
++  SmallString<128> GCCSuffix;
++  llvm::sys::path::append(GCCSuffix, "/", Base.gccSuffix(), New.gccSuffix());
++  SmallString<128> OSSuffix;
++  llvm::sys::path::append(OSSuffix, "/", Base.osSuffix(), New.osSuffix());
++  SmallString<128> IncludeSuffix;
++  llvm::sys::path::append(IncludeSuffix, "/", Base.includeSuffix(),
++                          New.includeSuffix());
++
++  MultilibBuilder Composed(GCCSuffix, OSSuffix, IncludeSuffix);
++
++  MultilibBuilder::flags_list &Flags = Composed.flags();
++
++  Flags.insert(Flags.end(), Base.flags().begin(), Base.flags().end());
++  Flags.insert(Flags.end(), New.flags().begin(), New.flags().end());
++
++  return Composed;
++}
++
++MultilibSetBuilder &
++MultilibSetBuilder::Either(ArrayRef<MultilibBuilder> MultilibSegments) {
++  multilib_list Composed;
++
++  if (Multilibs.empty())
++    Multilibs.insert(Multilibs.end(), MultilibSegments.begin(),
++                     MultilibSegments.end());
++  else {
++    for (const auto &New : MultilibSegments) {
++      for (const auto &Base : Multilibs) {
++        MultilibBuilder MO = compose(Base, New);
++        if (MO.isValid())
++          Composed.push_back(MO);
++      }
++    }
++
++    Multilibs = Composed;
++  }
++
++  return *this;
++}
++
++MultilibSetBuilder &MultilibSetBuilder::FilterOut(const char *Regex) {
++  llvm::Regex R(Regex);
++#ifndef NDEBUG
++  std::string Error;
++  if (!R.isValid(Error)) {
++    llvm::errs() << Error;
++    llvm_unreachable("Invalid regex!");
++  }
++#endif
++  llvm::erase_if(Multilibs, [&R](const MultilibBuilder &M) {
++    return R.match(M.gccSuffix());
++  });
++  return *this;
++}
++
++MultilibSet MultilibSetBuilder::makeMultilibSet() const {
++  MultilibSet Result;
++  for (const auto &M : Multilibs) {
++    Result.push_back(M.makeMultilib());
++  }
++  return Result;
++}
+diff --git a/clang/lib/Driver/ToolChain.cpp b/clang/lib/Driver/ToolChain.cpp
+index bc70205a6c..fe6f2d318d 100644
+--- a/clang/lib/Driver/ToolChain.cpp
++++ b/clang/lib/Driver/ToolChain.cpp
+@@ -7,8 +7,10 @@
+ //===----------------------------------------------------------------------===//
+ 
+ #include "clang/Driver/ToolChain.h"
++#include "ToolChains/Arch/AArch64.h"
+ #include "ToolChains/Arch/ARM.h"
+ #include "ToolChains/Clang.h"
++#include "ToolChains/CommonArgs.h"
+ #include "ToolChains/Flang.h"
+ #include "ToolChains/InterfaceStubs.h"
+ #include "clang/Basic/ObjCRuntime.h"
+@@ -41,6 +43,7 @@
+ #include "llvm/Support/TargetParser.h"
+ #include "llvm/Support/VersionTuple.h"
+ #include "llvm/Support/VirtualFileSystem.h"
++#include "llvm/TargetParser/AArch64TargetParser.h"
+ #include <cassert>
+ #include <cstddef>
+ #include <cstring>
+@@ -170,6 +173,125 @@ bool ToolChain::defaultToIEEELongDouble() const {
+   return PPC_LINUX_DEFAULT_IEEELONGDOUBLE && getTriple().isOSLinux();
+ }
+ 
++static void getAArch64MultiSelectionFlags(const Driver &D,
++                                          const llvm::Triple &Triple,
++                                          const llvm::opt::ArgList &Args,
++                                          Multilib::flags_list &Result) {
++  std::vector<StringRef> Features;
++  tools::aarch64::getAArch64TargetFeatures(D, Triple, Args, Features, false);
++  const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
++  llvm::DenseSet<StringRef> FeatureSet(UnifiedFeatures.begin(),
++                                       UnifiedFeatures.end());
++  for (const auto &Ext : AArch64::Extensions)
++    if (FeatureSet.find(Ext.Feature) != FeatureSet.end())
++      Result.push_back(("march=+" + Ext.Name).str());
++}
++
++static void getARMMultiSelectionFlags(const Driver &D,
++                                      const llvm::Triple &Triple,
++                                      const llvm::opt::ArgList &Args,
++                                      Multilib::flags_list &Result) {
++  std::vector<StringRef> Features;
++  llvm::ARM::FPUKind FPUKind = tools::arm::getARMTargetFeatures(
++      D, Triple, Args, Features, false /*ForAs*/, true /*ForMultilib*/);
++  const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
++  llvm::DenseSet<StringRef> FeatureSet(UnifiedFeatures.begin(),
++                                       UnifiedFeatures.end());
++  for (const auto &Ext : ARM::ARCHExtNames)
++    if (FeatureSet.find(Ext.Feature) != FeatureSet.end())
++      Result.push_back(("march=+" + Ext.Name).str());
++
++  switch (FPUKind) {
++#define ARM_FPU(NAME, KIND, VERSION, NEON_SUPPORT, RESTRICTION)                \
++  case llvm::ARM::KIND:                                                        \
++    Result.push_back("mfpu=" NAME);                                            \
++    break;
++#include "llvm/TargetParser/ARMTargetParser.def"
++  default:
++    llvm_unreachable("Invalid FPUKind");
++  }
++
++  switch (arm::getARMFloatABI(D, Triple, Args)) {
++  case arm::FloatABI::Soft:
++    Result.push_back("mfloat-abi=soft");
++    break;
++  case arm::FloatABI::SoftFP:
++    Result.push_back("mfloat-abi=softfp");
++    break;
++  case arm::FloatABI::Hard:
++    Result.push_back("mfloat-abi=hard");
++    break;
++  case arm::FloatABI::Invalid:
++    llvm_unreachable("Invalid float ABI");
++  }
++}
++
++Multilib::flags_list
++ToolChain::getMultiSelectionFlags(const llvm::opt::ArgList &Args) const {
++  using namespace clang::driver::options;
++
++  std::vector<std::string> Result;
++  const llvm::Triple Triple(ComputeEffectiveClangTriple(Args));
++  Result.push_back("target=" + Triple.str());
++
++  // Enumerate boolean flags we care about for the purposes of multilib here.
++  // There must be a smarter way to do it but this gets us started.
++  const struct HasFlag {
++    ID Pos, Neg;
++    bool Default;
++  } HasFlagList[] = {
++      {OPT_fexceptions, OPT_fno_exceptions, true},
++      {OPT_frtti, OPT_fno_rtti, true},
++  };
++
++  // Options we care about that have a single last-wins value.
++  static const ID GetLastArgValue[] = {
++      OPT_fcxx_abi_EQ,
++  };
++
++  for (const HasFlag &HF : HasFlagList) {
++    ID Option = Args.hasFlag(HF.Pos, HF.Neg, HF.Default) ? HF.Pos : HF.Neg;
++    Result.push_back(
++        clang::driver::getDriverOptTable().getOptionName(Option).str());
++  }
++
++  for (ID Option : GetLastArgValue) {
++    StringRef Value = Args.getLastArgValue(Option);
++    if (!Value.empty()) {
++      Result.push_back(
++          (clang::driver::getDriverOptTable().getOptionName(Option) + Value)
++              .str());
++    }
++  }
++
++  const SanitizerArgs SanArgs(getSanitizerArgs(Args));
++  if (SanArgs.needsAsanRt())
++    Result.push_back("fsanitize=address");
++  if (SanArgs.needsHwasanRt())
++    Result.push_back("fsanitize=hwaddress");
++
++  switch (Triple.getArch()) {
++  case llvm::Triple::aarch64:
++  case llvm::Triple::aarch64_32:
++  case llvm::Triple::aarch64_be:
++    getAArch64MultiSelectionFlags(D, Triple, Args, Result);
++    break;
++  case llvm::Triple::arm:
++  case llvm::Triple::armeb:
++  case llvm::Triple::thumb:
++  case llvm::Triple::thumbeb:
++    getARMMultiSelectionFlags(D, Triple, Args, Result);
++    break;
++  default:
++    break;
++  }
++
++  // Sort and remove duplicates
++  std::sort(Result.begin(), Result.end());
++  Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
++  return Result;
++}
++
+ SanitizerArgs
+ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
+   SanitizerArgs SanArgs(*this, JobArgs, !SanitizerArgsChecked);
+@@ -491,7 +613,9 @@ std::string ToolChain::getCompilerRTPath() const {
+   SmallString<128> Path(getDriver().ResourceDir);
+   if (isBareMetal()) {
+     llvm::sys::path::append(Path, "lib", getOSLibName());
+-    Path += SelectedMultilib.gccSuffix();
++    if (!SelectedMultilibs.empty()) {
++      Path += SelectedMultilibs.back().gccSuffix();
++    }
+   } else if (Triple.isOSUnknown()) {
+     llvm::sys::path::append(Path, "lib");
+   } else {
+diff --git a/clang/lib/Driver/ToolChains/Arch/ARM.cpp b/clang/lib/Driver/ToolChains/Arch/ARM.cpp
+index b6a9df2850..98805ed45c 100644
+--- a/clang/lib/Driver/ToolChains/Arch/ARM.cpp
++++ b/clang/lib/Driver/ToolChains/Arch/ARM.cpp
+@@ -436,9 +436,11 @@ static bool hasIntegerMVE(const std::vector<StringRef> &F) {
+          (NoMVE == F.rend() || std::distance(MVE, NoMVE) > 0);
+ }
+ 
+-void arm::getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+-                               const ArgList &Args,
+-                               std::vector<StringRef> &Features, bool ForAS) {
++llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
++                                             const llvm::Triple &Triple,
++                                             const ArgList &Args,
++                                             std::vector<StringRef> &Features,
++                                             bool ForAS, bool ForMultilib) {
+   bool KernelOrKext =
+       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
+   arm::FloatABI ABI = arm::getARMFloatABI(D, Triple, Args);
+@@ -632,6 +634,7 @@ fp16_fml_fallthrough:
+     // above call.
+     Features.insert(Features.end(), {"-dotprod", "-fp16fml", "-bf16", "-mve",
+                                      "-mve.fp", "-fpregs"});
++    FPUID = llvm::ARM::FK_NONE;
+   } else if (FPUID == llvm::ARM::FK_NONE ||
+              ArchArgFPUID == llvm::ARM::FK_NONE ||
+              CPUArgFPUID == llvm::ARM::FK_NONE) {
+@@ -643,6 +646,7 @@ fp16_fml_fallthrough:
+                     {"-dotprod", "-fp16fml", "-bf16", "-mve.fp"});
+     if (!hasIntegerMVE(Features))
+       Features.emplace_back("-fpregs");
++    FPUID = llvm::ARM::FK_NONE;
+   }
+ 
+   // En/disable crc code generation.
+@@ -773,10 +777,13 @@ fp16_fml_fallthrough:
+ 
+   // Generate execute-only output (no data access to code sections).
+   // This only makes sense for the compiler, not for the assembler.
+-  if (!ForAS) {
+-    // Supported only on ARMv6T2 and ARMv7 and above.
+-    // Cannot be combined with -mno-movt.
+-    if (Arg *A = Args.getLastArg(options::OPT_mexecute_only, options::OPT_mno_execute_only)) {
++  // It's not needed for multilib selection and may hide an unused
++  // argument diagnostic if the code is always run.
++  if (!ForAS && !ForMultilib) {
++      // Supported only on ARMv6T2 and ARMv7 and above.
++      // Cannot be combined with -mno-movt.
++      if (Arg *A = Args.getLastArg(options::OPT_mexecute_only,
++                                   options::OPT_mno_execute_only)) {
+       if (A->getOption().matches(options::OPT_mexecute_only)) {
+         if (getARMSubArchVersionNumber(Triple) < 7 &&
+             llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::ArchKind::ARMV6T2)
+@@ -899,6 +906,8 @@ fp16_fml_fallthrough:
+ 
+   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
+     Features.push_back("+no-bti-at-return-twice");
++
++  return static_cast<llvm::ARM::FPUKind>(FPUID);
+ }
+ 
+ std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {
+diff --git a/clang/lib/Driver/ToolChains/Arch/ARM.h b/clang/lib/Driver/ToolChains/Arch/ARM.h
+index 782bdf3d02..dbe46b87db 100644
+--- a/clang/lib/Driver/ToolChains/Arch/ARM.h
++++ b/clang/lib/Driver/ToolChains/Arch/ARM.h
+@@ -64,9 +64,11 @@ bool useAAPCSForMachO(const llvm::Triple &T);
+ void getARMArchCPUFromArgs(const llvm::opt::ArgList &Args,
+                            llvm::StringRef &Arch, llvm::StringRef &CPU,
+                            bool FromAs = false);
+-void getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
+-                          const llvm::opt::ArgList &Args,
+-                          std::vector<llvm::StringRef> &Features, bool ForAS);
++llvm::ARM::FPUKind getARMTargetFeatures(const Driver &D,
++                                        const llvm::Triple &Triple,
++                                        const llvm::opt::ArgList &Args,
++                                        std::vector<llvm::StringRef> &Features,
++                                        bool ForAS, bool ForMultilib = false);
+ int getARMSubArchVersionNumber(const llvm::Triple &Triple);
+ bool isARMMProfile(const llvm::Triple &Triple);
+ bool isARMAProfile(const llvm::Triple &Triple);
+diff --git a/clang/lib/Driver/ToolChains/BareMetal.cpp b/clang/lib/Driver/ToolChains/BareMetal.cpp
+index ac9c7036ad..dc6645b3e8 100644
+--- a/clang/lib/Driver/ToolChains/BareMetal.cpp
++++ b/clang/lib/Driver/ToolChains/BareMetal.cpp
+@@ -16,6 +16,7 @@
+ #include "clang/Driver/Compilation.h"
+ #include "clang/Driver/Driver.h"
+ #include "clang/Driver/DriverDiagnostic.h"
++#include "clang/Driver/MultilibBuilder.h"
+ #include "clang/Driver/Options.h"
+ #include "llvm/Option/ArgList.h"
+ #include "llvm/Support/Path.h"
+@@ -28,10 +29,6 @@ using namespace clang::driver;
+ using namespace clang::driver::tools;
+ using namespace clang::driver::toolchains;
+ 
+-static Multilib makeMultilib(StringRef commonSuffix) {
+-  return Multilib(commonSuffix, commonSuffix, commonSuffix);
+-}
+-
+ static bool findRISCVMultilibs(const Driver &D,
+                                const llvm::Triple &TargetTriple,
+                                const ArgList &Args, DetectedMultilibs &Result) {
+@@ -40,10 +37,11 @@ static bool findRISCVMultilibs(const Driver &D,
+   StringRef Abi = tools::riscv::getRISCVABI(Args, TargetTriple);
+ 
+   if (TargetTriple.isRISCV64()) {
+-    Multilib Imac = makeMultilib("").flag("+march=rv64imac").flag("+mabi=lp64");
+-    Multilib Imafdc = makeMultilib("/rv64imafdc/lp64d")
+-                          .flag("+march=rv64imafdc")
+-                          .flag("+mabi=lp64d");
++    MultilibBuilder Imac =
++        MultilibBuilder().flag("+march=rv64imac").flag("+mabi=lp64");
++    MultilibBuilder Imafdc = MultilibBuilder("/rv64imafdc/lp64d")
++                                 .flag("+march=rv64imafdc")
++                                 .flag("+mabi=lp64d");
+ 
+     // Multilib reuse
+     bool UseImafdc =
+@@ -54,22 +52,25 @@ static bool findRISCVMultilibs(const Driver &D,
+     addMultilibFlag(Abi == "lp64", "mabi=lp64", Flags);
+     addMultilibFlag(Abi == "lp64d", "mabi=lp64d", Flags);
+ 
+-    Result.Multilibs = MultilibSet().Either(Imac, Imafdc);
+-    return Result.Multilibs.select(Flags, Result.SelectedMultilib);
++    Result.Multilibs =
++        MultilibSetBuilder().Either(Imac, Imafdc).makeMultilibSet();
++    return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
+   }
+   if (TargetTriple.isRISCV32()) {
+-    Multilib Imac =
+-        makeMultilib("").flag("+march=rv32imac").flag("+mabi=ilp32");
+-    Multilib I =
+-        makeMultilib("/rv32i/ilp32").flag("+march=rv32i").flag("+mabi=ilp32");
+-    Multilib Im =
+-        makeMultilib("/rv32im/ilp32").flag("+march=rv32im").flag("+mabi=ilp32");
+-    Multilib Iac = makeMultilib("/rv32iac/ilp32")
+-                       .flag("+march=rv32iac")
+-                       .flag("+mabi=ilp32");
+-    Multilib Imafc = makeMultilib("/rv32imafc/ilp32f")
+-                         .flag("+march=rv32imafc")
+-                         .flag("+mabi=ilp32f");
++    MultilibBuilder Imac =
++        MultilibBuilder().flag("+march=rv32imac").flag("+mabi=ilp32");
++    MultilibBuilder I = MultilibBuilder("/rv32i/ilp32")
++                            .flag("+march=rv32i")
++                            .flag("+mabi=ilp32");
++    MultilibBuilder Im = MultilibBuilder("/rv32im/ilp32")
++                             .flag("+march=rv32im")
++                             .flag("+mabi=ilp32");
++    MultilibBuilder Iac = MultilibBuilder("/rv32iac/ilp32")
++                              .flag("+march=rv32iac")
++                              .flag("+mabi=ilp32");
++    MultilibBuilder Imafc = MultilibBuilder("/rv32imafc/ilp32f")
++                                .flag("+march=rv32imafc")
++                                .flag("+mabi=ilp32f");
+ 
+     // Multilib reuse
+     bool UseI = (Arch == "rv32i") || (Arch == "rv32ic");    // ic => i
+@@ -85,8 +86,9 @@ static bool findRISCVMultilibs(const Driver &D,
+     addMultilibFlag(Abi == "ilp32", "mabi=ilp32", Flags);
+     addMultilibFlag(Abi == "ilp32f", "mabi=ilp32f", Flags);
+ 
+-    Result.Multilibs = MultilibSet().Either(I, Im, Iac, Imac, Imafc);
+-    return Result.Multilibs.select(Flags, Result.SelectedMultilib);
++    Result.Multilibs =
++        MultilibSetBuilder().Either(I, Im, Iac, Imac, Imafc).makeMultilibSet();
++    return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
+   }
+   return false;
+ }
+@@ -101,9 +103,12 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
+   findMultilibs(D, Triple, Args);
+   SmallString<128> SysRoot(computeSysRoot());
+   if (!SysRoot.empty()) {
+-    llvm::sys::path::append(SysRoot, "lib");
+-    getFilePaths().push_back(std::string(SysRoot));
+-    getLibraryPaths().push_back(std::string(SysRoot));
++    for (const Multilib &M : getOrderedMultilibs()) {
++      SmallString<128> Dir(SysRoot);
++      llvm::sys::path::append(Dir, M.osSuffix(), "lib");
++      getFilePaths().push_back(std::string(Dir));
++      getLibraryPaths().push_back(std::string(Dir));
++    }
+   }
+ }
+ 
+@@ -153,14 +158,57 @@ static bool isRISCVBareMetal(const llvm::Triple &Triple) {
+   return Triple.getEnvironmentName() == "elf";
+ }
+ 
++static bool findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
++                                  StringRef MultilibPath, const ArgList &Args,
++                                  DetectedMultilibs &Result) {
++  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
++      D.getVFS().getBufferForFile(MultilibPath);
++  if (!MB)
++    return false;
++  Multilib::flags_list Flags = TC.getMultiSelectionFlags(Args);
++  if (!Result.Multilibs.parseYaml(*MB.get()))
++    return false;
++  return Result.Multilibs.select(Flags, Result.SelectedMultilibs);
++}
++
++#define MULTILIB_YAML_FILENAME "multilib.yaml"
++
++// Get the sysroot, before multilib takes effect.
++static std::string computeBaseSysRoot(const Driver &D,
++                                      const llvm::Triple &Triple) {
++  if (!D.SysRoot.empty())
++    return D.SysRoot;
++
++  SmallString<128> SysRootDir(D.Dir);
++  llvm::sys::path::append(SysRootDir, "../lib/clang-runtimes");
++
++  SmallString<128> MultilibPath(SysRootDir);
++  llvm::sys::path::append(MultilibPath, MULTILIB_YAML_FILENAME);
++
++  // New behaviour: if multilib.yaml is found then use clang-runtimes as the
++  // sysroot.
++  if (D.getVFS().exists(MultilibPath))
++    return std::string(SysRootDir);
++
++  // Otherwise fall back to the old behaviour of appending the target triple.
++  llvm::sys::path::append(SysRootDir, D.getTargetTriple());
++  return std::string(SysRootDir);
++}
++
+ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
+                               const ArgList &Args) {
+   DetectedMultilibs Result;
+   if (isRISCVBareMetal(Triple)) {
+     if (findRISCVMultilibs(D, Triple, Args, Result)) {
+-      SelectedMultilib = Result.SelectedMultilib;
++      SelectedMultilibs = Result.SelectedMultilibs;
+       Multilibs = Result.Multilibs;
+     }
++  } else {
++    llvm::SmallString<128> MultilibPath(computeBaseSysRoot(D, Triple));
++    llvm::sys::path::append(MultilibPath, MULTILIB_YAML_FILENAME);
++    findMultilibsFromYAML(*this, D, MultilibPath, Args, Result);
++    SelectedMultilibs = Result.SelectedMultilibs;
++    Multilibs = Result.Multilibs;
+   }
+ }
+ 
+@@ -174,15 +222,16 @@ Tool *BareMetal::buildLinker() const {
+ }
+ 
+ std::string BareMetal::computeSysRoot() const {
+-  if (!getDriver().SysRoot.empty())
+-    return getDriver().SysRoot + SelectedMultilib.osSuffix();
+-
+-  SmallString<128> SysRootDir;
+-  llvm::sys::path::append(SysRootDir, getDriver().Dir, "../lib/clang-runtimes",
+-                          getDriver().getTargetTriple());
++  return computeBaseSysRoot(getDriver(), getTriple());
++}
+ 
+-  SysRootDir += SelectedMultilib.osSuffix();
+-  return std::string(SysRootDir);
++llvm::SmallVector<Multilib> BareMetal::getOrderedMultilibs() const {
++  // Get multilibs in reverse order because they're ordered most-specific last.
++  llvm::SmallVector<Multilib> Result(SelectedMultilibs.rbegin(),
++                                     SelectedMultilibs.rend());
++  if (Result.empty())
++    Result.push_back(Multilib());
++  return Result;
+ }
+ 
+ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+@@ -197,10 +246,14 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+   }
+ 
+   if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
+-    SmallString<128> Dir(computeSysRoot());
+-    if (!Dir.empty()) {
+-      llvm::sys::path::append(Dir, "include");
+-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
++    const SmallString<128> SysRoot(computeSysRoot());
++    if (!SysRoot.empty()) {
++      for (const Multilib &M : getOrderedMultilibs()) {
++        SmallString<128> Dir(SysRoot);
++        llvm::sys::path::append(Dir, M.includeSuffix());
++        llvm::sys::path::append(Dir, "include");
++        addSystemInclude(DriverArgs, CC1Args, Dir.str());
++      }
+     }
+   }
+ }
+@@ -223,44 +276,47 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+   if (SysRoot.empty())
+     return;
+ 
+-  switch (GetCXXStdlibType(DriverArgs)) {
+-  case ToolChain::CST_Libcxx: {
+-    // First check sysroot/usr/include/c++/v1 if it exists.
+-    SmallString<128> TargetDir(SysRoot);
+-    llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
+-    if (D.getVFS().exists(TargetDir)) {
+-      addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
++  for (const Multilib &M : getOrderedMultilibs()) {
++    SmallString<128> Dir(SysRoot);
++    llvm::sys::path::append(Dir, M.gccSuffix());
++    switch (GetCXXStdlibType(DriverArgs)) {
++    case ToolChain::CST_Libcxx: {
++      // First check sysroot/usr/include/c++/v1 if it exists.
++      SmallString<128> TargetDir(Dir);
++      llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
++      if (D.getVFS().exists(TargetDir)) {
++        addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
++        break;
++      }
++      // Add generic path if nothing else succeeded so far.
++      llvm::sys::path::append(Dir, "include", "c++", "v1");
++      addSystemInclude(DriverArgs, CC1Args, Dir.str());
++      break;
++    }
++    case ToolChain::CST_Libstdcxx: {
++      llvm::sys::path::append(Dir, "include", "c++");
++      std::error_code EC;
++      Generic_GCC::GCCVersion Version = {"", -1, -1, -1, "", "", ""};
++      // Walk the subdirs, and find the one with the newest gcc version:
++      for (llvm::vfs::directory_iterator
++               LI = D.getVFS().dir_begin(Dir.str(), EC),
++               LE;
++           !EC && LI != LE; LI = LI.increment(EC)) {
++        StringRef VersionText = llvm::sys::path::filename(LI->path());
++        auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);
++        if (CandidateVersion.Major == -1)
++          continue;
++        if (CandidateVersion <= Version)
++          continue;
++        Version = CandidateVersion;
++      }
++      if (Version.Major != -1) {
++        llvm::sys::path::append(Dir, Version.Text);
++        addSystemInclude(DriverArgs, CC1Args, Dir.str());
++      }
+       break;
+     }
+-    // Add generic path if nothing else succeeded so far.
+-    SmallString<128> Dir(SysRoot);
+-    llvm::sys::path::append(Dir, "include", "c++", "v1");
+-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
+-    break;
+-  }
+-  case ToolChain::CST_Libstdcxx: {
+-    SmallString<128> Dir(SysRoot);
+-    llvm::sys::path::append(Dir, "include", "c++");
+-    std::error_code EC;
+-    Generic_GCC::GCCVersion Version = {"", -1, -1, -1, "", "", ""};
+-    // Walk the subdirs, and find the one with the newest gcc version:
+-    for (llvm::vfs::directory_iterator LI = D.getVFS().dir_begin(Dir.str(), EC),
+-                                       LE;
+-         !EC && LI != LE; LI = LI.increment(EC)) {
+-      StringRef VersionText = llvm::sys::path::filename(LI->path());
+-      auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);
+-      if (CandidateVersion.Major == -1)
+-        continue;
+-      if (CandidateVersion <= Version)
+-        continue;
+-      Version = CandidateVersion;
+     }
+-    if (Version.Major == -1)
+-      return;
+-    llvm::sys::path::append(Dir, Version.Text);
+-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
+-    break;
+-  }
+   }
+ }
+ 
+diff --git a/clang/lib/Driver/ToolChains/BareMetal.h b/clang/lib/Driver/ToolChains/BareMetal.h
+index 2a16a5beb0..79fcf5e506 100644
+--- a/clang/lib/Driver/ToolChains/BareMetal.h
++++ b/clang/lib/Driver/ToolChains/BareMetal.h
+@@ -70,6 +70,9 @@ public:
+   void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs) const;
+   std::string computeSysRoot() const override;
++
++private:
++  llvm::SmallVector<Multilib> getOrderedMultilibs() const;
+ };
+ 
+ } // namespace toolchains
+diff --git a/clang/lib/Driver/ToolChains/CSKYToolChain.cpp b/clang/lib/Driver/ToolChains/CSKYToolChain.cpp
+index de286faaca..0728ad1412 100644
+--- a/clang/lib/Driver/ToolChains/CSKYToolChain.cpp
++++ b/clang/lib/Driver/ToolChains/CSKYToolChain.cpp
+@@ -38,13 +38,13 @@ CSKYToolChain::CSKYToolChain(const Driver &D, const llvm::Triple &Triple,
+   GCCInstallation.init(Triple, Args);
+   if (GCCInstallation.isValid()) {
+     Multilibs = GCCInstallation.getMultilibs();
+-    SelectedMultilib = GCCInstallation.getMultilib();
++    SelectedMultilibs.assign({GCCInstallation.getMultilib()});
+     path_list &Paths = getFilePaths();
+     // Add toolchain/multilib specific file paths.
+-    addMultilibsFilePaths(D, Multilibs, SelectedMultilib,
++    addMultilibsFilePaths(D, Multilibs, SelectedMultilibs.back(),
+                           GCCInstallation.getInstallPath(), Paths);
+     getFilePaths().push_back(GCCInstallation.getInstallPath().str() +
+-                             SelectedMultilib.osSuffix());
++                             SelectedMultilibs.back().osSuffix());
+     ToolChain::path_list &PPaths = getProgramPaths();
+     // Multilib cross-compiler GCC installations put ld in a triple-prefixed
+     // directory off of the parent of the GCC installation.
+@@ -52,11 +52,12 @@ CSKYToolChain::CSKYToolChain(const Driver &D, const llvm::Triple &Triple,
+                            GCCInstallation.getTriple().str() + "/bin")
+                          .str());
+     PPaths.push_back((GCCInstallation.getParentLibPath() + "/../bin").str());
++    getFilePaths().push_back(computeSysRoot() + "/lib" +
++                             SelectedMultilibs.back().osSuffix());
+   } else {
+     getProgramPaths().push_back(D.Dir);
++    getFilePaths().push_back(computeSysRoot() + "/lib");
+   }
+-  getFilePaths().push_back(computeSysRoot() + "/lib" +
+-                           SelectedMultilib.osSuffix());
+ }
+ 
+ Tool *CSKYToolChain::buildLinker() const {
+diff --git a/clang/lib/Driver/ToolChains/Fuchsia.cpp b/clang/lib/Driver/ToolChains/Fuchsia.cpp
+index ea6d7d6977..989460e219 100644
+--- a/clang/lib/Driver/ToolChains/Fuchsia.cpp
++++ b/clang/lib/Driver/ToolChains/Fuchsia.cpp
+@@ -12,6 +12,7 @@
+ #include "clang/Driver/Compilation.h"
+ #include "clang/Driver/Driver.h"
+ #include "clang/Driver/DriverDiagnostic.h"
++#include "clang/Driver/MultilibBuilder.h"
+ #include "clang/Driver/Options.h"
+ #include "clang/Driver/SanitizerArgs.h"
+ #include "llvm/Option/ArgList.h"
+@@ -217,53 +218,66 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
+ 
+   Multilibs.push_back(Multilib());
+   // Use the noexcept variant with -fno-exceptions to avoid the extra overhead.
+-  Multilibs.push_back(Multilib("noexcept", {}, {}, 1)
++  Multilibs.push_back(MultilibBuilder("noexcept", {}, {})
+                           .flag("-fexceptions")
+-                          .flag("+fno-exceptions"));
++                          .flag("+fno-exceptions")
++                          .makeMultilib());
+   // ASan has higher priority because we always want the instrumentated version.
+-  Multilibs.push_back(Multilib("asan", {}, {}, 2)
+-                          .flag("+fsanitize=address"));
++  Multilibs.push_back(MultilibBuilder("asan", {}, {})
++                          .flag("+fsanitize=address")
++                          .makeMultilib());
+   // Use the asan+noexcept variant with ASan and -fno-exceptions.
+-  Multilibs.push_back(Multilib("asan+noexcept", {}, {}, 3)
++  Multilibs.push_back(MultilibBuilder("asan+noexcept", {}, {})
+                           .flag("+fsanitize=address")
+                           .flag("-fexceptions")
+-                          .flag("+fno-exceptions"));
++                          .flag("+fno-exceptions")
++                          .makeMultilib());
+   // HWASan has higher priority because we always want the instrumentated
+   // version.
+-  Multilibs.push_back(
+-      Multilib("hwasan", {}, {}, 4).flag("+fsanitize=hwaddress"));
++  Multilibs.push_back(MultilibBuilder("hwasan", {}, {})
++                          .flag("+fsanitize=hwaddress")
++                          .makeMultilib());
+   // Use the hwasan+noexcept variant with HWASan and -fno-exceptions.
+-  Multilibs.push_back(Multilib("hwasan+noexcept", {}, {}, 5)
++  Multilibs.push_back(MultilibBuilder("hwasan+noexcept", {}, {})
+                           .flag("+fsanitize=hwaddress")
+                           .flag("-fexceptions")
+-                          .flag("+fno-exceptions"));
++                          .flag("+fno-exceptions")
++                          .makeMultilib());
+   // Use the relative vtables ABI.
+   // TODO: Remove these multilibs once relative vtables are enabled by default
+   // for Fuchsia.
+-  Multilibs.push_back(Multilib("relative-vtables", {}, {}, 6)
+-                          .flag("+fexperimental-relative-c++-abi-vtables"));
+-  Multilibs.push_back(Multilib("relative-vtables+noexcept", {}, {}, 7)
++  Multilibs.push_back(MultilibBuilder("relative-vtables", {}, {})
++                          .flag("+fexperimental-relative-c++-abi-vtables")
++                          .makeMultilib());
++  Multilibs.push_back(MultilibBuilder("relative-vtables+noexcept", {}, {})
+                           .flag("+fexperimental-relative-c++-abi-vtables")
+                           .flag("-fexceptions")
+-                          .flag("+fno-exceptions"));
+-  Multilibs.push_back(Multilib("relative-vtables+asan", {}, {}, 8)
++                          .flag("+fno-exceptions")
++                          .makeMultilib());
++  Multilibs.push_back(MultilibBuilder("relative-vtables+asan", {}, {})
+                           .flag("+fexperimental-relative-c++-abi-vtables")
+-                          .flag("+fsanitize=address"));
+-  Multilibs.push_back(Multilib("relative-vtables+asan+noexcept", {}, {}, 9)
++                          .flag("+fsanitize=address")
++                          .makeMultilib());
++  Multilibs.push_back(MultilibBuilder("relative-vtables+asan+noexcept", {}, {})
+                           .flag("+fexperimental-relative-c++-abi-vtables")
+                           .flag("+fsanitize=address")
+                           .flag("-fexceptions")
+-                          .flag("+fno-exceptions"));
+-  Multilibs.push_back(Multilib("relative-vtables+hwasan", {}, {}, 10)
++                          .flag("+fno-exceptions")
++                          .makeMultilib());
++  Multilibs.push_back(MultilibBuilder("relative-vtables+hwasan", {}, {})
+                           .flag("+fexperimental-relative-c++-abi-vtables")
+-                          .flag("+fsanitize=hwaddress"));
+-  Multilibs.push_back(Multilib("relative-vtables+hwasan+noexcept", {}, {}, 11)
++                          .flag("+fsanitize=hwaddress")
++                          .makeMultilib());
++  Multilibs.push_back(MultilibBuilder("relative-vtables+hwasan+noexcept", {}, {})
+                           .flag("+fexperimental-relative-c++-abi-vtables")
+                           .flag("+fsanitize=hwaddress")
+                           .flag("-fexceptions")
+-                          .flag("+fno-exceptions"));
++                          .flag("+fno-exceptions")
++                          .makeMultilib());
+   // Use Itanium C++ ABI for the compat multilib.
+-  Multilibs.push_back(Multilib("compat", {}, {}, 12).flag("+fc++-abi=itanium"));
++  Multilibs.push_back(MultilibBuilder("compat", {}, {})
++                          .flag("+fc++-abi=itanium")
++                          .makeMultilib());
+ 
+   Multilibs.FilterOut([&](const Multilib &M) {
+     std::vector<std::string> RD = FilePaths(M);
+@@ -271,9 +285,10 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
+   });
+ 
+   Multilib::flags_list Flags;
+-  addMultilibFlag(
+-      Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions, true),
+-      "fexceptions", Flags);
++  bool Exceptions =
++      Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions, true);
++  addMultilibFlag(Exceptions, "fexceptions", Flags);
++  addMultilibFlag(!Exceptions, "fno-exceptions", Flags);
+   addMultilibFlag(getSanitizerArgs(Args).needsAsanRt(), "fsanitize=address",
+                   Flags);
+   addMultilibFlag(getSanitizerArgs(Args).needsHwasanRt(), "fsanitize=hwaddress",
+@@ -289,12 +304,17 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
+ 
+   Multilibs.setFilePathsCallback(FilePaths);
+ 
+-  if (Multilibs.select(Flags, SelectedMultilib))
+-    if (!SelectedMultilib.isDefault())
++  if (Multilibs.select(Flags, SelectedMultilibs)) {
++    // Ensure that -print-multi-directory only outputs one multilib directory.
++    Multilib LastSelected = SelectedMultilibs.back();
++    SelectedMultilibs = {LastSelected};
++
++    if (!SelectedMultilibs.back().isDefault())
+       if (const auto &PathsCallback = Multilibs.filePathsCallback())
+-        for (const auto &Path : PathsCallback(SelectedMultilib))
++        for (const auto &Path : PathsCallback(SelectedMultilibs.back()))
+           // Prepend the multilib path to ensure it takes the precedence.
+           getFilePaths().insert(getFilePaths().begin(), Path);
++  }
+ }
+ 
+ std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,
+diff --git a/clang/lib/Driver/ToolChains/Gnu.cpp b/clang/lib/Driver/ToolChains/Gnu.cpp
+index 4f23403166..5e02aa2eea 100644
+--- a/clang/lib/Driver/ToolChains/Gnu.cpp
++++ b/clang/lib/Driver/ToolChains/Gnu.cpp
+@@ -20,6 +20,7 @@
+ #include "clang/Driver/Compilation.h"
+ #include "clang/Driver/Driver.h"
+ #include "clang/Driver/DriverDiagnostic.h"
++#include "clang/Driver/MultilibBuilder.h"
+ #include "clang/Driver/Options.h"
+ #include "clang/Driver/Tool.h"
+ #include "clang/Driver/ToolChain.h"
+@@ -1045,38 +1046,34 @@ static bool isMSP430(llvm::Triple::ArchType Arch) {
+   return Arch == llvm::Triple::msp430;
+ }
+ 
+-static Multilib makeMultilib(StringRef commonSuffix) {
+-  return Multilib(commonSuffix, commonSuffix, commonSuffix);
+-}
+-
+ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
+                                 FilterNonExistent &NonExistent,
+                                 DetectedMultilibs &Result) {
+   // Check for Code Sourcery toolchain multilibs
+   MultilibSet CSMipsMultilibs;
+   {
+-    auto MArchMips16 = makeMultilib("/mips16").flag("+m32").flag("+mips16");
++    auto MArchMips16 = MultilibBuilder("/mips16").flag("+m32").flag("+mips16");
+ 
+     auto MArchMicroMips =
+-        makeMultilib("/micromips").flag("+m32").flag("+mmicromips");
++        MultilibBuilder("/micromips").flag("+m32").flag("+mmicromips");
+ 
+-    auto MArchDefault = makeMultilib("").flag("-mips16").flag("-mmicromips");
++    auto MArchDefault = MultilibBuilder("").flag("-mips16").flag("-mmicromips");
+ 
+-    auto UCLibc = makeMultilib("/uclibc").flag("+muclibc");
++    auto UCLibc = MultilibBuilder("/uclibc").flag("+muclibc");
+ 
+-    auto SoftFloat = makeMultilib("/soft-float").flag("+msoft-float");
++    auto SoftFloat = MultilibBuilder("/soft-float").flag("+msoft-float");
+ 
+-    auto Nan2008 = makeMultilib("/nan2008").flag("+mnan=2008");
++    auto Nan2008 = MultilibBuilder("/nan2008").flag("+mnan=2008");
+ 
+     auto DefaultFloat =
+-        makeMultilib("").flag("-msoft-float").flag("-mnan=2008");
++        MultilibBuilder("").flag("-msoft-float").flag("-mnan=2008");
+ 
+-    auto BigEndian = makeMultilib("").flag("+EB").flag("-EL");
++    auto BigEndian = MultilibBuilder("").flag("+EB").flag("-EL");
+ 
+-    auto LittleEndian = makeMultilib("/el").flag("+EL").flag("-EB");
++    auto LittleEndian = MultilibBuilder("/el").flag("+EL").flag("-EB");
+ 
+     // Note that this one's osSuffix is ""
+-    auto MAbi64 = makeMultilib("")
++    auto MAbi64 = MultilibBuilder("")
+                       .gccSuffix("/64")
+                       .includeSuffix("/64")
+                       .flag("+mabi=n64")
+@@ -1084,7 +1081,7 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
+                       .flag("-m32");
+ 
+     CSMipsMultilibs =
+-        MultilibSet()
++        MultilibSetBuilder()
+             .Either(MArchMips16, MArchMicroMips, MArchDefault)
+             .Maybe(UCLibc)
+             .Either(SoftFloat, Nan2008, DefaultFloat)
+@@ -1094,6 +1091,7 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
+             .Maybe(MAbi64)
+             .FilterOut("/mips16.*/64")
+             .FilterOut("/micromips.*/64")
++            .makeMultilibSet()
+             .FilterOut(NonExistent)
+             .setIncludeDirsCallback([](const Multilib &M) {
+               std::vector<std::string> Dirs({"/include"});
+@@ -1108,21 +1106,25 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
+ 
+   MultilibSet DebianMipsMultilibs;
+   {
+-    Multilib MAbiN32 =
+-        Multilib().gccSuffix("/n32").includeSuffix("/n32").flag("+mabi=n32");
++    MultilibBuilder MAbiN32 =
++        MultilibBuilder().gccSuffix("/n32").includeSuffix("/n32").flag(
++            "+mabi=n32");
+ 
+-    Multilib M64 = Multilib()
+-                       .gccSuffix("/64")
+-                       .includeSuffix("/64")
+-                       .flag("+m64")
+-                       .flag("-m32")
+-                       .flag("-mabi=n32");
++    MultilibBuilder M64 = MultilibBuilder()
++                              .gccSuffix("/64")
++                              .includeSuffix("/64")
++                              .flag("+m64")
++                              .flag("-m32")
++                              .flag("-mabi=n32");
+ 
+-    Multilib M32 =
+-        Multilib().gccSuffix("/32").flag("-m64").flag("+m32").flag("-mabi=n32");
++    MultilibBuilder M32 =
++        MultilibBuilder().gccSuffix("/32").flag("-m64").flag("+m32").flag(
++            "-mabi=n32");
+ 
+-    DebianMipsMultilibs =
+-        MultilibSet().Either(M32, M64, MAbiN32).FilterOut(NonExistent);
++    DebianMipsMultilibs = MultilibSetBuilder()
++                              .Either(M32, M64, MAbiN32)
++                              .makeMultilibSet()
++                              .FilterOut(NonExistent);
+   }
+ 
+   // Sort candidates. Toolchain that best meets the directories tree goes first.
+@@ -1131,7 +1133,7 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
+   if (CSMipsMultilibs.size() < DebianMipsMultilibs.size())
+     std::iter_swap(Candidates, Candidates + 1);
+   for (const MultilibSet *Candidate : Candidates) {
+-    if (Candidate->select(Flags, Result.SelectedMultilib)) {
++    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
+       if (Candidate == &DebianMipsMultilibs)
+         Result.BiarchSibling = Multilib();
+       Result.Multilibs = *Candidate;
+@@ -1147,25 +1149,32 @@ static bool findMipsAndroidMultilibs(llvm::vfs::FileSystem &VFS, StringRef Path,
+                                      DetectedMultilibs &Result) {
+ 
+   MultilibSet AndroidMipsMultilibs =
+-      MultilibSet()
+-          .Maybe(Multilib("/mips-r2").flag("+march=mips32r2"))
+-          .Maybe(Multilib("/mips-r6").flag("+march=mips32r6"))
++      MultilibSetBuilder()
++          .Maybe(MultilibBuilder("/mips-r2", {}, {}).flag("+march=mips32r2"))
++          .Maybe(MultilibBuilder("/mips-r6", {}, {}).flag("+march=mips32r6"))
++          .makeMultilibSet()
+           .FilterOut(NonExistent);
+ 
+   MultilibSet AndroidMipselMultilibs =
+-      MultilibSet()
+-          .Either(Multilib().flag("+march=mips32"),
+-                  Multilib("/mips-r2", "", "/mips-r2").flag("+march=mips32r2"),
+-                  Multilib("/mips-r6", "", "/mips-r6").flag("+march=mips32r6"))
++      MultilibSetBuilder()
++          .Either(MultilibBuilder().flag("+march=mips32"),
++                  MultilibBuilder("/mips-r2", "", "/mips-r2")
++                      .flag("+march=mips32r2"),
++                  MultilibBuilder("/mips-r6", "", "/mips-r6")
++                      .flag("+march=mips32r6"))
++          .makeMultilibSet()
+           .FilterOut(NonExistent);
+ 
+   MultilibSet AndroidMips64elMultilibs =
+-      MultilibSet()
+-          .Either(
+-              Multilib().flag("+march=mips64r6"),
+-              Multilib("/32/mips-r1", "", "/mips-r1").flag("+march=mips32"),
+-              Multilib("/32/mips-r2", "", "/mips-r2").flag("+march=mips32r2"),
+-              Multilib("/32/mips-r6", "", "/mips-r6").flag("+march=mips32r6"))
++      MultilibSetBuilder()
++          .Either(MultilibBuilder().flag("+march=mips64r6"),
++                  MultilibBuilder("/32/mips-r1", "", "/mips-r1")
++                      .flag("+march=mips32"),
++                  MultilibBuilder("/32/mips-r2", "", "/mips-r2")
++                      .flag("+march=mips32r2"),
++                  MultilibBuilder("/32/mips-r6", "", "/mips-r6")
++                      .flag("+march=mips32r6"))
++          .makeMultilibSet()
+           .FilterOut(NonExistent);
+ 
+   MultilibSet *MS = &AndroidMipsMultilibs;
+@@ -1173,7 +1182,7 @@ static bool findMipsAndroidMultilibs(llvm::vfs::FileSystem &VFS, StringRef Path,
+     MS = &AndroidMipselMultilibs;
+   else if (VFS.exists(Path + "/32"))
+     MS = &AndroidMips64elMultilibs;
+-  if (MS->select(Flags, Result.SelectedMultilib)) {
++  if (MS->select(Flags, Result.SelectedMultilibs)) {
+     Result.Multilibs = *MS;
+     return true;
+   }
+@@ -1186,18 +1195,20 @@ static bool findMipsMuslMultilibs(const Multilib::flags_list &Flags,
+   // Musl toolchain multilibs
+   MultilibSet MuslMipsMultilibs;
+   {
+-    auto MArchMipsR2 = makeMultilib("")
++    auto MArchMipsR2 = MultilibBuilder("")
+                            .osSuffix("/mips-r2-hard-musl")
+                            .flag("+EB")
+                            .flag("-EL")
+                            .flag("+march=mips32r2");
+ 
+-    auto MArchMipselR2 = makeMultilib("/mipsel-r2-hard-musl")
++    auto MArchMipselR2 = MultilibBuilder("/mipsel-r2-hard-musl")
+                              .flag("-EB")
+                              .flag("+EL")
+                              .flag("+march=mips32r2");
+ 
+-    MuslMipsMultilibs = MultilibSet().Either(MArchMipsR2, MArchMipselR2);
++    MuslMipsMultilibs = MultilibSetBuilder()
++                            .Either(MArchMipsR2, MArchMipselR2)
++                            .makeMultilibSet();
+ 
+     // Specify the callback that computes the include directories.
+     MuslMipsMultilibs.setIncludeDirsCallback([](const Multilib &M) {
+@@ -1205,7 +1216,7 @@ static bool findMipsMuslMultilibs(const Multilib::flags_list &Flags,
+           {"/../sysroot" + M.osSuffix() + "/usr/include"});
+     });
+   }
+-  if (MuslMipsMultilibs.select(Flags, Result.SelectedMultilib)) {
++  if (MuslMipsMultilibs.select(Flags, Result.SelectedMultilibs)) {
+     Result.Multilibs = MuslMipsMultilibs;
+     return true;
+   }
+@@ -1218,48 +1229,49 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
+   // CodeScape MTI toolchain v1.2 and early.
+   MultilibSet MtiMipsMultilibsV1;
+   {
+-    auto MArchMips32 = makeMultilib("/mips32")
++    auto MArchMips32 = MultilibBuilder("/mips32")
+                            .flag("+m32")
+                            .flag("-m64")
+                            .flag("-mmicromips")
+                            .flag("+march=mips32");
+ 
+-    auto MArchMicroMips = makeMultilib("/micromips")
++    auto MArchMicroMips = MultilibBuilder("/micromips")
+                               .flag("+m32")
+                               .flag("-m64")
+                               .flag("+mmicromips");
+ 
+-    auto MArchMips64r2 = makeMultilib("/mips64r2")
++    auto MArchMips64r2 = MultilibBuilder("/mips64r2")
+                              .flag("-m32")
+                              .flag("+m64")
+                              .flag("+march=mips64r2");
+ 
+-    auto MArchMips64 = makeMultilib("/mips64").flag("-m32").flag("+m64").flag(
+-        "-march=mips64r2");
++    auto MArchMips64 =
++        MultilibBuilder("/mips64").flag("-m32").flag("+m64").flag(
++            "-march=mips64r2");
+ 
+-    auto MArchDefault = makeMultilib("")
++    auto MArchDefault = MultilibBuilder("")
+                             .flag("+m32")
+                             .flag("-m64")
+                             .flag("-mmicromips")
+                             .flag("+march=mips32r2");
+ 
+-    auto Mips16 = makeMultilib("/mips16").flag("+mips16");
++    auto Mips16 = MultilibBuilder("/mips16").flag("+mips16");
+ 
+-    auto UCLibc = makeMultilib("/uclibc").flag("+muclibc");
++    auto UCLibc = MultilibBuilder("/uclibc").flag("+muclibc");
+ 
+     auto MAbi64 =
+-        makeMultilib("/64").flag("+mabi=n64").flag("-mabi=n32").flag("-m32");
++        MultilibBuilder("/64").flag("+mabi=n64").flag("-mabi=n32").flag("-m32");
+ 
+-    auto BigEndian = makeMultilib("").flag("+EB").flag("-EL");
++    auto BigEndian = MultilibBuilder("").flag("+EB").flag("-EL");
+ 
+-    auto LittleEndian = makeMultilib("/el").flag("+EL").flag("-EB");
++    auto LittleEndian = MultilibBuilder("/el").flag("+EL").flag("-EB");
+ 
+-    auto SoftFloat = makeMultilib("/sof").flag("+msoft-float");
++    auto SoftFloat = MultilibBuilder("/sof").flag("+msoft-float");
+ 
+-    auto Nan2008 = makeMultilib("/nan2008").flag("+mnan=2008");
++    auto Nan2008 = MultilibBuilder("/nan2008").flag("+mnan=2008");
+ 
+     MtiMipsMultilibsV1 =
+-        MultilibSet()
++        MultilibSetBuilder()
+             .Either(MArchMips32, MArchMicroMips, MArchMips64r2, MArchMips64,
+                     MArchDefault)
+             .Maybe(UCLibc)
+@@ -1276,6 +1288,7 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
+             .Maybe(SoftFloat)
+             .Maybe(Nan2008)
+             .FilterOut(".*sof/nan2008")
++            .makeMultilibSet()
+             .FilterOut(NonExistent)
+             .setIncludeDirsCallback([](const Multilib &M) {
+               std::vector<std::string> Dirs({"/include"});
+@@ -1290,80 +1303,87 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
+   // CodeScape IMG toolchain starting from v1.3.
+   MultilibSet MtiMipsMultilibsV2;
+   {
+-    auto BeHard = makeMultilib("/mips-r2-hard")
++    auto BeHard = MultilibBuilder("/mips-r2-hard")
+                       .flag("+EB")
+                       .flag("-msoft-float")
+                       .flag("-mnan=2008")
+                       .flag("-muclibc");
+-    auto BeSoft = makeMultilib("/mips-r2-soft")
++    auto BeSoft = MultilibBuilder("/mips-r2-soft")
+                       .flag("+EB")
+                       .flag("+msoft-float")
+                       .flag("-mnan=2008");
+-    auto ElHard = makeMultilib("/mipsel-r2-hard")
++    auto ElHard = MultilibBuilder("/mipsel-r2-hard")
+                       .flag("+EL")
+                       .flag("-msoft-float")
+                       .flag("-mnan=2008")
+                       .flag("-muclibc");
+-    auto ElSoft = makeMultilib("/mipsel-r2-soft")
++    auto ElSoft = MultilibBuilder("/mipsel-r2-soft")
+                       .flag("+EL")
+                       .flag("+msoft-float")
+                       .flag("-mnan=2008")
+                       .flag("-mmicromips");
+-    auto BeHardNan = makeMultilib("/mips-r2-hard-nan2008")
++    auto BeHardNan = MultilibBuilder("/mips-r2-hard-nan2008")
+                          .flag("+EB")
+                          .flag("-msoft-float")
+                          .flag("+mnan=2008")
+                          .flag("-muclibc");
+-    auto ElHardNan = makeMultilib("/mipsel-r2-hard-nan2008")
++    auto ElHardNan = MultilibBuilder("/mipsel-r2-hard-nan2008")
+                          .flag("+EL")
+                          .flag("-msoft-float")
+                          .flag("+mnan=2008")
+                          .flag("-muclibc")
+                          .flag("-mmicromips");
+-    auto BeHardNanUclibc = makeMultilib("/mips-r2-hard-nan2008-uclibc")
++    auto BeHardNanUclibc = MultilibBuilder("/mips-r2-hard-nan2008-uclibc")
+                                .flag("+EB")
+                                .flag("-msoft-float")
+                                .flag("+mnan=2008")
+                                .flag("+muclibc");
+-    auto ElHardNanUclibc = makeMultilib("/mipsel-r2-hard-nan2008-uclibc")
++    auto ElHardNanUclibc = MultilibBuilder("/mipsel-r2-hard-nan2008-uclibc")
+                                .flag("+EL")
+                                .flag("-msoft-float")
+                                .flag("+mnan=2008")
+                                .flag("+muclibc");
+-    auto BeHardUclibc = makeMultilib("/mips-r2-hard-uclibc")
++    auto BeHardUclibc = MultilibBuilder("/mips-r2-hard-uclibc")
+                             .flag("+EB")
+                             .flag("-msoft-float")
+                             .flag("-mnan=2008")
+                             .flag("+muclibc");
+-    auto ElHardUclibc = makeMultilib("/mipsel-r2-hard-uclibc")
++    auto ElHardUclibc = MultilibBuilder("/mipsel-r2-hard-uclibc")
+                             .flag("+EL")
+                             .flag("-msoft-float")
+                             .flag("-mnan=2008")
+                             .flag("+muclibc");
+-    auto ElMicroHardNan = makeMultilib("/micromipsel-r2-hard-nan2008")
++    auto ElMicroHardNan = MultilibBuilder("/micromipsel-r2-hard-nan2008")
+                               .flag("+EL")
+                               .flag("-msoft-float")
+                               .flag("+mnan=2008")
+                               .flag("+mmicromips");
+-    auto ElMicroSoft = makeMultilib("/micromipsel-r2-soft")
++    auto ElMicroSoft = MultilibBuilder("/micromipsel-r2-soft")
+                            .flag("+EL")
+                            .flag("+msoft-float")
+                            .flag("-mnan=2008")
+                            .flag("+mmicromips");
+ 
+-    auto O32 =
+-        makeMultilib("/lib").osSuffix("").flag("-mabi=n32").flag("-mabi=n64");
+-    auto N32 =
+-        makeMultilib("/lib32").osSuffix("").flag("+mabi=n32").flag("-mabi=n64");
+-    auto N64 =
+-        makeMultilib("/lib64").osSuffix("").flag("-mabi=n32").flag("+mabi=n64");
++    auto O32 = MultilibBuilder("/lib")
++                   .osSuffix("")
++                   .flag("-mabi=n32")
++                   .flag("-mabi=n64");
++    auto N32 = MultilibBuilder("/lib32")
++                   .osSuffix("")
++                   .flag("+mabi=n32")
++                   .flag("-mabi=n64");
++    auto N64 = MultilibBuilder("/lib64")
++                   .osSuffix("")
++                   .flag("-mabi=n32")
++                   .flag("+mabi=n64");
+ 
+     MtiMipsMultilibsV2 =
+-        MultilibSet()
++        MultilibSetBuilder()
+             .Either({BeHard, BeSoft, ElHard, ElSoft, BeHardNan, ElHardNan,
+                      BeHardNanUclibc, ElHardNanUclibc, BeHardUclibc,
+                      ElHardUclibc, ElMicroHardNan, ElMicroSoft})
+             .Either(O32, N32, N64)
++            .makeMultilibSet()
+             .FilterOut(NonExistent)
+             .setIncludeDirsCallback([](const Multilib &M) {
+               return std::vector<std::string>({"/../../../../sysroot" +
+@@ -1376,7 +1396,7 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
+             });
+   }
+   for (auto *Candidate : {&MtiMipsMultilibsV1, &MtiMipsMultilibsV2}) {
+-    if (Candidate->select(Flags, Result.SelectedMultilib)) {
++    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
+       Result.Multilibs = *Candidate;
+       return true;
+     }
+@@ -1390,18 +1410,19 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
+   // CodeScape IMG toolchain v1.2 and early.
+   MultilibSet ImgMultilibsV1;
+   {
+-    auto Mips64r6 = makeMultilib("/mips64r6").flag("+m64").flag("-m32");
++    auto Mips64r6 = MultilibBuilder("/mips64r6").flag("+m64").flag("-m32");
+ 
+-    auto LittleEndian = makeMultilib("/el").flag("+EL").flag("-EB");
++    auto LittleEndian = MultilibBuilder("/el").flag("+EL").flag("-EB");
+ 
+     auto MAbi64 =
+-        makeMultilib("/64").flag("+mabi=n64").flag("-mabi=n32").flag("-m32");
++        MultilibBuilder("/64").flag("+mabi=n64").flag("-mabi=n32").flag("-m32");
+ 
+     ImgMultilibsV1 =
+-        MultilibSet()
++        MultilibSetBuilder()
+             .Maybe(Mips64r6)
+             .Maybe(MAbi64)
+             .Maybe(LittleEndian)
++            .makeMultilibSet()
+             .FilterOut(NonExistent)
+             .setIncludeDirsCallback([](const Multilib &M) {
+               return std::vector<std::string>(
+@@ -1412,51 +1433,58 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
+   // CodeScape IMG toolchain starting from v1.3.
+   MultilibSet ImgMultilibsV2;
+   {
+-    auto BeHard = makeMultilib("/mips-r6-hard")
++    auto BeHard = MultilibBuilder("/mips-r6-hard")
+                       .flag("+EB")
+                       .flag("-msoft-float")
+                       .flag("-mmicromips");
+-    auto BeSoft = makeMultilib("/mips-r6-soft")
++    auto BeSoft = MultilibBuilder("/mips-r6-soft")
+                       .flag("+EB")
+                       .flag("+msoft-float")
+                       .flag("-mmicromips");
+-    auto ElHard = makeMultilib("/mipsel-r6-hard")
++    auto ElHard = MultilibBuilder("/mipsel-r6-hard")
+                       .flag("+EL")
+                       .flag("-msoft-float")
+                       .flag("-mmicromips");
+-    auto ElSoft = makeMultilib("/mipsel-r6-soft")
++    auto ElSoft = MultilibBuilder("/mipsel-r6-soft")
+                       .flag("+EL")
+                       .flag("+msoft-float")
+                       .flag("-mmicromips");
+-    auto BeMicroHard = makeMultilib("/micromips-r6-hard")
++    auto BeMicroHard = MultilibBuilder("/micromips-r6-hard")
+                            .flag("+EB")
+                            .flag("-msoft-float")
+                            .flag("+mmicromips");
+-    auto BeMicroSoft = makeMultilib("/micromips-r6-soft")
++    auto BeMicroSoft = MultilibBuilder("/micromips-r6-soft")
+                            .flag("+EB")
+                            .flag("+msoft-float")
+                            .flag("+mmicromips");
+-    auto ElMicroHard = makeMultilib("/micromipsel-r6-hard")
++    auto ElMicroHard = MultilibBuilder("/micromipsel-r6-hard")
+                            .flag("+EL")
+                            .flag("-msoft-float")
+                            .flag("+mmicromips");
+-    auto ElMicroSoft = makeMultilib("/micromipsel-r6-soft")
++    auto ElMicroSoft = MultilibBuilder("/micromipsel-r6-soft")
+                            .flag("+EL")
+                            .flag("+msoft-float")
+                            .flag("+mmicromips");
+ 
+-    auto O32 =
+-        makeMultilib("/lib").osSuffix("").flag("-mabi=n32").flag("-mabi=n64");
+-    auto N32 =
+-        makeMultilib("/lib32").osSuffix("").flag("+mabi=n32").flag("-mabi=n64");
+-    auto N64 =
+-        makeMultilib("/lib64").osSuffix("").flag("-mabi=n32").flag("+mabi=n64");
++    auto O32 = MultilibBuilder("/lib")
++                   .osSuffix("")
++                   .flag("-mabi=n32")
++                   .flag("-mabi=n64");
++    auto N32 = MultilibBuilder("/lib32")
++                   .osSuffix("")
++                   .flag("+mabi=n32")
++                   .flag("-mabi=n64");
++    auto N64 = MultilibBuilder("/lib64")
++                   .osSuffix("")
++                   .flag("-mabi=n32")
++                   .flag("+mabi=n64");
+ 
+     ImgMultilibsV2 =
+-        MultilibSet()
++        MultilibSetBuilder()
+             .Either({BeHard, BeSoft, ElHard, ElSoft, BeMicroHard, BeMicroSoft,
+                      ElMicroHard, ElMicroSoft})
+             .Either(O32, N32, N64)
++            .makeMultilibSet()
+             .FilterOut(NonExistent)
+             .setIncludeDirsCallback([](const Multilib &M) {
+               return std::vector<std::string>({"/../../../../sysroot" +
+@@ -1469,7 +1497,7 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
+             });
+   }
+   for (auto *Candidate : {&ImgMultilibsV1, &ImgMultilibsV2}) {
+-    if (Candidate->select(Flags, Result.SelectedMultilib)) {
++    if (Candidate->select(Flags, Result.SelectedMultilibs)) {
+       Result.Multilibs = *Candidate;
+       return true;
+     }
+@@ -1542,7 +1570,7 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
+   Result.Multilibs.push_back(Default);
+   Result.Multilibs.FilterOut(NonExistent);
+ 
+-  if (Result.Multilibs.select(Flags, Result.SelectedMultilib)) {
++  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs)) {
+     Result.BiarchSibling = Multilib();
+     return true;
+   }
+@@ -1556,22 +1584,19 @@ static void findAndroidArmMultilibs(const Driver &D,
+                                     DetectedMultilibs &Result) {
+   // Find multilibs with subdirectories like armv7-a, thumb, armv7-a/thumb.
+   FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
+-  Multilib ArmV7Multilib = makeMultilib("/armv7-a")
+-                               .flag("+march=armv7-a")
+-                               .flag("-mthumb");
+-  Multilib ThumbMultilib = makeMultilib("/thumb")
+-                               .flag("-march=armv7-a")
+-                               .flag("+mthumb");
+-  Multilib ArmV7ThumbMultilib = makeMultilib("/armv7-a/thumb")
+-                               .flag("+march=armv7-a")
+-                               .flag("+mthumb");
+-  Multilib DefaultMultilib = makeMultilib("")
+-                               .flag("-march=armv7-a")
+-                               .flag("-mthumb");
++  MultilibBuilder ArmV7Multilib =
++      MultilibBuilder("/armv7-a").flag("+march=armv7-a").flag("-mthumb");
++  MultilibBuilder ThumbMultilib =
++      MultilibBuilder("/thumb").flag("-march=armv7-a").flag("+mthumb");
++  MultilibBuilder ArmV7ThumbMultilib =
++      MultilibBuilder("/armv7-a/thumb").flag("+march=armv7-a").flag("+mthumb");
++  MultilibBuilder DefaultMultilib =
++      MultilibBuilder("").flag("-march=armv7-a").flag("-mthumb");
+   MultilibSet AndroidArmMultilibs =
+-      MultilibSet()
+-          .Either(ThumbMultilib, ArmV7Multilib,
+-                  ArmV7ThumbMultilib, DefaultMultilib)
++      MultilibSetBuilder()
++          .Either(ThumbMultilib, ArmV7Multilib, ArmV7ThumbMultilib,
++                  DefaultMultilib)
++          .makeMultilibSet()
+           .FilterOut(NonExistent);
+ 
+   Multilib::flags_list Flags;
+@@ -1588,7 +1613,7 @@ static void findAndroidArmMultilibs(const Driver &D,
+   addMultilibFlag(IsArmV7Mode, "march=armv7-a", Flags);
+   addMultilibFlag(IsThumbMode, "mthumb", Flags);
+ 
+-  if (AndroidArmMultilibs.select(Flags, Result.SelectedMultilib))
++  if (AndroidArmMultilibs.select(Flags, Result.SelectedMultilibs))
+     Result.Multilibs = AndroidArmMultilibs;
+ }
+ 
+@@ -1597,22 +1622,24 @@ static bool findMSP430Multilibs(const Driver &D,
+                                 StringRef Path, const ArgList &Args,
+                                 DetectedMultilibs &Result) {
+   FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
+-  Multilib WithoutExceptions = makeMultilib("/430").flag("-exceptions");
+-  Multilib WithExceptions = makeMultilib("/430/exceptions").flag("+exceptions");
++  MultilibBuilder WithoutExceptions =
++      MultilibBuilder("/430").flag("-exceptions");
++  MultilibBuilder WithExceptions =
++      MultilibBuilder("/430/exceptions").flag("+exceptions");
+ 
+   // FIXME: when clang starts to support msp430x ISA additional logic
+   // to select between multilib must be implemented
+-  // Multilib MSP430xMultilib = makeMultilib("/large");
++  // MultilibBuilder MSP430xMultilib = MultilibBuilder("/large");
+ 
+-  Result.Multilibs.push_back(WithoutExceptions);
+-  Result.Multilibs.push_back(WithExceptions);
++  Result.Multilibs.push_back(WithoutExceptions.makeMultilib());
++  Result.Multilibs.push_back(WithExceptions.makeMultilib());
+   Result.Multilibs.FilterOut(NonExistent);
+ 
+   Multilib::flags_list Flags;
+   addMultilibFlag(Args.hasFlag(options::OPT_fexceptions,
+                                options::OPT_fno_exceptions, false),
+                   "exceptions", Flags);
+-  if (Result.Multilibs.select(Flags, Result.SelectedMultilib))
++  if (Result.Multilibs.select(Flags, Result.SelectedMultilibs))
+     return true;
+ 
+   return false;
+@@ -1653,31 +1680,32 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
+     isBigEndian = !A->getOption().matches(options::OPT_mlittle_endian);
+   addMultilibFlag(isBigEndian, "EB", Flags);
+ 
+-  auto HardFloat = makeMultilib("/hard-fp").flag("+hard-fp");
+-  auto SoftFpFloat = makeMultilib("/soft-fp").flag("+soft-fp");
+-  auto SoftFloat = makeMultilib("").flag("+soft");
+-  auto Arch801 = makeMultilib("/ck801").flag("+march=ck801");
+-  auto Arch802 = makeMultilib("/ck802").flag("+march=ck802");
+-  auto Arch803 = makeMultilib("/ck803").flag("+march=ck803");
++  auto HardFloat = MultilibBuilder("/hard-fp").flag("+hard-fp");
++  auto SoftFpFloat = MultilibBuilder("/soft-fp").flag("+soft-fp");
++  auto SoftFloat = MultilibBuilder("").flag("+soft");
++  auto Arch801 = MultilibBuilder("/ck801").flag("+march=ck801");
++  auto Arch802 = MultilibBuilder("/ck802").flag("+march=ck802");
++  auto Arch803 = MultilibBuilder("/ck803").flag("+march=ck803");
+   // CK804 use the same library as CK803
+-  auto Arch804 = makeMultilib("/ck803").flag("+march=ck804");
+-  auto Arch805 = makeMultilib("/ck805").flag("+march=ck805");
+-  auto Arch807 = makeMultilib("/ck807").flag("+march=ck807");
+-  auto Arch810 = makeMultilib("").flag("+march=ck810");
+-  auto Arch810v = makeMultilib("/ck810v").flag("+march=ck810v");
+-  auto Arch860 = makeMultilib("/ck860").flag("+march=ck860");
+-  auto Arch860v = makeMultilib("/ck860v").flag("+march=ck860v");
+-  auto BigEndian = makeMultilib("/big").flag("+EB");
++  auto Arch804 = MultilibBuilder("/ck803").flag("+march=ck804");
++  auto Arch805 = MultilibBuilder("/ck805").flag("+march=ck805");
++  auto Arch807 = MultilibBuilder("/ck807").flag("+march=ck807");
++  auto Arch810 = MultilibBuilder("").flag("+march=ck810");
++  auto Arch810v = MultilibBuilder("/ck810v").flag("+march=ck810v");
++  auto Arch860 = MultilibBuilder("/ck860").flag("+march=ck860");
++  auto Arch860v = MultilibBuilder("/ck860v").flag("+march=ck860v");
++  auto BigEndian = MultilibBuilder("/big").flag("+EB");
+ 
+   MultilibSet CSKYMultilibs =
+-      MultilibSet()
++      MultilibSetBuilder()
+           .Maybe(BigEndian)
+           .Either({Arch801, Arch802, Arch803, Arch804, Arch805, Arch807,
+                    Arch810, Arch810v, Arch860, Arch860v})
+           .Either(HardFloat, SoftFpFloat, SoftFloat)
++          .makeMultilibSet()
+           .FilterOut(NonExistent);
+ 
+-  if (CSKYMultilibs.select(Flags, Result.SelectedMultilib))
++  if (CSKYMultilibs.select(Flags, Result.SelectedMultilibs))
+     Result.Multilibs = CSKYMultilibs;
+ }
+ 
+@@ -1697,17 +1725,19 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
+       {"rv32imac", "ilp32"},  {"rv32imafc", "ilp32f"}, {"rv64imac", "lp64"},
+       {"rv64imafdc", "lp64d"}};
+ 
+-  std::vector<Multilib> Ms;
++  std::vector<MultilibBuilder> Ms;
+   for (auto Element : RISCVMultilibSet) {
+     // multilib path rule is ${march}/${mabi}
+     Ms.emplace_back(
+-        makeMultilib((Twine(Element.march) + "/" + Twine(Element.mabi)).str())
++        MultilibBuilder(
++            (Twine(Element.march) + "/" + Twine(Element.mabi)).str())
+             .flag(Twine("+march=", Element.march).str())
+             .flag(Twine("+mabi=", Element.mabi).str()));
+   }
+   MultilibSet RISCVMultilibs =
+-      MultilibSet()
+-          .Either(ArrayRef<Multilib>(Ms))
++      MultilibSetBuilder()
++          .Either(Ms)
++          .makeMultilibSet()
+           .FilterOut(NonExistent)
+           .setFilePathsCallback([](const Multilib &M) {
+             return std::vector<std::string>(
+@@ -1716,7 +1746,6 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
+                  "/../../../../riscv32-unknown-elf/lib" + M.gccSuffix()});
+           });
+ 
+-
+   Multilib::flags_list Flags;
+   llvm::StringSet<> Added_ABIs;
+   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
+@@ -1731,7 +1760,7 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
+     }
+   }
+ 
+-  if (RISCVMultilibs.select(Flags, Result.SelectedMultilib))
++  if (RISCVMultilibs.select(Flags, Result.SelectedMultilibs))
+     Result.Multilibs = RISCVMultilibs;
+ }
+ 
+@@ -1742,17 +1771,22 @@ static void findRISCVMultilibs(const Driver &D,
+     return findRISCVBareMetalMultilibs(D, TargetTriple, Path, Args, Result);
+ 
+   FilterNonExistent NonExistent(Path, "/crtbegin.o", D.getVFS());
+-  Multilib Ilp32 = makeMultilib("lib32/ilp32").flag("+m32").flag("+mabi=ilp32");
+-  Multilib Ilp32f =
+-      makeMultilib("lib32/ilp32f").flag("+m32").flag("+mabi=ilp32f");
+-  Multilib Ilp32d =
+-      makeMultilib("lib32/ilp32d").flag("+m32").flag("+mabi=ilp32d");
+-  Multilib Lp64 = makeMultilib("lib64/lp64").flag("+m64").flag("+mabi=lp64");
+-  Multilib Lp64f = makeMultilib("lib64/lp64f").flag("+m64").flag("+mabi=lp64f");
+-  Multilib Lp64d = makeMultilib("lib64/lp64d").flag("+m64").flag("+mabi=lp64d");
++  MultilibBuilder Ilp32 =
++      MultilibBuilder("lib32/ilp32").flag("+m32").flag("+mabi=ilp32");
++  MultilibBuilder Ilp32f =
++      MultilibBuilder("lib32/ilp32f").flag("+m32").flag("+mabi=ilp32f");
++  MultilibBuilder Ilp32d =
++      MultilibBuilder("lib32/ilp32d").flag("+m32").flag("+mabi=ilp32d");
++  MultilibBuilder Lp64 =
++      MultilibBuilder("lib64/lp64").flag("+m64").flag("+mabi=lp64");
++  MultilibBuilder Lp64f =
++      MultilibBuilder("lib64/lp64f").flag("+m64").flag("+mabi=lp64f");
++  MultilibBuilder Lp64d =
++      MultilibBuilder("lib64/lp64d").flag("+m64").flag("+mabi=lp64d");
+   MultilibSet RISCVMultilibs =
+-      MultilibSet()
++      MultilibSetBuilder()
+           .Either({Ilp32, Ilp32f, Ilp32d, Lp64, Lp64f, Lp64d})
++          .makeMultilibSet()
+           .FilterOut(NonExistent);
+ 
+   Multilib::flags_list Flags;
+@@ -1768,7 +1802,7 @@ static void findRISCVMultilibs(const Driver &D,
+   addMultilibFlag(ABIName == "lp64f", "mabi=lp64f", Flags);
+   addMultilibFlag(ABIName == "lp64d", "mabi=lp64d", Flags);
+ 
+-  if (RISCVMultilibs.select(Flags, Result.SelectedMultilib))
++  if (RISCVMultilibs.select(Flags, Result.SelectedMultilibs))
+     Result.Multilibs = RISCVMultilibs;
+ }
+ 
+@@ -1777,7 +1811,7 @@ static bool findBiarchMultilibs(const Driver &D,
+                                 StringRef Path, const ArgList &Args,
+                                 bool NeedsBiarchSuffix,
+                                 DetectedMultilibs &Result) {
+-  Multilib Default;
++  MultilibBuilder DefaultBuilder;
+ 
+   // Some versions of SUSE and Fedora on ppc64 put 32-bit libs
+   // in what would normally be GCCInstallPath and put the 64-bit
+@@ -1803,24 +1837,27 @@ static bool findBiarchMultilibs(const Driver &D,
+     }
+   }
+ 
+-  Multilib Alt64 = Multilib()
++  Multilib Alt64 = MultilibBuilder()
+                        .gccSuffix(Suff64)
+                        .includeSuffix(Suff64)
+                        .flag("-m32")
+                        .flag("+m64")
+-                       .flag("-mx32");
+-  Multilib Alt32 = Multilib()
++                       .flag("-mx32")
++                       .makeMultilib();
++  Multilib Alt32 = MultilibBuilder()
+                        .gccSuffix("/32")
+                        .includeSuffix("/32")
+                        .flag("+m32")
+                        .flag("-m64")
+-                       .flag("-mx32");
+-  Multilib Altx32 = Multilib()
++                       .flag("-mx32")
++                       .makeMultilib();
++  Multilib Altx32 = MultilibBuilder()
+                         .gccSuffix("/x32")
+                         .includeSuffix("/x32")
+                         .flag("-m32")
+                         .flag("-m64")
+-                        .flag("+mx32");
++                        .flag("+mx32")
++                        .makeMultilib();
+ 
+   // GCC toolchain for IAMCU doesn't have crtbegin.o, so look for libgcc.a.
+   FilterNonExistent NonExistent(
+@@ -1846,14 +1883,16 @@ static bool findBiarchMultilibs(const Driver &D,
+   }
+ 
+   if (Want == WANT32)
+-    Default.flag("+m32").flag("-m64").flag("-mx32");
++    DefaultBuilder.flag("+m32").flag("-m64").flag("-mx32");
+   else if (Want == WANT64)
+-    Default.flag("-m32").flag("+m64").flag("-mx32");
++    DefaultBuilder.flag("-m32").flag("+m64").flag("-mx32");
+   else if (Want == WANTX32)
+-    Default.flag("-m32").flag("-m64").flag("+mx32");
++    DefaultBuilder.flag("-m32").flag("-m64").flag("+mx32");
+   else
+     return false;
+ 
++  Multilib Default = DefaultBuilder.makeMultilib();
++
+   Result.Multilibs.push_back(Default);
+   Result.Multilibs.push_back(Alt64);
+   Result.Multilibs.push_back(Alt32);
+@@ -1866,11 +1905,12 @@ static bool findBiarchMultilibs(const Driver &D,
+   addMultilibFlag(TargetTriple.isArch32Bit(), "m32", Flags);
+   addMultilibFlag(TargetTriple.isArch64Bit() && IsX32, "mx32", Flags);
+ 
+-  if (!Result.Multilibs.select(Flags, Result.SelectedMultilib))
++  if (!Result.Multilibs.select(Flags, Result.SelectedMultilibs))
+     return false;
+ 
+-  if (Result.SelectedMultilib == Alt64 || Result.SelectedMultilib == Alt32 ||
+-      Result.SelectedMultilib == Altx32)
++  if (Result.SelectedMultilibs.back() == Alt64 ||
++      Result.SelectedMultilibs.back() == Alt32 ||
++      Result.SelectedMultilibs.back() == Altx32)
+     Result.BiarchSibling = Default;
+ 
+   return true;
+@@ -2654,7 +2694,9 @@ bool Generic_GCC::GCCInstallationDetector::ScanGCCForMultilibs(
+   }
+ 
+   Multilibs = Detected.Multilibs;
+-  SelectedMultilib = Detected.SelectedMultilib;
++  SelectedMultilib = Detected.SelectedMultilibs.empty()
++                         ? Multilib()
++                         : Detected.SelectedMultilibs.back();
+   BiarchSibling = Detected.BiarchSibling;
+ 
+   return true;
+@@ -2954,6 +2996,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
+                                    path_list &Paths) {
+   // Add the multilib suffixed paths where they are available.
+   if (GCCInstallation.isValid()) {
++    assert(!SelectedMultilibs.empty());
+     const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
+     const std::string &LibPath =
+         std::string(GCCInstallation.getParentLibPath());
+@@ -2961,13 +3004,14 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
+     // Sourcery CodeBench MIPS toolchain holds some libraries under
+     // a biarch-like suffix of the GCC installation.
+     if (const auto &PathsCallback = Multilibs.filePathsCallback())
+-      for (const auto &Path : PathsCallback(SelectedMultilib))
++      for (const auto &Path : PathsCallback(SelectedMultilibs.back()))
+         addPathIfExists(D, GCCInstallation.getInstallPath() + Path, Paths);
+ 
+     // Add lib/gcc/$triple/$version, with an optional /multilib suffix.
+-    addPathIfExists(
+-        D, GCCInstallation.getInstallPath() + SelectedMultilib.gccSuffix(),
+-        Paths);
++    addPathIfExists(D,
++                    GCCInstallation.getInstallPath() +
++                        SelectedMultilibs.back().gccSuffix(),
++                    Paths);
+ 
+     // Add lib/gcc/$triple/$libdir
+     // For GCC built with --enable-version-specific-runtime-libs.
+@@ -2994,7 +3038,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
+     // Clang diverges from GCC's behavior.
+     addPathIfExists(D,
+                     LibPath + "/../" + GCCTriple.str() + "/lib/../" + OSLibDir +
+-                        SelectedMultilib.osSuffix(),
++                        SelectedMultilibs.back().osSuffix(),
+                     Paths);
+ 
+     // If the GCC installation we found is inside of the sysroot, we want to
+diff --git a/clang/lib/Driver/ToolChains/Gnu.h b/clang/lib/Driver/ToolChains/Gnu.h
+index b861072410..2767f346ca 100644
+--- a/clang/lib/Driver/ToolChains/Gnu.h
++++ b/clang/lib/Driver/ToolChains/Gnu.h
+@@ -22,8 +22,8 @@ struct DetectedMultilibs {
+   /// The set of multilibs that the detected installation supports.
+   MultilibSet Multilibs;
+ 
+-  /// The primary multilib appropriate for the given flags.
+-  Multilib SelectedMultilib;
++  /// The multilibs appropriate for the given flags.
++  llvm::SmallVector<Multilib> SelectedMultilibs;
+ 
+   /// On Biarch systems, this corresponds to the default multilib when
+   /// targeting the non-default multilib. Otherwise, it is empty.
+diff --git a/clang/lib/Driver/ToolChains/Hexagon.cpp b/clang/lib/Driver/ToolChains/Hexagon.cpp
+index 09d2f41ab0..e11bf19142 100644
+--- a/clang/lib/Driver/ToolChains/Hexagon.cpp
++++ b/clang/lib/Driver/ToolChains/Hexagon.cpp
+@@ -540,7 +540,9 @@ HexagonToolChain::getSmallDataThreshold(const ArgList &Args) {
+ std::string HexagonToolChain::getCompilerRTPath() const {
+   SmallString<128> Dir(getDriver().SysRoot);
+   llvm::sys::path::append(Dir, "usr", "lib");
+-  Dir += SelectedMultilib.gccSuffix();
++  if (!SelectedMultilibs.empty()) {
++    Dir += SelectedMultilibs.back().gccSuffix();
++  }
+   return std::string(Dir.str());
+ }
+ 
+diff --git a/clang/lib/Driver/ToolChains/Hurd.cpp b/clang/lib/Driver/ToolChains/Hurd.cpp
+index 48b9ccadf3..2dfc90ef37 100644
+--- a/clang/lib/Driver/ToolChains/Hurd.cpp
++++ b/clang/lib/Driver/ToolChains/Hurd.cpp
+@@ -65,7 +65,7 @@ Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
+     : Generic_ELF(D, Triple, Args) {
+   GCCInstallation.init(Triple, Args);
+   Multilibs = GCCInstallation.getMultilibs();
+-  SelectedMultilib = GCCInstallation.getMultilib();
++  SelectedMultilibs.assign({GCCInstallation.getMultilib()});
+   std::string SysRoot = computeSysRoot();
+   ToolChain::path_list &PPaths = getProgramPaths();
+ 
+diff --git a/clang/lib/Driver/ToolChains/Linux.cpp b/clang/lib/Driver/ToolChains/Linux.cpp
+index c6fb290ffd..e5adcf4716 100644
+--- a/clang/lib/Driver/ToolChains/Linux.cpp
++++ b/clang/lib/Driver/ToolChains/Linux.cpp
+@@ -182,7 +182,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
+     : Generic_ELF(D, Triple, Args) {
+   GCCInstallation.init(Triple, Args);
+   Multilibs = GCCInstallation.getMultilibs();
+-  SelectedMultilib = GCCInstallation.getMultilib();
++  SelectedMultilibs.assign({GCCInstallation.getMultilib()});
+   llvm::Triple::ArchType Arch = Triple.getArch();
+   std::string SysRoot = computeSysRoot();
+   ToolChain::path_list &PPaths = getProgramPaths();
+@@ -226,8 +226,8 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
+   const bool IsRISCV = Triple.isRISCV();
+   const bool IsCSKY = Triple.isCSKY();
+ 
+-  if (IsCSKY)
+-    SysRoot = SysRoot + SelectedMultilib.osSuffix();
++  if (IsCSKY && !SelectedMultilibs.empty())
++    SysRoot = SysRoot + SelectedMultilibs.back().osSuffix();
+ 
+   if ((IsMips || IsCSKY) && !SysRoot.empty())
+     ExtraOpts.push_back("--sysroot=" + SysRoot);
+diff --git a/clang/lib/Driver/ToolChains/MipsLinux.cpp b/clang/lib/Driver/ToolChains/MipsLinux.cpp
+index 9c58583bca..6157970233 100644
+--- a/clang/lib/Driver/ToolChains/MipsLinux.cpp
++++ b/clang/lib/Driver/ToolChains/MipsLinux.cpp
+@@ -30,7 +30,7 @@ MipsLLVMToolChain::MipsLLVMToolChain(const Driver &D,
+   DetectedMultilibs Result;
+   findMIPSMultilibs(D, Triple, "", Args, Result);
+   Multilibs = Result.Multilibs;
+-  SelectedMultilib = Result.SelectedMultilib;
++  SelectedMultilibs = Result.SelectedMultilibs;
+ 
+   // Find out the library suffix based on the ABI.
+   LibSuffix = tools::mips::getMipsABILibSuffix(Args, Triple);
+diff --git a/clang/lib/Driver/ToolChains/RISCVToolchain.cpp b/clang/lib/Driver/ToolChains/RISCVToolchain.cpp
+index 3491de22d3..d3b42187dd 100644
+--- a/clang/lib/Driver/ToolChains/RISCVToolchain.cpp
++++ b/clang/lib/Driver/ToolChains/RISCVToolchain.cpp
+@@ -53,10 +53,10 @@ RISCVToolChain::RISCVToolChain(const Driver &D, const llvm::Triple &Triple,
+   GCCInstallation.init(Triple, Args);
+   if (GCCInstallation.isValid()) {
+     Multilibs = GCCInstallation.getMultilibs();
+-    SelectedMultilib = GCCInstallation.getMultilib();
++    SelectedMultilibs.assign({GCCInstallation.getMultilib()});
+     path_list &Paths = getFilePaths();
+     // Add toolchain/multilib specific file paths.
+-    addMultilibsFilePaths(D, Multilibs, SelectedMultilib,
++    addMultilibsFilePaths(D, Multilibs, SelectedMultilibs.back(),
+                           GCCInstallation.getInstallPath(), Paths);
+     getFilePaths().push_back(GCCInstallation.getInstallPath().str());
+     ToolChain::path_list &PPaths = getProgramPaths();
+diff --git a/clang/test/Driver/baremetal-multilib.yaml b/clang/test/Driver/baremetal-multilib.yaml
+new file mode 100644
+index 0000000000..4d744798fe
+--- /dev/null
++++ b/clang/test/Driver/baremetal-multilib.yaml
+@@ -0,0 +1,168 @@
++# REQUIRES: shell
++# UNSUPPORTED: system-windows
++
++# RUN: rm -rf %T/baremetal_multilib
++# RUN: mkdir -p %T/baremetal_multilib/bin
++# RUN: mkdir -p %T/baremetal_multilib/lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/lib
++# RUN: touch %T/baremetal_multilib/lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/lib/libclang_rt.builtins.a
++# RUN: ln -s %clang %T/baremetal_multilib/bin/clang
++# RUN: ln -s %s %T/baremetal_multilib/lib/clang-runtimes/multilib.yaml
++
++# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
++# RUN:     --target=thumbv8m.main-none-eabihf --sysroot= \
++# RUN:   | FileCheck -DSYSROOT=%T/baremetal_multilib %s
++# CHECK:      "-cc1" "-triple" "thumbv8m.main-none-unknown-eabihf"
++# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/include/c++/v1"
++# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/include"
++# CHECK-SAME: "-x" "c++" "{{.*}}baremetal-multilib.yaml"
++# CHECK-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
++# CHECK-SAME: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/lib"
++# CHECK-SAME: "-lc" "-lm" "-lclang_rt.builtins"
++# CHECK-SAME: "-o" "{{.*}}.tmp.out"
++
++# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
++# RUN:     --target=thumbv8m.main-none-eabihf --sysroot= \
++# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-DIRECTORY %s
++# CHECK-PRINT-MULTI-DIRECTORY: arm-none-eabi/thumb/v8-m.main/fp
++
++# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
++# RUN:     --target=thumbv8.1m.main-none-eabihf -fno-exceptions --sysroot= \
++# RUN:   | FileCheck -DSYSROOT=%T/baremetal_multilib --check-prefix=CHECK-LAYERED-MULTILIB %s
++# CHECK-LAYERED-MULTILIB:      "-cc1" "-triple" "thumbv8.1m.main-none-unknown-eabihf"
++# CHECK-LAYERED-MULTILIB-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8.1-m.main/fp/noexcept/include/c++/v1"
++# CHECK-LAYERED-MULTILIB-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8.1-m.main/fp/include/c++/v1"
++# CHECK-LAYERED-MULTILIB-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8.1-m.main/fp/noexcept/include"
++# CHECK-LAYERED-MULTILIB-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8.1-m.main/fp/include"
++# CHECK-LAYERED-MULTILIB-NEXT: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8.1-m.main/fp/noexcept/lib"
++# CHECK-LAYERED-MULTILIB-SAME: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8.1-m.main/fp/lib"
++
++# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
++# RUN:     --target=thumbv8.1m.main-none-eabihf -fno-exceptions --sysroot= \
++# RUN:   | FileCheck --check-prefix=CHECK-LAYERED-PRINT-MULTI-DIRECTORY %s
++# CHECK-LAYERED-PRINT-MULTI-DIRECTORY:      arm-none-eabi/thumb/v8.1-m.main/fp
++# CHECK-LAYERED-PRINT-MULTI-DIRECTORY-NEXT: arm-none-eabi/thumb/v8.1-m.main/fp/noexcept
++
++# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -print-multi-lib 2>&1 \
++# RUN:     --target=arm-none-eabi --sysroot= \
++# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-LIB %s
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v6-m/nofp;@-target=thumbv6m-none-eabi@mfloat-abi=soft
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7-m/nofp;@-target=thumbv7m-none-eabi@mfloat-abi=soft
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/nofp;@-target=thumbv7em-none-eabi@mfloat-abi=soft@mfpu=none
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8-m.main/nofp;@-target=arm-none-eabi@mfloat-abi=soft@march=armv8m.main+nofp
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/nofp/nomve;@-target=arm-none-eabi@mfloat-abi=soft@march=armv8.1m.main+nofp+nomve
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/fpv4_sp_d16;@-target=thumbv7em-none-eabihf@mfpu=fpv4-sp-d16
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v7e-m/fpv5_d16;@-target=thumbv7em-none-eabihf@mfpu=fpv5-d16
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8-m.main/fp;@-target=thumbv8m.main-none-eabihf
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/fp;@-target=thumbv8.1m.main-none-eabihf
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/nofp/mve;@-target=arm-none-eabihf@march=armv8.1m.main+nofp+mve
++# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8.1-m.main/fp/noexcept;@-target=thumbv8.1m.main-none-eabihf@fno-exceptions
++
++# RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x assembler -mexecute-only \
++# RUN:     --target=arm-none-eabi --sysroot= %s -c -### 2>&1 \
++# RUN:    | FileCheck %s --check-prefix=CHECK-NO-EXECUTE-ONLY-ASM
++# CHECK-NO-EXECUTE-ONLY-ASM: warning: argument unused during compilation: '-mexecute-only'
++
++---
++# This file is in two parts:
++# 1. A list of library variants.
++# 2. A mapping from flags generated from command line arguments to further
++#    flags.
++
++# How does clang use this file?
++# 1. If the ToolChain class for the architecture supports this form of
++#    multilib it then it loads the file if present in sysroot.
++# 2. Generate flags from the user provided arguments.
++#    (Use `clang -print-multi-selection-flags` to see which flags are
++#    generated).
++# 3. Compare the arguments against each regular expression and store
++#    associated flags if there's a match.
++# 4. Find the last library variant whose flags are a subset of the
++#    flags derived from the user provided arguments.
++# 5. Use the directory for the library variant as the sysroot.
++
++# Clang will emit an error if this number is greater than its current multilib
++# version or if its major version differs, but will accept lesser minor
++# versions.
++MultilibVersion: 0.1
++
++# The first section of the file is the list of library variants.
++# A library is considered compatible if the are a subset of the flags derived
++# from the arguments provided by the user.
++# If multiple libraries are deemed compatible then the one that appears
++# last in the list wins. A ToolChain may instead opt to use more than one
++# multilib, layered on top of each other.
++# Each library variant must have a "PrintOptions" attribute. This is solely to
++# support `clang -print-multi-lib`.
++
++Variants:
++- Dir: arm-none-eabi/thumb/v6-m/nofp
++  Flags: [target=thumbv6m-none-unknown-eabi]
++  PrintOptions: [--target=thumbv6m-none-eabi, -mfloat-abi=soft]
++
++- Dir: arm-none-eabi/thumb/v7-m/nofp
++  Flags: [target=thumbv7m-none-unknown-eabi]
++  PrintOptions: [--target=thumbv7m-none-eabi, -mfloat-abi=soft]
++
++- Dir: arm-none-eabi/thumb/v7e-m/nofp
++  Flags: [target=thumbv7em-none-unknown-eabi]
++  PrintOptions: [--target=thumbv7em-none-eabi, -mfloat-abi=soft, -mfpu=none]
++
++- Dir: arm-none-eabi/thumb/v8-m.main/nofp
++  Flags: [target=thumbv8m.main-none-unknown-eabi]
++  PrintOptions: [--target=arm-none-eabi, -mfloat-abi=soft, -march=armv8m.main+nofp]
++
++- Dir: arm-none-eabi/thumb/v8.1-m.main/nofp/nomve
++  Flags: [target=thumbv8.1m.main-none-unknown-eabi]
++  PrintOptions: [--target=arm-none-eabi, -mfloat-abi=soft, -march=armv8.1m.main+nofp+nomve]
++
++- Dir: arm-none-eabi/thumb/v7e-m/fpv4_sp_d16
++  Flags: [target=thumbv7em-none-unknown-eabihf, mfpu=fpv4-sp-d16]
++  PrintOptions: [--target=thumbv7em-none-eabihf, -mfpu=fpv4-sp-d16]
++
++- Dir: arm-none-eabi/thumb/v7e-m/fpv5_d16
++  Flags: [target=thumbv7em-none-unknown-eabihf, mfpu=fpv5-d16]
++  PrintOptions: [--target=thumbv7em-none-eabihf, -mfpu=fpv5-d16]
++
++- Dir: arm-none-eabi/thumb/v8-m.main/fp
++  Flags: [target=thumbv8m.main-none-unknown-eabihf, hasfpu]
++  PrintOptions: [--target=thumbv8m.main-none-eabihf]
++
++- Dir: arm-none-eabi/thumb/v8.1-m.main/fp
++  Flags: [target=thumbv8.1m.main-none-unknown-eabihf, hasfpu]
++  PrintOptions: [--target=thumbv8.1m.main-none-eabihf]
++
++- Dir: arm-none-eabi/thumb/v8.1-m.main/nofp/mve
++  Flags: [target=thumbv8.1m.main-none-unknown-eabihf, march=+mve]
++  PrintOptions: [--target=arm-none-eabihf, -march=armv8.1m.main+nofp+mve]
++
++# A specialisation of v8.1-m.main/fp without exceptions.
++# This layers over the top of the regular v8.1-m.main/fp so it doesn't
++# need to have its own include directory or C library, thereby saving
++# disk space.
++- Dir: arm-none-eabi/thumb/v8.1-m.main/fp/noexcept
++  Flags: [target=thumbv8.1m.main-none-unknown-eabihf, hasfpu, fno-exceptions]
++  PrintOptions: [--target=thumbv8.1m.main-none-eabihf, -fno-exceptions]
++
++
++# The second section of the file is a map from auto-detected flags
++# to custom flags. The auto-detected flags can be printed out
++# by running clang with `-print-multi-selection-flags`.
++# The regex must match a whole flag string.
++# "MatchFlags" flags will be added if an argument matches, while
++# "NoMatchFlags" flags will be added otherwise.
++FlagMap:
++- Regex: mfpu=none
++  NoMatchFlags: [hasfpu]
++# For v8m.base (and potential later v8m baseline versions) use v6m
++- Regex: target=thumbv8(\.[0-9]+)?m\.base-none-unknown-eabi
++  MatchFlags: [target=thumbv6m-none-unknown-eabi]
++# Match versions after v8.1m.main. We assume that v8.2m (if/when it exists) will
++# be backwards compatible with v8.1m.
++# The alternative is to not recognise later versions, and require that
++# this multilib spec is updated before it can be used with newer
++# architecture versions.
++- Regex: thumbv8\.[1-9]m\.main-none-unknown-eabi
++  MatchFlags: [target=thumbv8.1m.main-none-unknown-eabi]
++- Regex: thumbv8\.[1-9]m\.main-none-unknown-eabihf
++  MatchFlags: [target=thumbv8.1m.main-none-unknown-eabihf]
++...
+diff --git a/clang/test/Driver/baremetal.cpp b/clang/test/Driver/baremetal.cpp
+index 24890e87c3..3518e0526c 100644
+--- a/clang/test/Driver/baremetal.cpp
++++ b/clang/test/Driver/baremetal.cpp
+@@ -118,9 +118,9 @@
+ // Verify that the bare metal driver does not include any host system paths:
+ // CHECK-AARCH64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
+ // CHECK-AARCH64-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
+-// CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+}}aarch64-none-elf{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
++// CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+ // CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+-// CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+}}aarch64-none-elf{{[/\\]+}}include"
++// CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+ 
+ // RUN: %clang %s -### --target=riscv64-unknown-elf -o %t.out -L some/directory/user/asked/for \
+ // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
+diff --git a/clang/test/Driver/fuchsia.cpp b/clang/test/Driver/fuchsia.cpp
+index e5640f5826..81802266e4 100644
+--- a/clang/test/Driver/fuchsia.cpp
++++ b/clang/test/Driver/fuchsia.cpp
+@@ -190,3 +190,14 @@
+ // CHECK-MULTILIB-RELATIVE-VTABLES-HWASAN-NOEXCEPT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}relative-vtables+hwasan+noexcept"
+ // CHECK-MULTILIB-COMPAT-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}compat"
+ // CHECK-MULTILIB-X86: "-L{{.*}}{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia"
++
++// Check that -print-multi-directory only outputs one multilib directory.
++// This may be relaxed later but for now preserve existing behaviour.
++// RUN: %clangxx -print-multi-directory --target=x86_64-unknown-fuchsia -fsanitize=address -fno-exceptions \
++// RUN:     -ccc-install-dir %S/Inputs/basic_fuchsia_tree/bin \
++// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
++// RUN:     | FileCheck %s -check-prefixes=CHECK-PRINT-MULTI-LIB
++// CHECK-PRINT-MULTI-LIB-NOT: .
++// CHECK-PRINT-MULTI-LIB-NOT: noexcept
++// CHECK-PRINT-MULTI-LIB-NOT: asan
++// CHECK-PRINT-MULTI-LIB: asan+noexcept
+diff --git a/clang/test/Driver/lit.local.cfg b/clang/test/Driver/lit.local.cfg
+index 21d23ff0a2..7d818447a1 100644
+--- a/clang/test/Driver/lit.local.cfg
++++ b/clang/test/Driver/lit.local.cfg
+@@ -1,7 +1,7 @@
+ from lit.llvm import llvm_config
+ 
+ config.suffixes = ['.c', '.cpp', '.cppm', '.h', '.m', '.mm', '.S', '.s', '.f90', '.F90', '.f95',
+-                   '.cu', '.rs', '.cl', '.clcpp', '.hip', '.hipi', '.hlsl']
++                   '.cu', '.rs', '.cl', '.clcpp', '.hip', '.hipi', '.hlsl', '.yaml']
+ config.substitutions = list(config.substitutions)
+ config.substitutions.insert(0,
+     ('%clang_cc1',
+diff --git a/clang/test/Driver/print-multi-selection-flags.c b/clang/test/Driver/print-multi-selection-flags.c
+new file mode 100644
+index 0000000000..7c351555d4
+--- /dev/null
++++ b/clang/test/Driver/print-multi-selection-flags.c
+@@ -0,0 +1,54 @@
++// RUN: %clang -print-multi-selection-flags-experimental --target=aarch64-linux -fc++-abi=itanium -fsanitize=address | FileCheck --check-prefix=CHECK-LINUX %s
++// CHECK-LINUX: fc++-abi=itanium
++// CHECK-LINUX: fexceptions
++// CHECK-LINUX: frtti
++// CHECK-LINUX: fsanitize=address
++// CHECK-LINUX: target=aarch64-unknown-linux
++
++// RUN: %clang -print-multi-selection-flags-experimental --target=aarch64-fuchsia -fsanitize=hwaddress | FileCheck --check-prefix=CHECK-FUCHSIA %s
++// CHECK-FUCHSIA: fsanitize=hwaddress
++// CHECK-FUCHSIA: target=aarch64-unknown-fuchsia
++
++// RUN: %clang -print-multi-selection-flags-experimental --target=arm-none-eabi -mfloat-abi=soft -fno-exceptions -fno-rtti | FileCheck --check-prefix=CHECK-ARMV4T %s
++// CHECK-ARMV4T: fno-exceptions
++// CHECK-ARMV4T: fno-rtti
++// CHECK-ARMV4T: mfloat-abi=soft
++// CHECK-ARMV4T: mfpu=none
++// CHECK-ARMV4T: target=armv4t-none-unknown-eabi
++
++// RUN: %clang -print-multi-selection-flags-experimental --target=armv7em-none-eabi -mfloat-abi=softfp | FileCheck --check-prefix=CHECK-SOFTFP %s
++// CHECK-SOFTFP: mfloat-abi=softfp
++// CHECK-SOFTFP: mfpu=fpv4-sp-d16
++// CHECK-SOFTFP: target=thumbv7em-none-unknown-eabi
++
++// RUN: %clang -print-multi-selection-flags-experimental --target=arm-none-eabihf -march=armv7em -mfpu=fpv5-d16 | FileCheck --check-prefix=CHECK-HARD %s
++// CHECK-HARD: mfloat-abi=hard
++// CHECK-HARD: mfpu=fpv5-d16
++// CHECK-HARD: target=thumbv7em-none-unknown-eabihf
++
++// RUN: %clang -print-multi-selection-flags-experimental --target=arm-none-eabi -mfloat-abi=soft -march=armv8-m.main+nofp | FileCheck --check-prefix=CHECK-V8MMAIN-NOFP %s
++// CHECK-V8MMAIN-NOFP: mfloat-abi=soft
++// CHECK-V8MMAIN-NOFP: mfpu=none
++// CHECK-V8MMAIN-NOFP: target=thumbv8m.main-none-unknown-eabi
++
++// RUN: %clang -print-multi-selection-flags-experimental --target=arm-none-eabi -mfloat-abi=hard -march=armv8.1m.main+mve.fp | FileCheck --check-prefix=CHECK-MVE %s
++// CHECK-MVE: march=+mve
++// CHECK-MVE: march=+mve.fp
++// CHECK-MVE: mfloat-abi=hard
++// CHECK-MVE: mfpu=fp-armv8-fullfp16-sp-d16
++// CHECK-MVE: target=thumbv8.1m.main-none-unknown-eabihf
++
++// RUN: %clang -print-multi-selection-flags-experimental --target=arm-none-eabi -march=armv8.1m.main+mve+nofp | FileCheck --check-prefix=CHECK-MVENOFP %s
++// CHECK-MVENOFP: march=+mve
++// CHECK-MVENOFP-NOT: march=+mve.fp
++// CHECK-MVENOFP: mfpu=none
++
++// RUN: %clang -print-multi-selection-flags-experimental --target=aarch64-none-elf -march=armv8-a+lse | FileCheck --check-prefix=CHECK-LSE %s
++// CHECK-LSE: march=+lse
++
++// RUN: %clang -print-multi-selection-flags-experimental --target=aarch64-none-elf -march=armv8.5-a+sve+sve2 | FileCheck --check-prefix=CHECK-SVE2 %s
++// RUN: %clang -print-multi-selection-flags-experimental --target=aarch64-none-elf -march=armv9-a            | FileCheck --check-prefix=CHECK-SVE2 %s
++// CHECK-SVE2: march=+simd
++// CHECK-SVE2: march=+sve
++// CHECK-SVE2: march=+sve2
++// CHECK-SVE2: target=aarch64-none-unknown-elf
+diff --git a/clang/unittests/Driver/CMakeLists.txt b/clang/unittests/Driver/CMakeLists.txt
+index 1de0151cc4..e37c158d71 100644
+--- a/clang/unittests/Driver/CMakeLists.txt
++++ b/clang/unittests/Driver/CMakeLists.txt
+@@ -11,6 +11,7 @@ add_clang_unittest(ClangDriverTests
+   DXCModeTest.cpp
+   ToolChainTest.cpp
+   ModuleCacheTest.cpp
++  MultilibBuilderTest.cpp
+   MultilibTest.cpp
+   SanitizerArgsTest.cpp
+   )
+diff --git a/clang/unittests/Driver/MultilibBuilderTest.cpp b/clang/unittests/Driver/MultilibBuilderTest.cpp
+new file mode 100644
+index 0000000000..4695f417a0
+--- /dev/null
++++ b/clang/unittests/Driver/MultilibBuilderTest.cpp
+@@ -0,0 +1,223 @@
++//===- unittests/Driver/MultilibBuilderTest.cpp --- MultilibBuilder tests
++//---------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// Unit tests for MultilibBuilder and MultilibSetBuilder
++//
++//===----------------------------------------------------------------------===//
++
++#include "clang/Driver/MultilibBuilder.h"
++#include "../../lib/Driver/ToolChains/CommonArgs.h"
++#include "clang/Basic/LLVM.h"
++#include "llvm/ADT/ArrayRef.h"
++#include "llvm/ADT/StringRef.h"
++#include "llvm/ADT/StringSwitch.h"
++#include "gtest/gtest.h"
++
++using llvm::is_contained;
++using namespace clang;
++using namespace driver;
++
++TEST(MultilibBuilderTest, MultilibValidity) {
++
++  ASSERT_TRUE(MultilibBuilder().isValid()) << "Empty multilib is not valid";
++
++  ASSERT_TRUE(MultilibBuilder().flag("+foo").isValid())
++      << "Single indicative flag is not valid";
++
++  ASSERT_TRUE(MultilibBuilder().flag("-foo").isValid())
++      << "Single contraindicative flag is not valid";
++
++  ASSERT_FALSE(MultilibBuilder().flag("+foo").flag("-foo").isValid())
++      << "Conflicting flags should invalidate the Multilib";
++
++  ASSERT_TRUE(MultilibBuilder().flag("+foo").flag("+foo").isValid())
++      << "Multilib should be valid even if it has the same flag "
++         "twice";
++
++  ASSERT_TRUE(MultilibBuilder().flag("+foo").flag("-foobar").isValid())
++      << "Seemingly conflicting prefixes shouldn't actually conflict";
++}
++
++TEST(MultilibBuilderTest, Construction1) {
++  MultilibBuilder M("gcc64", "os64", "inc64");
++  ASSERT_TRUE(M.gccSuffix() == "/gcc64");
++  ASSERT_TRUE(M.osSuffix() == "/os64");
++  ASSERT_TRUE(M.includeSuffix() == "/inc64");
++}
++
++TEST(MultilibBuilderTest, Construction3) {
++  MultilibBuilder M = MultilibBuilder().flag("+f1").flag("+f2").flag("-f3");
++  for (const std::string &A : M.flags()) {
++    ASSERT_TRUE(llvm::StringSwitch<bool>(A)
++                    .Cases("+f1", "+f2", "-f3", true)
++                    .Default(false));
++  }
++}
++
++TEST(MultilibBuilderTest, SetConstruction1) {
++  // Single maybe
++  MultilibSet MS = MultilibSetBuilder()
++                       .Maybe(MultilibBuilder("64").flag("+m64"))
++                       .makeMultilibSet();
++  ASSERT_TRUE(MS.size() == 2);
++  for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
++    if (I->gccSuffix() == "/64")
++      ASSERT_TRUE(*I->flags().begin() == "+m64");
++    else if (I->gccSuffix() == "")
++      ASSERT_TRUE(*I->flags().begin() == "-m64");
++    else
++      FAIL() << "Unrecognized gccSufix: " << I->gccSuffix();
++  }
++}
++
++TEST(MultilibBuilderTest, SetConstruction2) {
++  // Double maybe
++  MultilibSet MS = MultilibSetBuilder()
++                       .Maybe(MultilibBuilder("sof").flag("+sof"))
++                       .Maybe(MultilibBuilder("el").flag("+EL"))
++                       .makeMultilibSet();
++  ASSERT_TRUE(MS.size() == 4);
++  for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
++    ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
++                    .Cases("", "/sof", "/el", "/sof/el", true)
++                    .Default(false))
++        << "Multilib " << *I << " wasn't expected";
++    ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
++                    .Case("", is_contained(I->flags(), "-sof"))
++                    .Case("/sof", is_contained(I->flags(), "+sof"))
++                    .Case("/el", is_contained(I->flags(), "-sof"))
++                    .Case("/sof/el", is_contained(I->flags(), "+sof"))
++                    .Default(false))
++        << "Multilib " << *I << " didn't have the appropriate {+,-}sof flag";
++    ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
++                    .Case("", is_contained(I->flags(), "-EL"))
++                    .Case("/sof", is_contained(I->flags(), "-EL"))
++                    .Case("/el", is_contained(I->flags(), "+EL"))
++                    .Case("/sof/el", is_contained(I->flags(), "+EL"))
++                    .Default(false))
++        << "Multilib " << *I << " didn't have the appropriate {+,-}EL flag";
++  }
++}
++
++TEST(MultilibBuilderTest, SetRegexFilter) {
++  MultilibSetBuilder MB;
++  MB.Maybe(MultilibBuilder("one"))
++      .Maybe(MultilibBuilder("two"))
++      .Maybe(MultilibBuilder("three"))
++      .makeMultilibSet();
++  MultilibSet MS = MB.makeMultilibSet();
++  ASSERT_EQ(MS.size(), (unsigned)2 * 2 * 2)
++      << "Size before filter was incorrect. Contents:\n"
++      << MS;
++  MB.FilterOut("/one/two/three");
++  MS = MB.makeMultilibSet();
++  ASSERT_EQ(MS.size(), (unsigned)2 * 2 * 2 - 1)
++      << "Size after filter was incorrect. Contents:\n"
++      << MS;
++  for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
++    ASSERT_TRUE(I->gccSuffix() != "/one/two/three")
++        << "The filter should have removed " << *I;
++  }
++}
++
++TEST(MultilibBuilderTest, SetFilterObject) {
++  MultilibSet MS = MultilibSetBuilder()
++                       .Maybe(MultilibBuilder("orange"))
++                       .Maybe(MultilibBuilder("pear"))
++                       .Maybe(MultilibBuilder("plum"))
++                       .makeMultilibSet();
++  ASSERT_EQ((int)MS.size(), 1 /* Default */ + 1 /* pear */ + 1 /* plum */ +
++                                1 /* pear/plum */ + 1 /* orange */ +
++                                1 /* orange/pear */ + 1 /* orange/plum */ +
++                                1 /* orange/pear/plum */)
++      << "Size before filter was incorrect. Contents:\n"
++      << MS;
++  MS.FilterOut([](const Multilib &M) {
++    return StringRef(M.gccSuffix()).startswith("/p");
++  });
++  ASSERT_EQ((int)MS.size(), 1 /* Default */ + 1 /* orange */ +
++                                1 /* orange/pear */ + 1 /* orange/plum */ +
++                                1 /* orange/pear/plum */)
++      << "Size after filter was incorrect. Contents:\n"
++      << MS;
++  for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
++    ASSERT_FALSE(StringRef(I->gccSuffix()).startswith("/p"))
++        << "The filter should have removed " << *I;
++  }
++}
++
++TEST(MultilibBuilderTest, SetSelection1) {
++  MultilibSet MS1 = MultilibSetBuilder()
++                        .Maybe(MultilibBuilder("64").flag("+m64"))
++                        .makeMultilibSet();
++
++  Multilib::flags_list FlagM64 = {"+m64"};
++  llvm::SmallVector<Multilib> SelectionM64;
++  ASSERT_TRUE(MS1.select(FlagM64, SelectionM64))
++      << "Flag set was {\"+m64\"}, but selection not found";
++  ASSERT_TRUE(SelectionM64.back().gccSuffix() == "/64")
++      << "Selection picked " << SelectionM64.back()
++      << " which was not expected";
++
++  Multilib::flags_list FlagNoM64 = {"-m64"};
++  llvm::SmallVector<Multilib> SelectionNoM64;
++  ASSERT_TRUE(MS1.select(FlagNoM64, SelectionNoM64))
++      << "Flag set was {\"-m64\"}, but selection not found";
++  ASSERT_TRUE(SelectionNoM64.back().gccSuffix() == "")
++      << "Selection picked " << SelectionNoM64.back()
++      << " which was not expected";
++}
++
++TEST(MultilibBuilderTest, SetSelection2) {
++  MultilibSet MS2 = MultilibSetBuilder()
++                        .Maybe(MultilibBuilder("el").flag("+EL"))
++                        .Maybe(MultilibBuilder("sf").flag("+SF"))
++                        .makeMultilibSet();
++
++  for (unsigned I = 0; I < 4; ++I) {
++    bool IsEL = I & 0x1;
++    bool IsSF = I & 0x2;
++    Multilib::flags_list Flags;
++    if (IsEL)
++      Flags.push_back("+EL");
++    else
++      Flags.push_back("-EL");
++
++    if (IsSF)
++      Flags.push_back("+SF");
++    else
++      Flags.push_back("-SF");
++
++    llvm::SmallVector<Multilib> Selection;
++    ASSERT_TRUE(MS2.select(Flags, Selection))
++        << "Selection failed for " << (IsEL ? "+EL" : "-EL") << " "
++        << (IsSF ? "+SF" : "-SF");
++
++    std::string Suffix;
++    if (IsEL)
++      Suffix += "/el";
++    if (IsSF)
++      Suffix += "/sf";
++
++    ASSERT_EQ(Selection.back().gccSuffix(), Suffix)
++        << "Selection picked " << Selection.back()
++        << " which was not expected ";
++  }
++}
++
++TEST(MultilibBuilderTest, PrintOptions) {
++  Multilib M = MultilibBuilder()
++                   .flag("+x")
++                   .flag("-y")
++                   .flag("+a")
++                   .flag("-b")
++                   .flag("+c")
++                   .makeMultilib();
++  ASSERT_EQ(Multilib::flags_list({"-x", "-a", "-c"}), M.getPrintOptions());
++}
+diff --git a/clang/unittests/Driver/MultilibTest.cpp b/clang/unittests/Driver/MultilibTest.cpp
+index 0731c81d9f..44dccc85dc 100644
+--- a/clang/unittests/Driver/MultilibTest.cpp
++++ b/clang/unittests/Driver/MultilibTest.cpp
+@@ -11,34 +11,18 @@
+ //===----------------------------------------------------------------------===//
+ 
+ #include "clang/Driver/Multilib.h"
++#include "../../lib/Driver/ToolChains/CommonArgs.h"
+ #include "clang/Basic/LLVM.h"
++#include "clang/Basic/Version.h"
++#include "llvm/ADT/ArrayRef.h"
+ #include "llvm/ADT/StringRef.h"
+ #include "llvm/ADT/StringSwitch.h"
++#include "llvm/Support/SourceMgr.h"
+ #include "gtest/gtest.h"
+ 
+ using namespace clang::driver;
+ using namespace clang;
+ 
+-TEST(MultilibTest, MultilibValidity) {
+-
+-  ASSERT_TRUE(Multilib().isValid()) << "Empty multilib is not valid";
+-
+-  ASSERT_TRUE(Multilib().flag("+foo").isValid())
+-      << "Single indicative flag is not valid";
+-
+-  ASSERT_TRUE(Multilib().flag("-foo").isValid())
+-      << "Single contraindicative flag is not valid";
+-
+-  ASSERT_FALSE(Multilib().flag("+foo").flag("-foo").isValid())
+-      << "Conflicting flags should invalidate the Multilib";
+-
+-  ASSERT_TRUE(Multilib().flag("+foo").flag("+foo").isValid())
+-      << "Multilib should be valid even if it has the same flag twice";
+-
+-  ASSERT_TRUE(Multilib().flag("+foo").flag("-foobar").isValid())
+-      << "Seemingly conflicting prefixes shouldn't actually conflict";
+-}
+-
+ TEST(MultilibTest, OpEqReflexivity1) {
+   Multilib M;
+   ASSERT_TRUE(M == M) << "Multilib::operator==() is not reflexive";
+@@ -50,40 +34,28 @@ TEST(MultilibTest, OpEqReflexivity2) {
+ }
+ 
+ TEST(MultilibTest, OpEqReflexivity3) {
+-  Multilib M1, M2;
+-  M1.flag("+foo");
+-  M2.flag("+foo");
++  Multilib M1({}, {}, {}, {"+foo"});
++  Multilib M2({}, {}, {}, {"+foo"});
+   ASSERT_TRUE(M1 == M2) << "Multilibs with the same flag should be the same";
+ }
+ 
+ TEST(MultilibTest, OpEqInequivalence1) {
+-  Multilib M1, M2;
+-  M1.flag("+foo");
+-  M2.flag("-foo");
++  Multilib M1({}, {}, {}, {"+foo"});
++  Multilib M2({}, {}, {}, {"-foo"});
+   ASSERT_FALSE(M1 == M2) << "Multilibs with conflicting flags are not the same";
+   ASSERT_FALSE(M2 == M1)
+       << "Multilibs with conflicting flags are not the same (commuted)";
+ }
+ 
+ TEST(MultilibTest, OpEqInequivalence2) {
+-  Multilib M1, M2;
+-  M2.flag("+foo");
++  Multilib M1;
++  Multilib M2({}, {}, {}, {"+foo"});
+   ASSERT_FALSE(M1 == M2) << "Flags make Multilibs different";
+ }
+ 
+-TEST(MultilibTest, OpEqEquivalence1) {
+-  Multilib M1, M2;
+-  M1.flag("+foo");
+-  M2.flag("+foo").flag("+foo");
+-  ASSERT_TRUE(M1 == M2) << "Flag duplication shouldn't affect equivalence";
+-  ASSERT_TRUE(M2 == M1)
+-      << "Flag duplication shouldn't affect equivalence (commuted)";
+-}
+-
+ TEST(MultilibTest, OpEqEquivalence2) {
+-  Multilib M1("64");
+-  Multilib M2;
+-  M2.gccSuffix("/64");
++  Multilib M1("/64");
++  Multilib M2("/64");
+   ASSERT_TRUE(M1 == M2)
+       << "Constructor argument must match Multilib::gccSuffix()";
+   ASSERT_TRUE(M2 == M1)
+@@ -91,9 +63,8 @@ TEST(MultilibTest, OpEqEquivalence2) {
+ }
+ 
+ TEST(MultilibTest, OpEqEquivalence3) {
+-  Multilib M1("", "32");
+-  Multilib M2;
+-  M2.osSuffix("/32");
++  Multilib M1("", "/32");
++  Multilib M2("", "/32");
+   ASSERT_TRUE(M1 == M2)
+       << "Constructor argument must match Multilib::osSuffix()";
+   ASSERT_TRUE(M2 == M1)
+@@ -101,9 +72,8 @@ TEST(MultilibTest, OpEqEquivalence3) {
+ }
+ 
+ TEST(MultilibTest, OpEqEquivalence4) {
+-  Multilib M1("", "", "16");
+-  Multilib M2;
+-  M2.includeSuffix("/16");
++  Multilib M1("", "", "/16");
++  Multilib M2("", "", "/16");
+   ASSERT_TRUE(M1 == M2)
+       << "Constructor argument must match Multilib::includeSuffix()";
+   ASSERT_TRUE(M2 == M1)
+@@ -111,31 +81,31 @@ TEST(MultilibTest, OpEqEquivalence4) {
+ }
+ 
+ TEST(MultilibTest, OpEqInequivalence3) {
+-  Multilib M1("foo");
+-  Multilib M2("bar");
++  Multilib M1("/foo");
++  Multilib M2("/bar");
+   ASSERT_FALSE(M1 == M2) << "Differing gccSuffixes should be different";
+   ASSERT_FALSE(M2 == M1)
+       << "Differing gccSuffixes should be different (commuted)";
+ }
+ 
+ TEST(MultilibTest, OpEqInequivalence4) {
+-  Multilib M1("", "foo");
+-  Multilib M2("", "bar");
++  Multilib M1("", "/foo");
++  Multilib M2("", "/bar");
+   ASSERT_FALSE(M1 == M2) << "Differing osSuffixes should be different";
+   ASSERT_FALSE(M2 == M1)
+       << "Differing osSuffixes should be different (commuted)";
+ }
+ 
+ TEST(MultilibTest, OpEqInequivalence5) {
+-  Multilib M1("", "", "foo");
+-  Multilib M2("", "", "bar");
++  Multilib M1("", "", "/foo");
++  Multilib M2("", "", "/bar");
+   ASSERT_FALSE(M1 == M2) << "Differing includeSuffixes should be different";
+   ASSERT_FALSE(M2 == M1)
+       << "Differing includeSuffixes should be different (commuted)";
+ }
+ 
+ TEST(MultilibTest, Construction1) {
+-  Multilib M("gcc64", "os64", "inc64");
++  Multilib M("/gcc64", "/os64", "/inc64");
+   ASSERT_TRUE(M.gccSuffix() == "/gcc64");
+   ASSERT_TRUE(M.osSuffix() == "/os64");
+   ASSERT_TRUE(M.includeSuffix() == "/inc64");
+@@ -155,7 +125,7 @@ TEST(MultilibTest, Construction2) {
+ }
+ 
+ TEST(MultilibTest, Construction3) {
+-  Multilib M = Multilib().flag("+f1").flag("+f2").flag("-f3");
++  Multilib M({}, {}, {}, {"+f1", "+f2", "-f3"});
+   for (Multilib::flags_list::const_iterator I = M.flags().begin(),
+                                             E = M.flags().end();
+        I != E; ++I) {
+@@ -165,211 +135,445 @@ TEST(MultilibTest, Construction3) {
+   }
+ }
+ 
+-static bool hasFlag(const Multilib &M, StringRef Flag) {
+-  for (Multilib::flags_list::const_iterator I = M.flags().begin(),
+-                                            E = M.flags().end();
+-       I != E; ++I) {
+-    if (*I == Flag)
+-      return true;
+-    else if (StringRef(*I).substr(1) == Flag.substr(1))
+-      return false;
+-  }
+-  return false;
+-}
+-
+-TEST(MultilibTest, SetConstruction1) {
+-  // Single maybe
+-  MultilibSet MS;
+-  ASSERT_TRUE(MS.size() == 0);
+-  MS.Maybe(Multilib("64").flag("+m64"));
++TEST(MultilibTest, SetPushback) {
++  MultilibSet MS({
++      Multilib("/one"),
++      Multilib("/two"),
++  });
+   ASSERT_TRUE(MS.size() == 2);
+   for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
+-    if (I->gccSuffix() == "/64")
+-      ASSERT_TRUE(I->flags()[0] == "+m64");
+-    else if (I->gccSuffix() == "")
+-      ASSERT_TRUE(I->flags()[0] == "-m64");
+-    else
+-      FAIL() << "Unrecognized gccSufix: " << I->gccSuffix();
++    ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
++                    .Cases("/one", "/two", true)
++                    .Default(false));
+   }
+ }
+ 
+-TEST(MultilibTest, SetConstruction2) {
+-  // Double maybe
+-  MultilibSet MS;
+-  MS.Maybe(Multilib("sof").flag("+sof"));
+-  MS.Maybe(Multilib("el").flag("+EL"));
+-  ASSERT_TRUE(MS.size() == 4);
+-  for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
+-    ASSERT_TRUE(I->isValid()) << "Multilb " << *I << " should be valid";
+-    ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
+-                    .Cases("", "/sof", "/el", "/sof/el", true)
+-                    .Default(false))
+-        << "Multilib " << *I << " wasn't expected";
+-    ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
+-                    .Case("", hasFlag(*I, "-sof"))
+-                    .Case("/sof", hasFlag(*I, "+sof"))
+-                    .Case("/el", hasFlag(*I, "-sof"))
+-                    .Case("/sof/el", hasFlag(*I, "+sof"))
+-                    .Default(false))
+-        << "Multilib " << *I << " didn't have the appropriate {+,-}sof flag";
+-    ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
+-                    .Case("", hasFlag(*I, "-EL"))
+-                    .Case("/sof", hasFlag(*I, "-EL"))
+-                    .Case("/el", hasFlag(*I, "+EL"))
+-                    .Case("/sof/el", hasFlag(*I, "+EL"))
+-                    .Default(false))
+-        << "Multilib " << *I << " didn't have the appropriate {+,-}EL flag";
+-  }
++TEST(MultilibTest, SetPriority) {
++  MultilibSet MS({
++      Multilib("/foo", {}, {}, {"+foo"}),
++      Multilib("/bar", {}, {}, {"+bar"}),
++  });
++  Multilib::flags_list Flags1 = {"+foo", "-bar"};
++  llvm::SmallVector<Multilib> Selection1;
++  ASSERT_TRUE(MS.select(Flags1, Selection1))
++      << "Flag set was {\"+foo\"}, but selection not found";
++  ASSERT_TRUE(Selection1.back().gccSuffix() == "/foo")
++      << "Selection picked " << Selection1.back() << " which was not expected";
++
++  Multilib::flags_list Flags2 = {"+foo", "+bar"};
++  llvm::SmallVector<Multilib> Selection2;
++  ASSERT_TRUE(MS.select(Flags2, Selection2))
++      << "Flag set was {\"+bar\"}, but selection not found";
++  ASSERT_TRUE(Selection2.back().gccSuffix() == "/bar")
++      << "Selection picked " << Selection2.back() << " which was not expected";
+ }
+ 
+-TEST(MultilibTest, SetPushback) {
++TEST(MultilibTest, SelectMultiple) {
++  MultilibSet MS({
++      Multilib("/a", {}, {}, {"x"}),
++      Multilib("/b", {}, {}, {"y"}),
++  });
++  llvm::SmallVector<Multilib> Selection;
++
++  ASSERT_TRUE(MS.select({"x"}, Selection));
++  ASSERT_EQ(1u, Selection.size());
++  EXPECT_EQ("/a", Selection[0].gccSuffix());
++
++  ASSERT_TRUE(MS.select({"y"}, Selection));
++  ASSERT_EQ(1u, Selection.size());
++  EXPECT_EQ("/b", Selection[0].gccSuffix());
++
++  ASSERT_TRUE(MS.select({"y", "x"}, Selection));
++  ASSERT_EQ(2u, Selection.size());
++  EXPECT_EQ("/a", Selection[0].gccSuffix());
++  EXPECT_EQ("/b", Selection[1].gccSuffix());
++}
++
++static void diagnosticCallback(const llvm::SMDiagnostic &D, void *Out) {
++  *reinterpret_cast<std::string *>(Out) = D.getMessage();
++}
++
++static bool parseYaml(MultilibSet &MS, std::string &Diagnostic,
++                      const char *Data) {
++  return MS.parseYaml(llvm::MemoryBufferRef(Data, "TEST"), diagnosticCallback,
++                      &Diagnostic);
++}
++
++static bool parseYaml(MultilibSet &MS, const char *Data) {
++  return MS.parseYaml(llvm::MemoryBufferRef(Data, "TEST"));
++}
++
++// When updating this version also update MultilibVersionCurrent in Multilib.cpp
++#define YAML_PREAMBLE "MultilibVersion: 0.1\n"
++
++TEST(MultilibTest, ParseInvalid) {
++  std::string Diagnostic;
++
+   MultilibSet MS;
+-  MS.push_back(Multilib("one"));
+-  MS.push_back(Multilib("two"));
+-  ASSERT_TRUE(MS.size() == 2);
+-  for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
+-    ASSERT_TRUE(llvm::StringSwitch<bool>(I->gccSuffix())
+-                    .Cases("/one", "/two", true)
+-                    .Default(false));
+-  }
+-  MS.clear();
+-  ASSERT_TRUE(MS.size() == 0);
++
++  EXPECT_FALSE(parseYaml(MS, Diagnostic, R"(
++Variants: []
++)"));
++  EXPECT_TRUE(
++      StringRef(Diagnostic).contains("missing required key 'MultilibVersion'"))
++      << Diagnostic;
++
++  // Reject files with a different major version
++  EXPECT_FALSE(parseYaml(MS, Diagnostic,
++                         R"(
++MultilibVersion: 2.0
++Variants: []
++)"));
++  EXPECT_TRUE(
++      StringRef(Diagnostic).contains("Multilib version 2.0 is unsupported"))
++      << Diagnostic;
++  EXPECT_FALSE(parseYaml(MS, Diagnostic,
++                         R"(
++MultilibVersion: 1.0
++Variants: []
++)"));
++  EXPECT_TRUE(
++      StringRef(Diagnostic).contains("Multilib version 1.0 is unsupported"))
++      << Diagnostic;
++
++  // Reject files with a later minor version
++  EXPECT_FALSE(parseYaml(MS, Diagnostic,
++                         R"(
++MultilibVersion: 0.9
++Variants: []
++)"));
++  EXPECT_TRUE(
++      StringRef(Diagnostic).contains("Multilib version 0.9 is unsupported"))
++      << Diagnostic;
++
++  // Accept files with the same major version and the same or earlier minor
++  // version
++  EXPECT_TRUE(parseYaml(MS, Diagnostic, R"(
++MultilibVersion: 0.1
++Variants: []
++)")) << Diagnostic;
++
++  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE));
++  EXPECT_TRUE(StringRef(Diagnostic).contains("missing required key 'Variants'"))
++      << Diagnostic;
++
++  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
++Variants:
++- Dir: /abc
++  Flags: []
++  PrintOptions: []
++)"));
++  EXPECT_TRUE(StringRef(Diagnostic).contains("paths must be relative"))
++      << Diagnostic;
++
++  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
++Variants:
++- Flags: []
++  PrintOptions: []
++)"));
++  EXPECT_TRUE(StringRef(Diagnostic).contains("missing required key 'Dir'"))
++      << Diagnostic;
++
++  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
++Variants:
++- Dir: .
++  PrintOptions: []
++)"));
++  EXPECT_TRUE(StringRef(Diagnostic).contains("missing required key 'Flags'"))
++      << Diagnostic;
++
++  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
++Variants:
++- Dir: .
++  Flags: []
++)"));
++  EXPECT_TRUE(
++      StringRef(Diagnostic).contains("missing required key 'PrintOptions'"))
++      << Diagnostic;
++
++  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
++Variants: []
++FlagMap:
++- Regex: abc
++)"));
++  EXPECT_TRUE(
++      StringRef(Diagnostic)
++          .contains("value required for 'MatchFlags' or 'NoMatchFlags'"))
++      << Diagnostic;
++
++  EXPECT_FALSE(parseYaml(MS, Diagnostic, YAML_PREAMBLE R"(
++Variants: []
++FlagMap:
++- Dir: .
++  Regex: '('
++  PrintOptions: []
++)"));
++  EXPECT_TRUE(StringRef(Diagnostic).contains("parentheses not balanced"))
++      << Diagnostic;
+ }
+ 
+-TEST(MultilibTest, SetRegexFilter) {
++TEST(MultilibTest, Parse) {
+   MultilibSet MS;
+-  MS.Maybe(Multilib("one"));
+-  MS.Maybe(Multilib("two"));
+-  MS.Maybe(Multilib("three"));
+-  ASSERT_EQ(MS.size(), (unsigned)2 * 2 * 2)
+-      << "Size before filter was incorrect. Contents:\n" << MS;
+-  MS.FilterOut("/one/two/three");
+-  ASSERT_EQ(MS.size(), (unsigned)2 * 2 * 2 - 1)
+-      << "Size after filter was incorrect. Contents:\n" << MS;
+-  for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
+-    ASSERT_TRUE(I->gccSuffix() != "/one/two/three")
+-        << "The filter should have removed " << *I;
+-  }
++  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: .
++  Flags: []
++  PrintOptions: []
++)"));
++  EXPECT_EQ(1U, MS.size());
++  EXPECT_EQ("", MS.begin()->gccSuffix());
++
++  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: abc
++  Flags: []
++  PrintOptions: []
++)"));
++  EXPECT_EQ(1U, MS.size());
++  EXPECT_EQ("/abc", MS.begin()->gccSuffix());
++
++  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: pqr
++  Flags: []
++  PrintOptions: [-mfloat-abi=soft]
++)"));
++  EXPECT_EQ(1U, MS.size());
++  EXPECT_EQ("/pqr", MS.begin()->gccSuffix());
++  EXPECT_EQ(std::vector<std::string>({"-mfloat-abi=soft"}),
++            MS.begin()->getPrintOptions());
++
++  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: pqr
++  Flags: []
++  PrintOptions: [-mfloat-abi=soft, -fno-exceptions]
++)"));
++  EXPECT_EQ(1U, MS.size());
++  EXPECT_EQ(std::vector<std::string>({"-mfloat-abi=soft", "-fno-exceptions"}),
++            MS.begin()->getPrintOptions());
++
++  EXPECT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: a
++  Flags: []
++  PrintOptions: []
++- Dir: b
++  Flags: []
++  PrintOptions: []
++)"));
++  EXPECT_EQ(2U, MS.size());
+ }
+ 
+-TEST(MultilibTest, SetFilterObject) {
++TEST(MultilibTest, SelectSoft) {
+   MultilibSet MS;
+-  MS.Maybe(Multilib("orange"));
+-  MS.Maybe(Multilib("pear"));
+-  MS.Maybe(Multilib("plum"));
+-  ASSERT_EQ((int)MS.size(), 1 /* Default */ +
+-                            1 /* pear */ +
+-                            1 /* plum */ +
+-                            1 /* pear/plum */ +
+-                            1 /* orange */ +
+-                            1 /* orange/pear */ +
+-                            1 /* orange/plum */ +
+-                            1 /* orange/pear/plum */ )
+-      << "Size before filter was incorrect. Contents:\n" << MS;
+-  MS.FilterOut([](const Multilib &M) {
+-    return StringRef(M.gccSuffix()).startswith("/p");
+-  });
+-  ASSERT_EQ((int)MS.size(), 1 /* Default */ +
+-                            1 /* orange */ +
+-                            1 /* orange/pear */ +
+-                            1 /* orange/plum */ + 
+-                            1 /* orange/pear/plum */ )
+-      << "Size after filter was incorrect. Contents:\n" << MS;
+-  for (MultilibSet::const_iterator I = MS.begin(), E = MS.end(); I != E; ++I) {
+-    ASSERT_FALSE(StringRef(I->gccSuffix()).startswith("/p"))
+-        << "The filter should have removed " << *I;
+-  }
++  llvm::SmallVector<Multilib> Selected;
++  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: s
++  Flags: [softabi]
++  PrintOptions: []
++FlagMap:
++- Regex: mfloat-abi=soft
++  MatchFlags: [softabi]
++- Regex: mfloat-abi=softfp
++  MatchFlags: [softabi]
++)"));
++  EXPECT_TRUE(MS.select({"mfloat-abi=soft"}, Selected));
++  EXPECT_TRUE(MS.select({"mfloat-abi=softfp"}, Selected));
++  EXPECT_FALSE(MS.select({"mfloat-abi=hard"}, Selected));
+ }
+ 
+-TEST(MultilibTest, SetSelection1) {
+-  MultilibSet MS1 = MultilibSet()
+-    .Maybe(Multilib("64").flag("+m64"));
+-
+-  Multilib::flags_list FlagM64;
+-  FlagM64.push_back("+m64");
+-  Multilib SelectionM64;
+-  ASSERT_TRUE(MS1.select(FlagM64, SelectionM64))
+-      << "Flag set was {\"+m64\"}, but selection not found";
+-  ASSERT_TRUE(SelectionM64.gccSuffix() == "/64")
+-      << "Selection picked " << SelectionM64 << " which was not expected";
+-
+-  Multilib::flags_list FlagNoM64;
+-  FlagNoM64.push_back("-m64");
+-  Multilib SelectionNoM64;
+-  ASSERT_TRUE(MS1.select(FlagNoM64, SelectionNoM64))
+-      << "Flag set was {\"-m64\"}, but selection not found";
+-  ASSERT_TRUE(SelectionNoM64.gccSuffix() == "")
+-      << "Selection picked " << SelectionNoM64 << " which was not expected";
++TEST(MultilibTest, SelectSoftFP) {
++  MultilibSet MS;
++  llvm::SmallVector<Multilib> Selected;
++  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: f
++  Flags: [mfloat-abi=softfp]
++  PrintOptions: []
++)"));
++  EXPECT_FALSE(MS.select({"mfloat-abi=soft"}, Selected));
++  EXPECT_TRUE(MS.select({"mfloat-abi=softfp"}, Selected));
++  EXPECT_FALSE(MS.select({"mfloat-abi=hard"}, Selected));
+ }
+ 
+-TEST(MultilibTest, SetSelection2) {
+-  MultilibSet MS2 = MultilibSet()
+-    .Maybe(Multilib("el").flag("+EL"))
+-    .Maybe(Multilib("sf").flag("+SF"));
+-
+-  for (unsigned I = 0; I < 4; ++I) {
+-    bool IsEL = I & 0x1;
+-    bool IsSF = I & 0x2;
+-    Multilib::flags_list Flags;
+-    if (IsEL)
+-      Flags.push_back("+EL");
+-    else
+-      Flags.push_back("-EL");
+-
+-    if (IsSF)
+-      Flags.push_back("+SF");
+-    else
+-      Flags.push_back("-SF");
+-
+-    Multilib Selection;
+-    ASSERT_TRUE(MS2.select(Flags, Selection)) << "Selection failed for "
+-                                              << (IsEL ? "+EL" : "-EL") << " "
+-                                              << (IsSF ? "+SF" : "-SF");
+-
+-    std::string Suffix;
+-    if (IsEL)
+-      Suffix += "/el";
+-    if (IsSF)
+-      Suffix += "/sf";
+-
+-    ASSERT_EQ(Selection.gccSuffix(), Suffix) << "Selection picked " << Selection
+-                                             << " which was not expected ";
+-  }
++TEST(MultilibTest, SelectHard) {
++  // If hard float is all that's available then select that only if compiling
++  // with hard float.
++  MultilibSet MS;
++  llvm::SmallVector<Multilib> Selected;
++  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: h
++  Flags: [mfloat-abi=hard]
++  PrintOptions: []
++)"));
++  EXPECT_FALSE(MS.select({"mfloat-abi=soft"}, Selected));
++  EXPECT_FALSE(MS.select({"mfloat-abi=softfp"}, Selected));
++  EXPECT_TRUE(MS.select({"mfloat-abi=hard"}, Selected));
+ }
+ 
+-TEST(MultilibTest, SetCombineWith) {
+-  MultilibSet Coffee;
+-  Coffee.push_back(Multilib("coffee"));
+-  MultilibSet Milk;
+-  Milk.push_back(Multilib("milk"));
+-  MultilibSet Latte;
+-  ASSERT_EQ(Latte.size(), (unsigned)0);
+-  Latte.combineWith(Coffee);
+-  ASSERT_EQ(Latte.size(), (unsigned)1);
+-  Latte.combineWith(Milk);
+-  ASSERT_EQ(Latte.size(), (unsigned)2);
++TEST(MultilibTest, SelectFloatABI) {
++  MultilibSet MS;
++  llvm::SmallVector<Multilib> Selected;
++  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: s
++  Flags: [softabi]
++  PrintOptions: []
++- Dir: f
++  Flags: [softabi, hasfp]
++  PrintOptions: []
++- Dir: h
++  Flags: [hardabi, hasfp]
++  PrintOptions: []
++FlagMap:
++- Regex: mfloat-abi=(soft|softfp)
++  MatchFlags: [softabi]
++- Regex: mfloat-abi=hard
++  MatchFlags: [hardabi]
++- Regex: mfloat-abi=soft
++  NoMatchFlags: [hasfp]
++)"));
++  MS.select({"mfloat-abi=soft"}, Selected);
++  EXPECT_EQ("/s", Selected.back().gccSuffix());
++  MS.select({"mfloat-abi=softfp"}, Selected);
++  EXPECT_EQ("/f", Selected.back().gccSuffix());
++  MS.select({"mfloat-abi=hard"}, Selected);
++  EXPECT_EQ("/h", Selected.back().gccSuffix());
+ }
+ 
+-TEST(MultilibTest, SetPriority) {
++TEST(MultilibTest, SelectFloatABIReversed) {
++  // If soft is specified after softfp then softfp will never be
++  // selected because soft is compatible with softfp and last wins.
+   MultilibSet MS;
+-  MS.push_back(Multilib("foo", {}, {}, 1).flag("+foo"));
+-  MS.push_back(Multilib("bar", {}, {}, 2).flag("+bar"));
++  llvm::SmallVector<Multilib> Selected;
++  ASSERT_TRUE(parseYaml(MS, YAML_PREAMBLE R"(
++Variants:
++- Dir: h
++  Flags: [hardabi, hasfp]
++  PrintOptions: []
++- Dir: f
++  Flags: [softabi, hasfp]
++  PrintOptions: []
++- Dir: s
++  Flags: [softabi]
++  PrintOptions: []
++FlagMap:
++- Regex: mfloat-abi=(soft|softfp)
++  MatchFlags: [softabi]
++- Regex: mfloat-abi=hard
++  MatchFlags: [hardabi]
++- Regex: mfloat-abi=soft
++  NoMatchFlags: [hasfp]
++)"));
++  MS.select({"mfloat-abi=soft"}, Selected);
++  EXPECT_EQ("/s", Selected.back().gccSuffix());
++  MS.select({"mfloat-abi=softfp"}, Selected);
++  EXPECT_EQ("/s", Selected.back().gccSuffix());
++  MS.select({"mfloat-abi=hard"}, Selected);
++  EXPECT_EQ("/h", Selected.back().gccSuffix());
++}
+ 
+-  Multilib::flags_list Flags1;
+-  Flags1.push_back("+foo");
+-  Flags1.push_back("-bar");
+-  Multilib Selection1;
+-  ASSERT_TRUE(MS.select(Flags1, Selection1))
+-      << "Flag set was {\"+foo\"}, but selection not found";
+-  ASSERT_TRUE(Selection1.gccSuffix() == "/foo")
+-      << "Selection picked " << Selection1 << " which was not expected";
++TEST(MultilibTest, SelectMClass) {
++  const char *MultilibSpec = YAML_PREAMBLE R"(
++Variants:
++- Dir: thumb/v6-m/nofp
++  Flags: [target=thumbv6m-none-eabi]
++  PrintOptions: [--target=thumbv6m-none-eabi, -mfloat-abi=soft]
++
++- Dir: thumb/v7-m/nofp
++  Flags: [target=thumbv7m-none-eabi]
++  PrintOptions: [--target=thumbv7m-none-eabi, -mfloat-abi=soft]
++
++- Dir: thumb/v7e-m/nofp
++  Flags: [target=thumbv7em-none-eabi]
++  PrintOptions: [--target=thumbv7em-none-eabi, -mfloat-abi=soft, -mfpu=none]
++
++- Dir: thumb/v8-m.main/nofp
++  Flags: [target=thumbv8m.main-none-eabi]
++  PrintOptions: [--target=arm-none-eabi, -mfloat-abi=soft, -march=armv8m.main+nofp]
++
++- Dir: thumb/v8.1-m.main/nofp/nomve
++  Flags: [target=thumbv8.1m.main-none-eabi]
++  PrintOptions: [--target=arm-none-eabi, -mfloat-abi=soft, -march=armv8.1m.main+nofp+nomve]
++
++- Dir: thumb/v7e-m/fpv4_sp_d16
++  Flags: [target=thumbv7em-none-eabihf, mfpu=fpv4-sp-d16]
++  PrintOptions: [--target=thumbv7em-none-eabihf, -mfpu=fpv4-sp-d16]
++
++- Dir: thumb/v7e-m/fpv5_d16
++  Flags: [target=thumbv7em-none-eabihf, mfpu=fpv5-d16]
++  PrintOptions: [--target=thumbv7em-none-eabihf, -mfpu=fpv5-d16]
++
++- Dir: thumb/v8-m.main/fp
++  Flags: [target=thumbv8m.main-none-eabihf]
++  PrintOptions: [--target=thumbv8m.main-none-eabihf]
++
++- Dir: thumb/v8.1-m.main/fp
++  Flags: [target=thumbv8.1m.main-none-eabihf]
++  PrintOptions: [--target=thumbv8.1m.main-none-eabihf]
++
++- Dir: thumb/v8.1-m.main/nofp/mve
++  Flags: [target=thumbv8.1m.main-none-eabihf, march=+mve]
++  PrintOptions: [--target=arm-none-eabihf, -march=armv8.1m.main+nofp+mve]
++
++FlagMap:
++- Regex: target=thumbv8(\.[0-9]+)?m\.base-none-eabi
++  MatchFlags: [target=thumbv6m-none-eabi]
++- Regex: thumbv8\.[1-9]m\.main-none-eabi
++  MatchFlags: [target=thumbv8.1m.main-none-eabi]
++- Regex: thumbv8\.[1-9]m\.main-none-eabihf
++  MatchFlags: [target=thumbv8.1m.main-none-eabihf]
++)";
+ 
+-  Multilib::flags_list Flags2;
+-  Flags2.push_back("+foo");
+-  Flags2.push_back("+bar");
+-  Multilib Selection2;
+-  ASSERT_TRUE(MS.select(Flags2, Selection2))
+-      << "Flag set was {\"+bar\"}, but selection not found";
+-  ASSERT_TRUE(Selection2.gccSuffix() == "/bar")
+-      << "Selection picked " << Selection2 << " which was not expected";
++  MultilibSet MS;
++  llvm::SmallVector<Multilib> Selected;
++  ASSERT_TRUE(parseYaml(MS, MultilibSpec));
++
++  EXPECT_TRUE(
++      MS.select({"target=thumbv6m-none-eabi", "mfloat-abi=soft"}, Selected));
++  EXPECT_EQ("/thumb/v6-m/nofp", Selected.back().gccSuffix());
++
++  EXPECT_TRUE(
++      MS.select({"target=thumbv7m-none-eabi", "mfloat-abi=soft"}, Selected));
++  EXPECT_EQ("/thumb/v7-m/nofp", Selected.back().gccSuffix());
++
++  EXPECT_TRUE(
++      MS.select({"target=thumbv7em-none-eabi", "mfloat-abi=soft", "mfpu=none"},
++                Selected));
++  EXPECT_EQ("/thumb/v7e-m/nofp", Selected.back().gccSuffix());
++
++  EXPECT_TRUE(MS.select({"target=thumbv8m.main-none-eabi", "mfloat-abi=soft"},
++                        Selected));
++  EXPECT_EQ("/thumb/v8-m.main/nofp", Selected.back().gccSuffix());
++
++  EXPECT_TRUE(MS.select(
++      {"target=thumbv8.1m.main-none-eabi", "mfloat-abi=soft", "mfpu=none"},
++      Selected));
++  EXPECT_EQ("/thumb/v8.1-m.main/nofp/nomve", Selected.back().gccSuffix());
++
++  EXPECT_TRUE(MS.select(
++      {"target=thumbv7em-none-eabihf", "mfloat-abi=hard", "mfpu=fpv4-sp-d16"},
++      Selected));
++  EXPECT_EQ("/thumb/v7e-m/fpv4_sp_d16", Selected.back().gccSuffix());
++
++  EXPECT_TRUE(MS.select(
++      {"target=thumbv7em-none-eabihf", "mfloat-abi=hard", "mfpu=fpv5-d16"},
++      Selected));
++  EXPECT_EQ("/thumb/v7e-m/fpv5_d16", Selected.back().gccSuffix());
++
++  EXPECT_TRUE(MS.select({"target=thumbv8m.main-none-eabihf", "mfloat-abi=hard"},
++                        Selected));
++  EXPECT_EQ("/thumb/v8-m.main/fp", Selected.back().gccSuffix());
++
++  EXPECT_TRUE(MS.select(
++      {"target=thumbv8.1m.main-none-eabihf", "mfloat-abi=hard"}, Selected));
++  EXPECT_EQ("/thumb/v8.1-m.main/fp", Selected.back().gccSuffix());
++
++  EXPECT_TRUE(MS.select({"target=thumbv8.1m.main-none-eabihf",
++                         "mfloat-abi=hard", "mfpu=none", "march=+mve"},
++                        Selected));
++  EXPECT_EQ("/thumb/v8.1-m.main/nofp/mve", Selected.back().gccSuffix());
+ }
 diff --git a/llvm/cmake/modules/AddLLVM.cmake b/llvm/cmake/modules/AddLLVM.cmake
 index 9eef4eb7e35d..11106ba582fb 100644
 --- a/llvm/cmake/modules/AddLLVM.cmake
@@ -111,3 +4568,131 @@ index 274cef64b3e7..0ef4b82474ce 100644
 +    WORKING_DIRECTORY "${outdir}")
  
  endfunction()
+diff --git a/clang/test/Driver/arm-compiler-rt.c b/clang/test/Driver/arm-compiler-rt.c
+index a8ea38a7da3c..8b9bcfe77809 100644
+--- a/clang/test/Driver/arm-compiler-rt.c
++++ b/clang/test/Driver/arm-compiler-rt.c
+@@ -1,47 +1,54 @@
+ // RUN: %clang -target arm-none-eabi \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -rtlib=compiler-rt -### %s 2>&1 \
+ // RUN:   | FileCheck %s -check-prefix ARM-EABI
+-// ARM-EABI: "-L{{.*[/\\]}}Inputs/resource_dir_with_arch_subdir{{/|\\\\}}lib{{/|\\\\}}baremetal"
+ // ARM-EABI: "-lclang_rt.builtins-arm"
+ 
+ // RUN: %clang -target arm-linux-gnueabi \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -rtlib=compiler-rt -### %s 2>&1 \
+ // RUN:   | FileCheck %s -check-prefix ARM-GNUEABI
+ // ARM-GNUEABI: "{{.*[/\\]}}libclang_rt.builtins-arm.a"
+ 
+ // RUN: %clang -target arm-linux-gnueabi \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -rtlib=compiler-rt -mfloat-abi=hard -### %s 2>&1 \
+ // RUN:   | FileCheck %s -check-prefix ARM-GNUEABI-ABI
+ // ARM-GNUEABI-ABI: "{{.*[/\\]}}libclang_rt.builtins-armhf.a"
+ 
+ // RUN: %clang -target arm-linux-gnueabihf \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -rtlib=compiler-rt -### %s 2>&1 \
+ // RUN:   | FileCheck %s -check-prefix ARM-GNUEABIHF
+ // ARM-GNUEABIHF: "{{.*[/\\]}}libclang_rt.builtins-armhf.a"
+ 
+ // RUN: %clang -target arm-linux-gnueabihf \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -rtlib=compiler-rt -mfloat-abi=soft -### %s 2>&1 \
+ // RUN:   | FileCheck %s -check-prefix ARM-GNUEABIHF-ABI
+ // ARM-GNUEABIHF-ABI: "{{.*[/\\]}}libclang_rt.builtins-arm.a"
+ 
+ // RUN: %clang -target arm-windows-itanium \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -rtlib=compiler-rt -### %s 2>&1 \
+ // RUN:   | FileCheck %s -check-prefix ARM-WINDOWS
+ // ARM-WINDOWS: "{{.*[/\\]}}clang_rt.builtins-arm.lib"
+ 
+ // RUN: %clang -target arm-linux-androideabi \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -rtlib=compiler-rt -### %s 2>&1 \
+ // RUN:   | FileCheck %s -check-prefix ARM-ANDROID
+ // ARM-ANDROID: "{{.*[/\\]}}libclang_rt.builtins-arm-android.a"
+ 
+ // RUN: %clang -target arm-linux-androideabi \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -rtlib=compiler-rt -mfloat-abi=hard -### %s 2>&1 \
+ // RUN:   | FileCheck %s -check-prefix ARM-ANDROIDHF
+diff --git a/clang/test/Driver/print-libgcc-file-name-clangrt.c b/clang/test/Driver/print-libgcc-file-name-clangrt.c
+index 5084c9966474..d5e7c48dde29 100644
+--- a/clang/test/Driver/print-libgcc-file-name-clangrt.c
++++ b/clang/test/Driver/print-libgcc-file-name-clangrt.c
+@@ -2,12 +2,14 @@
+ 
+ // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+ // RUN:     --target=x86_64-pc-linux \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-X8664 %s
+ // CHECK-CLANGRT-X8664: libclang_rt.builtins-x86_64.a
+ 
+ // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+ // RUN:     --target=i386-pc-linux \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-I386 %s
+ // CHECK-CLANGRT-I386: libclang_rt.builtins-i386.a
+@@ -16,41 +18,48 @@
+ //
+ // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+ // RUN:     --target=i686-pc-linux \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-I386 %s
+ 
+ // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+ // RUN:     --target=arm-linux-gnueabi \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM %s
+ // CHECK-CLANGRT-ARM: libclang_rt.builtins-arm.a
+ 
+ // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+ // RUN:     --target=arm-linux-androideabi \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM-ANDROID %s
+ // CHECK-CLANGRT-ARM-ANDROID: libclang_rt.builtins-arm-android.a
+ 
+ // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+ // RUN:     --target=arm-linux-gnueabihf \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARMHF %s
+ // CHECK-CLANGRT-ARMHF: libclang_rt.builtins-armhf.a
+ 
+ // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+ // RUN:     --target=arm-linux-gnueabi -mfloat-abi=hard \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM-ABI %s
+ // CHECK-CLANGRT-ARM-ABI: libclang_rt.builtins-armhf.a
+ 
+ // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+ // RUN:     --target=armv7m-none-eabi \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM-BAREMETAL %s
+ // CHECK-CLANGRT-ARM-BAREMETAL: libclang_rt.builtins-armv7m.a
+ 
+ // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+ // RUN:     --target=armv7m-vendor-none-eabi \
++// RUN:     --sysroot=%S/Inputs/resource_dir_with_arch_subdir \
+ // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+ // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM-BAREMETAL-PER-TARGET %s
+ // CHECK-CLANGRT-ARM-BAREMETAL-PER-TARGET: libclang_rt.builtins.a
