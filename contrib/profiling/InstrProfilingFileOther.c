@@ -9,7 +9,23 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <fcntl.h>
+
+
+#define DIRECT_SEMIHOST
+
+#ifdef DIRECT_SEMIHOST
+    #include <string.h>
+    #define SH_OPEN_W_PLUS_B              7
+    #define SEMI_CLOSE(FD)                prf_semihost_close((FD))
+    #define SEMI_OPEN(NAME)               prf_semihost_open((NAME), SH_OPEN_W_PLUS_B)
+    #define SEMI_WRITE(FD, BUF, LEN)      prf_semihost_write((FD), (BUF), (LEN))
+#else
+    #include <fcntl.h>
+    #define SEMI_CLOSE(FD)                close((FD))
+    #define SEMI_OPEN(NAME)               open((NAME), O_WRONLY | O_CREAT | O_TRUNC, 0644)
+    #define SEMI_WRITE(FD, BUF, LEN)      write((FD), (BUF), (LEN))
+#endif
+
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
@@ -17,10 +33,105 @@
 #include "InstrProfilingUtil.h"
 
 
-
 #define FILE_NAME   "default.profraw"
 
 static void writeFileWithoutReturn(void);
+
+//----------------------------------------------------------------------------------------------------------------------
+
+
+#ifdef DIRECT_SEMIHOST
+
+#define SYS_CLOSE       (0x02)
+#define SYS_OPEN        (0x01)
+#define SYS_WRITE       (0x05)
+
+#ifdef __aarch64__
+    typedef unsigned long long int sh_param_t;
+#else
+    typedef uintptr_t sh_param_t;
+#endif
+
+static inline uintptr_t __attribute__ ((always_inline)) prf_sys_semihost(uintptr_t op, uintptr_t arg)
+{
+#ifdef __aarch64__
+    register uintptr_t x0 __asm("x0") = op;
+    register uintptr_t x1 __asm("x1") = arg;
+
+    __asm volatile (
+            "hlt	#0xf000   \n"
+            : "=r" (x0)                                /* output */
+            : "r" (x0), "r" (x1)                       /* inputs */
+            : "x2", "x3", "x30", "memory", "cc"        /* clobber */
+    );
+    return x0;
+#else
+    register uintptr_t r0 __asm("r0") = op;
+    register uintptr_t r1 __asm("r1") = arg;
+
+    __asm volatile (
+            #if __ARM_ARCH_PROFILE == 'M'
+                "bkpt #0xab  \n"
+            #else
+                #ifdef __thumb__
+                    "svc #0xab  \n"
+                #else
+                    "svc #0x123456  \n"
+                #endif
+            #endif
+            : "=r" (r0)                                /* output */
+            : "r" (r0), "r" (r1)                       /* inputs */
+            : "r2", "r3", "ip", "lr", "memory", "cc"   /* clobber */
+    );
+    return r0;
+#endif
+}   // prf_sys_semihost
+
+
+static int prf_semihost_close(int fd)
+{
+    struct {
+        sh_param_t  field1;
+    } arg = {
+        .field1 = fd
+    };
+    return (int) prf_sys_semihost(SYS_CLOSE, (uintptr_t) &arg);
+}   // prf_semihost_close
+
+
+static int prf_semihost_open(const char *pathname, int semiflags)
+{
+    struct {
+        sh_param_t  field1;
+        sh_param_t  field2;
+        sh_param_t  field3;
+    } arg = {
+        .field1 = (sh_param_t) (uintptr_t) pathname,
+        .field2 = semiflags,
+        .field3 = strlen(pathname)
+    };
+
+    return (int) prf_sys_semihost(SYS_OPEN, (uintptr_t) &arg);
+}   // prf_semihost_open
+
+
+static ssize_t prf_semihost_write(int fd, const void *buf, uintptr_t count)
+{
+    struct {
+        sh_param_t  field1;
+        sh_param_t  field2;
+        sh_param_t  field3;
+    } arg = {
+        .field1 = fd,
+        .field2 = (sh_param_t) (uintptr_t) buf,
+        .field3 = (sh_param_t) count
+    };
+
+    uintptr_t ret = prf_sys_semihost(SYS_WRITE, (uintptr_t) &arg);
+    return (ssize_t) (count - ret);
+}   // prf_semihost_write
+
+#endif
 
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -45,13 +156,13 @@ int INSTR_PROF_PROFILE_RUNTIME_VAR;
 static inline const void *getMinAddr(const void *A1, const void *A2)
 {
     return A1 < A2 ? A1 : A2;
-}
+}   // getMinAddr
 
 
 static inline const void *getMaxAddr(const void *A1, const void *A2)
 {
     return A1 > A2 ? A1 : A2;
-}
+}   // getMaxAddr
 
 
 // Given a pointer to the __llvm_profile_data for the function, record the
@@ -186,7 +297,7 @@ static uint32_t fileWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs, uint32_t
 
         if (IOVecs[I].Data)
         {
-            if (write(fd, IOVecs[I].Data, Length) != Length)
+            if (SEMI_WRITE(fd, IOVecs[I].Data, Length) != Length)
                 return 1;
         }
         else if (IOVecs[I].UseZeroPadding)
@@ -194,7 +305,7 @@ static uint32_t fileWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs, uint32_t
             while (Length > 0)
             {
                 size_t PartialWriteLen = (sizeof(uint64_t) > Length) ? Length : sizeof(uint64_t);
-                if (write(fd, Zeroes, PartialWriteLen) != PartialWriteLen)
+                if (SEMI_WRITE(fd, Zeroes, PartialWriteLen) != PartialWriteLen)
                 {
                     return 1;
                 }
@@ -227,10 +338,10 @@ int __llvm_profile_write_file(void)
     int fd;
     int r;
 
-    fd = open(FILE_NAME, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    fd = SEMI_OPEN(FILE_NAME);
     initFileWriter(&fileWriter, fd);
     r = lprofWriteData(&fileWriter, 0, 0);
-    close(fd);
+    SEMI_CLOSE(fd);
     return r;
 }   // __llvm_profile_write_file
 

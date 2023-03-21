@@ -16,4 +16,5 @@ add_library(${LIB_PROFILE} STATIC
 target_include_directories(${LIB_PROFILE} PRIVATE
     ${llvmproject_SOURCE_DIR}/compiler-rt/include
     ${llvmproject_SOURCE_DIR}/compiler-rt/lib/profile
+    ${picolibc_SOURCE_DIR}/semihost/
 )

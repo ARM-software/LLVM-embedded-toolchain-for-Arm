@@ -1,10 +1,4 @@
-#
-# Some commands for testing the build procedure of libclang_rt.profile.a
-#
-# cmake .. -GNinja -DFETCHCONTENT_FULLY_DISCONNECTED=ON -DLLVM_TOOLCHAIN_LIBRARY_VARIANTS="aarch64;armv6m_soft_nofp"
-# ninja llvm-toolchain
-# ninja package-llvm-toolchain
-#
+# Configuration for libclang_rt.profile.a
 
 function(add_contrib_lib_profile directory variant target_triple flags libc_target)
     get_runtimes_flags("${directory}" "${flags}")
@@ -39,6 +33,7 @@ function(add_contrib_lib_profile directory variant target_triple flags libc_targ
                                    -DLLVM_CONFIG_PATH=${LLVM_BINARY_DIR}/bin/llvm-config${CMAKE_EXECUTABLE_SUFFIX}
                                    -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                    -Dllvmproject_SOURCE_DIR=${llvmproject_SOURCE_DIR}
+                                   -Dpicolibc_SOURCE_DIR=${picolibc_SOURCE_DIR}
         USES_TERMINAL_CONFIGURE    TRUE
         USES_TERMINAL_BUILD        TRUE
         USES_TERMINAL_INSTALL      TRUE
