@@ -293,8 +293,6 @@ endif()
 set(CPACK_ARCHIVE_COMPONENT_INSTALL TRUE)
 # Don't create a separate archive for each component.
 set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
-# Strip debug info from files before packaging them
-set(CPACK_STRIP_FILES TRUE)
 # When extracting the files put them in an ArmCompiler-.../ directory.
 set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY TRUE)
 
@@ -882,7 +880,6 @@ add_custom_target(
     COMMAND
         "${CMAKE_COMMAND}"
         --install ${CMAKE_BINARY_DIR}
-        --strip
         --component llvm-toolchain
     USES_TERMINAL
 )
@@ -891,11 +888,11 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
     # are declared to be part of the llvm-toolchain
     # install component.
 else()
-    # Also run install-distribution-stripped to install the LLVM
+    # Also run install-distribution to install the LLVM
     # binaries.
     add_dependencies(
         install-llvm-toolchain
-        install-distribution-stripped
+        install-distribution
     )
 endif()
 add_dependencies(
@@ -1048,7 +1045,7 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
         -DLLVM_TABLEGEN=${LLVM_BINARY_DIR}/bin/llvm-tblgen${CMAKE_EXECUTABLE_SUFFIX}
         -DLLVM_TARGETS_TO_BUILD=${LLVM_TARGETS_TO_BUILD_comma}
         BUILD_COMMAND "" # Let the install command build whatever it needs
-        INSTALL_COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target install-distribution-stripped
+        INSTALL_COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target install-distribution
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
