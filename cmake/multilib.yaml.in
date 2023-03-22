@@ -1,0 +1,126 @@
+#
+# Copyright (c) 2022, Arm Limited and affiliates.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# If you're reading this file under the name 'multilib.yaml.in' in the
+# LLVM-embedded-toolchain-for-Arm source tree, then it's not valid
+# YAML in its own right: it's a template that CMakeLists.txt will
+# expand into a real 'multilib.yaml' containing a list of library
+# variants and the flags that will select them.
+#
+# If you're reading it under the name 'multilib.yaml' in the build or
+# install directory, then that substitution has been done.
+#
+# Comments in this file mostly make more sense from the
+# multilib.yaml.in point of view.
+
+MultilibVersion: '0.1'
+
+# The list of library variants is substituted in by CMakeLists.txt, so
+# that it can respect the LLVM_TOOLCHAIN_LIBRARY_VARIANTS setting and
+# only include the set of libraries actually included in this build.
+
+Variants:
+@multilib_variants@
+
+FlagMap:
+
+# Map higher architecture versions to subsets of them, so that a
+# compatible library can be found even for architectures we don't have
+# specific variants for.
+
+# v8-M Baseline is a superset of v6-M
+- Regex: target=thumbv8m\.base-none-unknown-eabi
+  MatchFlags:
+  - target=thumbv6m-none-unknown-eabi
+
+# v8.2-M Mainline is a superset of v8.1-M Mainline, in both hard and
+# soft float variants.
+#
+# Also, v8.1-M Mainline is also a superset of v8-M Mainline, which in
+# turn is a superset of v7E-M, and then of plain v7-M. We have
+# libraries for all those architecture versions, but not for every
+# combination of them with FPUs, so in some cases it might be
+# necessary to fall back to a lower architecture in order to provide
+# the needed FPU support.
+- Regex: target=thumbv8\.[2-9]m\.main-none-unknown-eabi
+  MatchFlags:
+  - target=thumbv8.1m.main-none-unknown-eabi
+  - target=thumbv8m.main-none-unknown-eabi
+  - target=thumbv7em-none-unknown-eabi
+  - target=thumbv7m-none-unknown-eabi
+- Regex: target=thumbv8\.[2-9]m\.main-none-unknown-eabihf
+  MatchFlags:
+  - target=thumbv8.1m.main-none-unknown-eabihf
+  - target=thumbv8m.main-none-unknown-eabihf
+  - target=thumbv7em-none-unknown-eabihf
+  - target=thumbv7m-none-unknown-eabihf
+- Regex: target=thumbv8\.1m\.main-none-unknown-eabi
+  MatchFlags:
+  - target=thumbv8m.main-none-unknown-eabi
+  - target=thumbv7em-none-unknown-eabi
+  - target=thumbv7m-none-unknown-eabi
+- Regex: target=thumbv8\.1m\.main-none-unknown-eabihf
+  MatchFlags:
+  - target=thumbv8m.main-none-unknown-eabihf
+  - target=thumbv7em-none-unknown-eabihf
+  - target=thumbv7m-none-unknown-eabihf
+- Regex: target=thumbv8m\.main-none-unknown-eabi
+  MatchFlags:
+  - target=thumbv7em-none-unknown-eabi
+  - target=thumbv7m-none-unknown-eabi
+- Regex: target=thumbv8m\.main-none-unknown-eabihf
+  MatchFlags:
+  - target=thumbv7em-none-unknown-eabihf
+  - target=thumbv7m-none-unknown-eabihf
+- Regex: target=thumbv7em-none-unknown-eabi
+  MatchFlags:
+  - target=thumbv7m-none-unknown-eabi
+- Regex: target=thumbv7em-none-unknown-eabihf
+  MatchFlags:
+  - target=thumbv7m-none-unknown-eabihf
+
+# Higher versions of v8-A, and v9-A, are all supersets of v8-A. (And
+# of each other, in the obvious way, but we don't have any libraries
+# for those at present, so there's no need to generate all their
+# flags.)
+- Regex: target=armv(8\.[1-9]|9|9\.[1-9])a-none-unknown-eabi
+  MatchFlags:
+  - target=armv8a-none-unknown-eabi
+
+# Hierarchy among FPUs: fpvN-d16 is a superset of fpvN-sp-d16, and
+# fpvN-d16 is a superset of fpv[N-1]-d16, for all N.
+#
+# We don't consider any hardware FP configuration to be compatible
+# with mfpu=none. It would work in most cases to cross-call between
+# code compiled for an FPU or no FPU, if you were using the soft float
+# ABI. But it wouldn't work in all cases: setjmp needs to know whether
+# to save FP registers in the jmp_buf, so a non-FPU-aware setjmp would
+# not behave correctly if linked into an otherwise FPU-using
+# application. Similarly for exception unwinding. So we don't permit
+# selecting an mfpu=none library as a fallback for any hard-FP
+# library.
+- Regex: mfpu=fpv5-d16
+  MatchFlags:
+  - mfpu=fpv4-d16
+  - mfpu=fpv5-sp-d16
+  - mfpu=fpv4-sp-d16
+- Regex: mfpu=fpv5-sp-d16
+  MatchFlags:
+  - mfpu=fpv4-sp-d16
+- Regex: mfpu=fpv4-d16
+  MatchFlags:
+  - mfpu=fpv4-sp-d16
