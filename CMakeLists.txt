@@ -422,7 +422,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
         PREFIX picolibc/${variant}
         DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib llvm-strip
-        CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib -Dspecsdir=none --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
+        CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib -Dspecsdir=none -Dmultilib=false --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
         BUILD_COMMAND ninja
         INSTALL_COMMAND ${MESON_EXECUTABLE} install ${MESON_INSTALL_QUIET}
         USES_TERMINAL_CONFIGURE TRUE
@@ -743,7 +743,7 @@ function(get_compiler_rt_target_triple target_arch)
         else()
             set(target_triple "arm-none-eabi")
         endif()
-        if(flags MATCHES "-mfloat-abi=hard")
+        if(compile_flags MATCHES "-mfloat-abi=hard")
             # Also, compiler-rt looks in the ABI component of the
             # triple to decide whether to use the hard float ABI.
             set(target_triple "${target_triple}hf")
@@ -755,7 +755,7 @@ endfunction()
 function(add_library_variants)
     set(variant_args "${ARGN}")
     while(variant_args)
-        list(POP_FRONT variant_args target_arch variant_suffix flags qemu_params)
+        list(POP_FRONT variant_args target_arch variant_suffix compile_flags multilib_flags qemu_params)
 
         if(variant_suffix)
             set(variant "${target_arch}_${variant_suffix}")
@@ -781,20 +781,34 @@ function(add_library_variants)
         get_compiler_rt_target_triple(${target_arch})
 
         set(directory "lib/clang-runtimes/${parent_dir_name}/${variant}")
-        set(flags "--target=${target_triple} ${flags}")
-        make_config_cfg("${directory}" "${variant}" "${flags}")
+        set(compile_flags "--target=${target_triple} ${compile_flags}")
+        make_config_cfg("${directory}" "${variant}" "${compile_flags}")
         set(variant_options)
         if(NOT PREBUILT_TARGET_LIBRARIES)
-            add_picolibc("${directory}" "${variant}" "${target_triple}" "${flags}" "${qemu_params}" variant_options)
-            add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}")
+            add_picolibc("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "${qemu_params}" variant_options)
+            add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "picolibc_${variant}")
             list(APPEND variant_options ${picolibc_specific_runtimes_options})
-            add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}" "${variant_options}")
-            if(flags MATCHES "-march=armv8")
+            add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "picolibc_${variant}" "${variant_options}")
+            if(compile_flags MATCHES "-march=armv8")
                 message("C++ runtime libraries tests disabled for ${variant}")
             else()
                 add_libcxx_libcxxabi_libunwind_tests("${variant}")
             endif()
         endif()
+
+        string(APPEND multilib_variants "- Dir: ${parent_dir_name}/${variant}\n")
+
+        string(APPEND multilib_variants "  Flags:\n")
+        string(REPLACE " " ";" multilib_flags_list ${multilib_flags})
+        foreach(flag ${multilib_flags_list})
+          string(APPEND multilib_variants "  - ${flag}\n")
+        endforeach()
+
+        string(APPEND multilib_variants "  PrintOptions:\n")
+        string(REPLACE " " ";" multilib_printoptions_list ${compile_flags})
+        foreach(option ${multilib_printoptions_list})
+          string(APPEND multilib_variants "  - ${option}\n")
+        endforeach()
 
         install(
             DIRECTORY "${LLVM_BINARY_DIR}/${directory}/"
@@ -802,24 +816,38 @@ function(add_library_variants)
             COMPONENT llvm-toolchain
         )
     endwhile()
+    set(multilib_variants "${multilib_variants}" PARENT_SCOPE)
 endfunction()
 
+set(multilib_variants "")
+
 # Define which library variants to build and which flags to use.
-# The order is <parent dir> <arch> <name suffix> <flags> <qemu params>
+# The order is <arch> <name suffix> <compile flags> <multilib selection flags> <qemu params>
 add_library_variants(
-    aarch64         ""                  "-march=armv8-a"                                        "-M raspi3b"
-    armv4t          ""                  "-march=armv4t"                                         "-M musicpal -cpu arm926"
-    armv5te         ""                  "-march=armv5te"                                        "-M musicpal -cpu arm926"
-    armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"                        "-M microbit"
-    armv7m          soft_nofp           "-mfloat-abi=soft -march=armv7m+nofp"                   "-M mps2-an385 -cpu cortex-m3"
-    armv7em         soft_nofp           "-mfloat-abi=soft -march=armv7em -mfpu=none"            "-M mps2-an386 -cpu cortex-m4"
-    armv7em         hard_fpv4_sp_d16    "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"     "-M mps2-an386 -cpu cortex-m4"
-    armv7em         hard_fpv5_d16       "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"        "-M mps2-an500 -cpu cortex-m7"
-    armv8m.main     soft_nofp           "-mfloat-abi=soft -march=armv8m.main+nofp"              "-M mps2-an505 -cpu cortex-m33"
-    armv8m.main     hard_fp             "-mfloat-abi=hard -march=armv8m.main+fp"                "-M mps3-an524 -cpu cortex-m33"
-    armv8.1m.main   soft_nofp_nomve     "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"      "-M mps3-an547 -cpu cortex-m55"
-    armv8.1m.main   hard_fp             "-mfloat-abi=hard -march=armv8.1m.main+fp"              "-M mps3-an547 -cpu cortex-m55"
-    armv8.1m.main   hard_nofp_mve       "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"        "-M mps3-an547 -cpu cortex-m55"
+    aarch64         ""                  ""                                                      "target=aarch64-none-unknown-elf"                                                          "-M raspi3b"
+    armv4t          ""                  "-march=armv4t"                                         "target=armv4t-none-unknown-eabi mfpu=none"                                                "-M musicpal -cpu arm926"
+    armv5te         ""                  "-march=armv5te"                                        "target=armv5e-none-unknown-eabi mfpu=none"                                                "-M musicpal -cpu arm926"
+    armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"                        "target=thumbv6m-none-unknown-eabi mfpu=none"                                              "-M microbit"
+    armv7m          soft_nofp           "-mfloat-abi=soft -march=armv7m+nofp"                   "target=thumbv7m-none-unknown-eabi mfpu=none"                                              "-M mps2-an385 -cpu cortex-m3"
+    armv7em         soft_nofp           "-mfloat-abi=soft -march=armv7em -mfpu=none"            "target=thumbv7em-none-unknown-eabi mfpu=none"                                             "-M mps2-an386 -cpu cortex-m4"
+    armv7em         hard_fpv4_sp_d16    "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"     "target=thumbv7em-none-unknown-eabihf mfpu=fpv4-sp-d16"                                    "-M mps2-an386 -cpu cortex-m4"
+    armv7em         hard_fpv5_d16       "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"        "target=thumbv7em-none-unknown-eabihf mfpu=fpv5-d16"                                       "-M mps2-an500 -cpu cortex-m7"
+    armv8m.main     soft_nofp           "-mfloat-abi=soft -march=armv8m.main+nofp"              "target=thumbv8m.main-none-unknown-eabi mfpu=none"                                         "-M mps2-an505 -cpu cortex-m33"
+    armv8m.main     hard_fp             "-mfloat-abi=hard -march=armv8m.main+fp"                "target=thumbv8m.main-none-unknown-eabihf mfpu=fpv5-d16"                                   "-M mps3-an524 -cpu cortex-m33"
+    armv8.1m.main   soft_nofp_nomve     "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"      "target=thumbv8.1m.main-none-unknown-eabi mfpu=none"                                       "-M mps3-an547 -cpu cortex-m55"
+    armv8.1m.main   hard_fp             "-mfloat-abi=hard -march=armv8.1m.main+fp"              "target=thumbv8.1m.main-none-unknown-eabihf march=+fp16 mfpu=fp-armv8-fullfp16-sp-d16"     "-M mps3-an547 -cpu cortex-m55"
+    armv8.1m.main   hard_nofp_mve       "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"        "target=thumbv8.1m.main-none-unknown-eabihf march=+dsp march=+mve mfpu=none"               "-M mps3-an547 -cpu cortex-m55"
+)
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/multilib.yaml.in
+    ${CMAKE_CURRENT_BINARY_DIR}/llvm/lib/clang-runtimes/multilib.yaml
+    @ONLY
+)
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/llvm/lib/clang-runtimes/multilib.yaml
+    DESTINATION lib/clang-runtimes
+    COMPONENT llvm-toolchain
 )
 
 install(

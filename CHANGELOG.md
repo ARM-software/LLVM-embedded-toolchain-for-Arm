@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Support for locales and input/output streams
 - Experimental support for Armv4T and Armv5TE architectures (#177)
 - Support for building locally on Windows & macOS (#188)
+- Experimental support for multilib, meaning that clang can now automatically select an appropriate set of libraries based on your compile flags, without needing either an explicit `--sysroot` option or a `--config` option. However, the config files are still present, and you can still use them instead.
 
 ### Fixed
 
