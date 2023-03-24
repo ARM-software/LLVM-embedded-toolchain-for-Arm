@@ -661,7 +661,6 @@ function(add_libcxx_libcxxabi_libunwind directory variant target_triple flags li
         -DLIBCXXABI_USE_COMPILER_RT=ON
         -DLIBCXXABI_USE_LLVM_UNWINDER=ON
         -DLIBCXX_CXX_ABI=libcxxabi
-        -DLIBCXX_ENABLE_DEBUG_MODE_SUPPORT=OFF
         -DLIBCXX_ENABLE_FILESYSTEM=OFF
         -DLIBCXX_ENABLE_SHARED=OFF
         -DLIBCXX_ENABLE_STATIC=ON
