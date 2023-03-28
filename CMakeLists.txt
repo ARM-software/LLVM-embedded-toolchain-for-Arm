@@ -481,6 +481,12 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         ungetc
     )
     # remove tests failing on a given platform
+    if(variant STREQUAL "armv4t")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip tls)
+    endif()
+    if(variant STREQUAL "armv5te")
+        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except tls)
+    endif()
     if(variant STREQUAL "armv6m_soft_nofp")
         list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except tls)
     endif()
@@ -518,7 +524,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         add_custom_command(
                 OUTPUT picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
                 COMMAND ${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX} --config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg
-                -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/samples/ldscripts/${variant}.ld
+                -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld
                 -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
                 ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
                 COMMENT "Building: ${test} for ${variant}"
@@ -552,7 +558,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         set(test_executor
             "${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-params=${qemu_params_colon}")
         set(${variant_runtime_options_var}
-            -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/samples/ldscripts/${variant}.ld
+            -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld
             -DLIBCXX_EXECUTOR=${test_executor}
             -DLIBCXXABI_EXECUTOR=${test_executor}
             -DLIBUNWIND_EXECUTOR=${test_executor}
