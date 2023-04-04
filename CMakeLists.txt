@@ -203,11 +203,13 @@ function(read_repo_version output_variable_prefix repo)
     if(tagType STREQUAL "commithash")
         # GIT_SHALLOW doesn't work with commit hashes.
         set(shallow OFF)
-    elseif(tagType STREQUAL "tag" OR tagType STREQUAL "branch")
+    elseif(tagType STREQUAL "branch")
         set(shallow ON)
         # CMake docs recommend that "branch names and tags should
         # generally be specified as remote names"
         set(tag "origin/${tag}")
+    elseif(tagType STREQUAL "tag")
+        set(shallow ON)
     else()
         message(FATAL_ERROR "Unrecognised tagType ${tagType}")
     endif()
