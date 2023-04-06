@@ -344,6 +344,7 @@ add_custom_target(
     COMMAND
     "${CMAKE_COMMAND}"
     -DLLVMEmbeddedToolchainForArm_VERSION=${LLVMEmbeddedToolchainForArm_VERSION}
+    -DLLVMEmbeddedToolchainForArm_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
     -Dllvmproject_SOURCE_DIR=${llvmproject_SOURCE_DIR}
     -Dpicolibc_SOURCE_DIR=${picolibc_SOURCE_DIR}
     -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/generate_version_txt.cmake

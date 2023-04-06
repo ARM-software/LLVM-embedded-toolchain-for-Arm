@@ -1,4 +1,10 @@
 execute_process(
+    COMMAND git -C ${LLVMEmbeddedToolchainForArm_SOURCE_DIR} rev-parse HEAD
+    OUTPUT_VARIABLE LLVMEmbeddedToolchainForArm_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY
+)
+execute_process(
     COMMAND git -C ${llvmproject_SOURCE_DIR} rev-parse HEAD
     OUTPUT_VARIABLE llvmproject_COMMIT
     OUTPUT_STRIP_TRAILING_WHITESPACE
