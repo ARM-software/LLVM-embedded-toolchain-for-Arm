@@ -1,8 +1,8 @@
 diff --git a/meson.build b/meson.build
-index 62384e63c..a242da5bf 100644
+index c49856ee0..3e927ea75 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -965,6 +965,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
+@@ -972,6 +972,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
    error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
  endif
  
@@ -32,3 +32,16 @@ index f7e7fa80c..75d7a9aaf 100644
  
  	.bss (NOLOAD) : {
  		*(.sbss*)
+diff --git a/test/tls.c b/test/tls.c
+index d3c0b08d4..7ac30d370 100644
+--- a/test/tls.c
++++ b/test/tls.c
+@@ -43,7 +43,7 @@
+ #define DATA_VAL 0x600df00d
+ #define DATA_VAL2 0x0a0a0a0a
+ 
+-#define OVERALIGN_DATA  128
++#define OVERALIGN_DATA  256
+ #define OVERALIGN_BSS   256
+ 
+ #define TLS_ALIGN      (OVERALIGN_DATA > OVERALIGN_BSS ? OVERALIGN_DATA : OVERALIGN_BSS)
