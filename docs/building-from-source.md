@@ -45,7 +45,9 @@ ninja llvm-toolchain
 ```
 
 To make it easy to get started, the above command checks out and patches llvm-project & picolibc Git repos automatically.
-If you prefer you can check out and patch the repos manually and use those:
+If you prefer you can check out and patch the repos manually and use those.
+If you check out repos manually then it is your responsibility to ensure that the correct revisions are checked out - see `versions.json` to identify these.
+
 ```
 mkdir repos
 git -C repos clone https://github.com/llvm/llvm-project.git
