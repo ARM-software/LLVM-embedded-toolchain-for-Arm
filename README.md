@@ -76,7 +76,8 @@ and extract the archive into an arbitrary directory.
 To use the toolchain, on the command line you need to provide:
 * A [configuration file](
   https://clang.llvm.org/docs/UsersManual.html#configuration-files) specified
-  with `--config`.
+  with `--config`, or a suitable set of command line options including the
+  `crt0` library to use - see [experimental multilib](#experimental-multilib).
 * A [linker script](
   https://sourceware.org/binutils/docs/ld/Scripts.html) specified with `-T`.
   Default `picolibcpp.ld` & `picolibc.ld` scripts are provided and can be used
@@ -97,6 +98,44 @@ $ ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg
 
 > *Note:* If you are using the toolchain in a shared environment with untrusted input,
 > make sure it is sufficiently sandboxed.
+
+### Experimental multilib
+
+The clang provided by LLVM Embedded Toolchain for Arm 16 can automatically
+select an appropriate set of libraries based on your compile flags, without
+needing either an explicit `--sysroot` option or a `--config` option.
+For example the following will automatically use libraries from the
+`lib/clang-runtimes/arm-none-eabi/armv6m_soft_nofp` directory:
+
+```
+$ clang \
+--target=armv6m-none-eabi \
+-fno-exceptions \
+-fno-rtti \
+-lcrt0-semihost \
+-lsemihost \
+-T picolibc.ld \
+-o example example.c
+```
+
+The config files are still present and you can still use them.
+
+It's possible that the multilib system will choose a set of libraries that are
+not the ones you want to use. In this case you can bypass the multilib system
+by providing a `--sysroot` option specifying the directory containing the
+`include` and `lib` directories of the libraries you want to use. For example:
+
+```
+$ clang \
+--sysroot=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/lib/clang-runtimes/arm-none-eabi/armv6m_soft_nofp \
+--target=armv6m-none-eabi \
+-fno-exceptions \
+-fno-rtti \
+-lcrt0-semihost \
+-lsemihost \
+-T picolibc.ld \
+-o example example.c
+```
 
 ## Building from source
 

@@ -4,22 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [16.0.0]
 
 ### Added
 
-- Support for locales and input/output streams
+- Support for locales and input/output streams (#149)
 - Experimental support for Armv4T and Armv5TE architectures (#177)
+- Provide binary releases for macOS (#86)
 - Support for building locally on Windows & macOS (#188)
-- Experimental support for multilib, meaning that clang can now automatically select an appropriate set of libraries based on your compile flags, without needing either an explicit `--sysroot` option or a `--config` option. However, the config files are still present, and you can still use them instead.
+- Experimental support for multilib (#110).
+  See [README.md](README.md#experimental-multilib) for more details.
 
 ### Fixed
 
 - lld freezing on Windows (#83)
+- Packages now extract into a LVMEmbeddedToolchainForArm-VERSION-PLATFORM subdirectory (#179)
 
 ### Changed
 
-- Packages now extract into a LVMEmbeddedToolchainForArm-VERSION-PLATFORM subdirectory.
 - Windows release packages are now signed.
 
 
