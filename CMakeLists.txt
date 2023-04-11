@@ -824,7 +824,7 @@ set(multilib_variants "")
 # Define which library variants to build and which flags to use.
 # The order is <arch> <name suffix> <compile flags> <multilib selection flags> <qemu params>
 add_library_variants(
-    aarch64         ""                  ""                                                      "target=aarch64-none-unknown-elf"                                                          "-M raspi3b"
+    aarch64         ""                  "-march=armv8-a"                                        "target=aarch64-none-unknown-elf"                                                          "-M raspi3b"
     armv4t          ""                  "-march=armv4t"                                         "target=armv4t-none-unknown-eabi mfpu=none"                                                "-M musicpal -cpu arm926"
     armv5te         ""                  "-march=armv5te"                                        "target=armv5e-none-unknown-eabi mfpu=none"                                                "-M musicpal -cpu arm926"
     armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"                        "target=thumbv6m-none-unknown-eabi mfpu=none"                                              "-M microbit"
