@@ -6,19 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [16.0.0]
+
 ### Added
 
-- Support for locales and input/output streams
+- Support for locales and input/output streams (#149)
 - Experimental support for Armv4T and Armv5TE architectures (#177)
+- Provide binary releases for macOS (#86)
 - Support for building locally on Windows & macOS (#188)
+- Experimental support for multilib (#110).
 
 ### Fixed
 
 - lld freezing on Windows (#83)
+- Packages now extract into a LLVMEmbeddedToolchainForArm-VERSION-PLATFORM subdirectory (#179)
 
 ### Changed
 
-- Packages now extract into a LVMEmbeddedToolchainForArm-VERSION-PLATFORM subdirectory.
 - Windows release packages are now signed.
 
 
