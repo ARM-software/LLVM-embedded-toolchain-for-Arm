@@ -57,7 +57,7 @@ to the ``bin`` directory of the toolchain.
 
 ## Compiling, running and debugging the samples
 
-### Linux macOS and MSYS2
+### Linux, macOS and MSYS2
 
 Change to the directory of a specific sample (e.g. ``src/baremetal-uart``) and
 use the following commands to build, run or debug the sample:
