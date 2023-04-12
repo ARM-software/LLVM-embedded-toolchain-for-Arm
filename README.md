@@ -59,8 +59,7 @@ LLVM Embedded Toolchain for Arm is built and tested on Ubuntu 18.04 LTS.
 
 The Windows version is built on Windows Server 2019 and lightly tested on Windows 10.
 
-Building on macOS is functional but experimental. Currently it is only lightly tested on
-a Macbook Pro with M1 on macOS 12.3.1.
+Building on macOS is functional for x86_64 and Apple Silicon.
 
 [Binary packages](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases)
 are provided for major LLVM releases for Linux and Windows.
@@ -72,6 +71,14 @@ releases](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releas
 and extract the archive into an arbitrary directory.
 
 On Ubuntu 20.04 and later `libtinfo5` is required: `apt install libtinfo5`.
+
+On macOS the toolchain binaries are quarantined by com.apple.quarantine. To
+run the executables change directory to bin and run the following command to
+remove the com.apple.quarantine:
+
+```
+find . -type f -perm +0111 | xargs xattr -d com.apple.com.quarantine
+```
 
 ### Using the toolchain
 
