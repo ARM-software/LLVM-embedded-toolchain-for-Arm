@@ -11,8 +11,9 @@ Embedded Toolchain for Arm.
 
 ## Supported environments
 
-The build scripts support three different environments:
+The build scripts support four different environments:
 * Linux
+* macOS
 * Windows
 * Windows + [MSYS2](https://www.msys2.org/)
 
@@ -20,7 +21,7 @@ The build scripts support three different environments:
 
 In order to compile the samples you will need the following tools:
 * LLVM Embedded Toolchain for Arm
-* GNU Make (Linux and MSYS2)
+* GNU Make (Linux, macOS and MSYS2)
 
 To run the samples you will need a QEMU emulator to be installed on your
 machine. The samples rely on
@@ -30,13 +31,17 @@ the QEMU Arm System emulator. On Ubuntu Linux it can be installed as follows:
 # apt-get install qemu-system-arm
 ```
 
+On macOS the QEMU Arm System emulator can be installed via HomeBrew or
+Mac Ports. Instructions can be found in
+https://www.qemu.org/download/#macos
+
 The Windows installer can be downloaded from
 https://www.qemu.org/download/#windows.
 
-To debug the samples you will need to install a debugger 
-that supports Arm targets, for example, 
+To debug the samples you will need to install a debugger
+that supports Arm targets, for example,
 [LLDB](https://lldb.llvm.org/) version matching LLVM Embedded Toolchain for Arm.
-Debugging is only supported on Linux.
+Debugging is only supported on Linux and macOS.
 
 ## Specifying the location of the installed toolchain
 
@@ -52,7 +57,7 @@ to the ``bin`` directory of the toolchain.
 
 ## Compiling, running and debugging the samples
 
-### Linux and MSYS2
+### Linux, macOS and MSYS2
 
 Change to the directory of a specific sample (e.g. ``src/baremetal-uart``) and
 use the following commands to build, run or debug the sample:
