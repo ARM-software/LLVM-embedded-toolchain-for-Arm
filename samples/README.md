@@ -11,7 +11,7 @@ Embedded Toolchain for Arm.
 
 ## Supported environments
 
-The build scripts support three different environments:
+The build scripts support four different environments:
 * Linux
 * macOS
 * Windows
