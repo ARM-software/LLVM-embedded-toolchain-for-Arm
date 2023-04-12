@@ -2,4 +2,4 @@ ${flags}
 -fno-exceptions
 -fno-rtti
 --sysroot <CFGDIR>/../${directory}
-<CFGDIR>/../${directory}/lib/${crt0}${extra_args}
+${crt0}${extra_args}

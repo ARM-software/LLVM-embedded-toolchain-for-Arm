@@ -746,10 +746,10 @@ endfunction()
 function(make_config_cfg directory variant flags)
     # Create clang configuration files
     # https://clang.llvm.org/docs/UsersManual.html#configuration-files
-    set(crt0 "crt0.o")
+    set(crt0 "-lcrt0")
     set(extra_args "")
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/config.cfg.in ${LLVM_BINARY_DIR}/bin/${variant}.cfg)
-    set(crt0 "crt0-semihost.o")
+    set(crt0 "-lcrt0-semihost")
     set(extra_args "\n-lsemihost")
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/config.cfg.in ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg)
     install(FILES

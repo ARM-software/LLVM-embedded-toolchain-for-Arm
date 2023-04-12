@@ -98,6 +98,29 @@ $ ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg
 > *Note:* If you are using the toolchain in a shared environment with untrusted input,
 > make sure it is sufficiently sandboxed.
 
+### Using the toolchain without config files
+
+Instead of using a config file you can provide a `--sysroot` option specifying
+the directory containing the`include` and `lib` directories of the libraries
+you want to use, in addition to various other required options:
+* The target triple
+* Disabling exceptions and RTTI
+* The `crt0` library - either `crt0` or `crt0-semihost`
+* The semihosting library, if desired.
+ For example:
+
+```
+$ clang \
+--sysroot=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/lib/clang-runtimes/arm-none-eabi/armv6m_soft_nofp \
+--target=armv6m-none-eabi \
+-fno-exceptions \
+-fno-rtti \
+-lcrt0-semihost \
+-lsemihost \
+-T picolibc.ld \
+-o example example.c
+```
+
 ## Building from source
 
 LLVM Embedded Toolchain for Arm is an open source project and thus can be built
