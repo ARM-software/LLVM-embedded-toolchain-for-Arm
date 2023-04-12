@@ -71,6 +71,8 @@ Download a release of the toolchain for your platform from [Github
 releases](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases)
 and extract the archive into an arbitrary directory.
 
+On Ubuntu 20.04 and later `libtinfo5` is required: `apt install libtinfo5`.
+
 ### Using the toolchain
 
 To use the toolchain, on the command line you need to provide:
