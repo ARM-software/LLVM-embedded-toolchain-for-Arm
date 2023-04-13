@@ -877,6 +877,7 @@ set(third_party_license_files
     ${llvmproject_SOURCE_DIR}/compiler-rt/LICENSE.TXT   COMPILER-RT-LICENSE.txt
     ${llvmproject_SOURCE_DIR}/libcxx/LICENSE.TXT        LIBCXX-LICENSE.txt
     ${llvmproject_SOURCE_DIR}/libcxxabi/LICENSE.TXT     LIBCXXABI-LICENSE.txt
+    ${llvmproject_SOURCE_DIR}/libunwind/LICENSE.TXT     LIBUNWIND-LICENSE.txt
     ${picolibc_SOURCE_DIR}/COPYING.NEWLIB               COPYING.NEWLIB
     ${picolibc_SOURCE_DIR}/COPYING.picolibc             COPYING.picolibc
 )
