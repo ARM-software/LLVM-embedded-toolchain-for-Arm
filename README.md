@@ -77,7 +77,7 @@ run the executables change directory to bin and run the following command to
 remove the com.apple.quarantine:
 
 ```
-find . -type f -perm +0111 | xargs xattr -d com.apple.com.quarantine
+find . -type f -perm +0111 | xargs xattr -d com.apple.quarantine
 ```
 
 ### Using the toolchain
