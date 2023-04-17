@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Updated to [LLVM 16.0.0](https://github.com/llvm/llvm-project/releases/tag/llvmorg-16.0.0)
 - Windows release packages are now signed.
 
 
@@ -58,7 +59,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Initial release of LLVM Embedded Toolchain for Arm
 
-[unreleased]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/compare/release-15.0.2...HEAD
+[unreleased]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/compare/release-16.0.0...HEAD
+[16.0.0]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/compare/release-15.0.2...release-16.0.0
 [15.0.2]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/compare/release-14.0.0...release-15.0.2
 [14.0.0]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/compare/release-13.0.0...release-14.0.0
 [13.0.0]: https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/tag/release-13.0.0
