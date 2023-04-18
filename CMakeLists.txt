@@ -456,7 +456,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
 
     # picolibc tests
-    string(REPLACE " " ";" qemu_params_list "${qemu_params}")
+    string(REPLACE " " ":" qemu_params_list "${qemu_params}")
     add_custom_target(check-picolibc_${variant})
     set(qemu_command "qemu-system-${cpu_family}")
     # Full list of picolibc tests
@@ -498,40 +498,40 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
     )
     # remove tests failing on a given platform
     if(variant STREQUAL "armv4t")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv5te")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv6m_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv7m_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv7em_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv7em_hard_fpv4_sp_d16")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip math_errhandling test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
     endif()
     if(variant STREQUAL "armv7em_hard_fpv5_d16")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip math_errhandling test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
     endif()
     if(variant STREQUAL "armv8m.main_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double math_errhandling malloc_stress test-except timegm)
+        list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
     endif()
     if(variant STREQUAL "armv8m.main_hard_fp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip complex-funcs fenv long_double math_errhandling math-funcs malloc_stress printf_scanf rand test-efcvt test-except test-strtod timegm)
+        list(REMOVE_ITEM picolibc_tests constructor-skip complex-funcs fenv long_double math_errhandling math-funcs malloc_stress printf_scanf rand test-efcvt test-strtod timegm)
     endif()
     if(variant STREQUAL "armv8.1m.main_soft_nofp_nomve")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double math_errhandling malloc_stress test-except timegm)
+        list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
     endif()
     if(variant STREQUAL "armv8.1m.main_hard_fp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double math_errhandling malloc_stress test-except timegm)
+        list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
     endif()
     if(variant STREQUAL "armv8.1m.main_hard_nofp_mve")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip complex-funcs fenv ffs long_double math_errhandling math-funcs malloc_stress printf_scanf printf-tests rand regex test-efcvt test-except test-strtod timegm time-tests)
+        list(REMOVE_ITEM picolibc_tests constructor-skip complex-funcs fenv ffs long_double math_errhandling math-funcs malloc_stress printf_scanf printf-tests rand regex test-efcvt test-strtod timegm time-tests)
     endif()
 
     function(picolibc_test test)
@@ -548,7 +548,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         )
         add_custom_target(
                 check-picolibc_${variant}-${test}
-                ${qemu_command} ${qemu_params_list} -semihosting -nographic -kernel check-picolibc_${variant}_build_${test}.out
+                ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --picolibc-test --qemu-command ${qemu_command} --qemu-params=${qemu_params_list} check-picolibc_${variant}_build_${test}.out
                 DEPENDS picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
                 WORKING_DIRECTORY picolibc_tests_${variant}
                 COMMENT "TEST: ${variant} ${test}"
