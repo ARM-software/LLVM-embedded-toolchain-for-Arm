@@ -149,6 +149,15 @@ set(LLVM_DISTRIBUTION_COMPONENTS
     LTO
     CACHE STRING ""
 )
+set(LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS
+    llvm-toolchain-config-files
+    llvm-toolchain-docs
+    llvm-toolchain-libs
+    llvm-toolchain-samples
+    llvm-toolchain-third-party-licenses
+    CACHE STRING "Components defined by this CMakeLists that should be
+installed by the install-llvm-toolchain target"
+)
 set(LLVM_ENABLE_PROJECTS clang;lld CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD AArch64;ARM CACHE STRING "")
 set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-linux-gnu CACHE STRING "")
@@ -287,9 +296,9 @@ endif()
 # These must be set before include(CPack) which the llvm CMakeLists.txt does.
 # Restrict which LLVM components are installed.
 if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
-    set(CPACK_COMPONENTS_ALL llvm-toolchain)
+    set(CPACK_COMPONENTS_ALL ${LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS} llvm-toolchain-mingw)
 else()
-    set(CPACK_COMPONENTS_ALL ${LLVM_DISTRIBUTION_COMPONENTS} llvm-toolchain)
+    set(CPACK_COMPONENTS_ALL ${LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS} ${LLVM_DISTRIBUTION_COMPONENTS})
 endif()
 # Enable limiting the installed components in TGZ and ZIP packages.
 set(CPACK_ARCHIVE_COMPONENT_INSTALL TRUE)
@@ -355,7 +364,7 @@ install(
     FILES
     ${CMAKE_CURRENT_BINARY_DIR}/VERSION.txt
     DESTINATION .
-    COMPONENT llvm-toolchain
+    COMPONENT llvm-toolchain-docs
 )
 
 
@@ -757,7 +766,7 @@ function(make_config_cfg directory variant flags)
         ${LLVM_BINARY_DIR}/bin/${variant}.cfg
         ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg
         DESTINATION bin
-        COMPONENT llvm-toolchain
+        COMPONENT llvm-toolchain-config-files
     )
 endfunction()
 
@@ -835,7 +844,7 @@ function(add_library_variants)
         install(
             DIRECTORY "${LLVM_BINARY_DIR}/${directory}/"
             DESTINATION "${directory}"
-            COMPONENT llvm-toolchain
+            COMPONENT llvm-toolchain-libs
         )
     endwhile()
 endfunction()
@@ -859,9 +868,15 @@ add_library_variants(
 )
 
 install(
+    FILES CHANGELOG.md LICENSE.txt README.md
+    DESTINATION .
+    COMPONENT llvm-toolchain-docs
+)
+
+install(
     DIRECTORY docs
     DESTINATION .
-    COMPONENT llvm-toolchain
+    COMPONENT llvm-toolchain-docs
 )
 
 if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
@@ -872,9 +887,9 @@ endif()
 configure_file(cmake/THIRD-PARTY-LICENSES.txt.in THIRD-PARTY-LICENSES.txt)
 
 install(
-    FILES CHANGELOG.md LICENSE.txt README.md ${CMAKE_CURRENT_BINARY_DIR}/THIRD-PARTY-LICENSES.txt
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/THIRD-PARTY-LICENSES.txt
     DESTINATION .
-    COMPONENT llvm-toolchain
+    COMPONENT llvm-toolchain-third-party-licenses
 )
 
 set(third_party_license_files
@@ -893,7 +908,7 @@ while(third_party_license_files)
     install(
         FILES ${source_file}
         DESTINATION third-party-licenses
-        COMPONENT llvm-toolchain
+        COMPONENT llvm-toolchain-third-party-licenses
         RENAME ${destination_name}
     )
 endwhile()
@@ -907,7 +922,7 @@ endif()
 install(
     DIRECTORY samples
     DESTINATION .
-    COMPONENT llvm-toolchain
+    COMPONENT llvm-toolchain-samples
     FILES_MATCHING REGEX "${sample_files_regex}"
 )
 
@@ -917,16 +932,32 @@ install(
 #   ninja install-llvm-toolchain
 add_custom_target(
     install-llvm-toolchain
-    COMMAND
-        "${CMAKE_COMMAND}"
-        --install ${CMAKE_BINARY_DIR}
-        --component llvm-toolchain
-    USES_TERMINAL
 )
+set(LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS_ALL ${LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS})
 if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
-    # No further action needed to install because the MinGW binaries
-    # are declared to be part of the llvm-toolchain
-    # install component.
+    list(APPEND LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS_ALL llvm-toolchain-mingw)
+endif()
+foreach(component ${LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS})
+    add_custom_target(
+        install-${component}
+        COMMAND
+            "${CMAKE_COMMAND}"
+            --install ${CMAKE_BINARY_DIR}
+            --component ${component}
+        USES_TERMINAL
+    )
+    add_dependencies(
+        install-${component}
+        llvm-toolchain
+    )
+    add_dependencies(
+        install-llvm-toolchain
+        install-${component}
+    )
+endforeach()
+if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
+    # No further action needed to install because the LLVM distributables
+    # are copied as part of the llvm-toolchain-mingw component.
 else()
     # Also run install-distribution to install the LLVM
     # binaries.
@@ -935,10 +966,6 @@ else()
         install-distribution
     )
 endif()
-add_dependencies(
-    install-llvm-toolchain
-    llvm-toolchain
-)
 
 
 # package-llvm-toolchain - target to create package
@@ -1110,14 +1137,14 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
     install(
         DIRECTORY ${INSTALL_DIR}/
         DESTINATION .
-        COMPONENT llvm-toolchain
+        COMPONENT llvm-toolchain-mingw
     )
 
     # Copy MinGW licenses
     install(
         DIRECTORY mingw-licenses/
         DESTINATION third-party-licenses
-        COMPONENT llvm-toolchain
+        COMPONENT llvm-toolchain-third-party-licenses
     )
 
     # Copy MinGW runtime DLLs
@@ -1135,7 +1162,7 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
         install(
             FILES ${mingw_runtime_dll}
             TYPE BIN
-            COMPONENT llvm-toolchain
+            COMPONENT llvm-toolchain-mingw
         )
     endforeach()
 
