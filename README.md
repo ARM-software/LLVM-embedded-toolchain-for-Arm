@@ -71,6 +71,7 @@ releases](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releas
 and extract the archive into an arbitrary directory.
 
 On Ubuntu 20.04 and later `libtinfo5` is required: `apt install libtinfo5`.
+(This requirement will be removed in LLVM Embedded Toolchain for Arm 17.)
 
 On macOS the toolchain binaries are quarantined by com.apple.quarantine. To
 run the executables change directory to bin and run the following command to
