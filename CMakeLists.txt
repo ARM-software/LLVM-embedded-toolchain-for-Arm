@@ -119,6 +119,10 @@ option(
     PREBUILT_TARGET_LIBRARIES
     "Target libraries are prebuilt so no need to build them"
 )
+set(TARGET_LIBRARIES_DIR
+    "lib/clang-runtimes" CACHE STRING
+    "Directory containing the target libraries."
+)
 set(LLVM_TOOLCHAIN_LIBRARY_VARIANTS
     "" CACHE STRING
     "Build only the specified library variants. If not specified then build all variants."
@@ -826,7 +830,7 @@ function(add_library_variants)
 
         get_compiler_rt_target_triple(${target_arch})
 
-        set(directory "lib/clang-runtimes/${parent_dir_name}/${variant}")
+        set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
         set(flags "--target=${target_triple} ${flags}")
         make_config_cfg("${directory}" "${variant}" "${flags}")
         set(variant_options)
