@@ -1053,6 +1053,13 @@ foreach(test
 endforeach()
 
 # Samples
+# If samples are included in the package then use the packaged samples in
+# post-package tests, otherwise use the samples from the source directory.
+if(llvm-toolchain-samples IN_LIST LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS)
+    set(check_package_samples_root_dir ${unpack_directory})
+else()
+    set(check_package_samples_root_dir ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
 # Don't run the baremetal-uart sample because it never terminates.
 foreach(test
     baremetal-semihosting-aarch64
@@ -1077,7 +1084,7 @@ foreach(test
         COMMAND make clean
         COMMAND make run BIN_PATH=${unpack_directory}/bin
         COMMAND make clean
-        WORKING_DIRECTORY ${unpack_directory}/samples/src/${test}
+        WORKING_DIRECTORY ${check_package_samples_root_dir}/samples/src/${test}
     )
     add_dependencies(check-package-llvm-toolchain-samples-${test} unpack-llvm-toolchain)
     add_dependencies(check-package-llvm-toolchain check-package-llvm-toolchain-samples-${test})
