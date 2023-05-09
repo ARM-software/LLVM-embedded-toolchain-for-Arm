@@ -15,27 +15,6 @@ import pathlib
 # This script requires Python 3.6 or later
 assert sys.version_info >= (3, 6)
 
-picolibc_binary_name = "check-picolibc"
-picolibc_non_zero_tests = {'abort': 134, "test-except": 1}
-
-def picolibc_alt_retcode(test_name, test_ret_code):
-    """ Some picolibc tests return non-zero retcode on succes
-        all of them will be altered to zero in here
-    """
-    if test_name in picolibc_non_zero_tests:
-        if test_ret_code == picolibc_non_zero_tests[test_name]:
-            return 0
-    return test_ret_code
-
-def picolibc_test_name(binary_name):
-    """ Extract test name from picolibc test binary name
-    """
-    if picolibc_binary_name in binary_name:
-        picolibc_test_name = binary_name[binary_name.rfind("_")+1:]
-        picolibc_test_name = picolibc_test_name[:picolibc_test_name.rfind(".out")]
-        return picolibc_test_name
-    return ""
-
 
 def run(args):
     """Execute the program using QEMU and return the subprocess return code."""
@@ -58,10 +37,7 @@ def run(args):
                             cwd=args.execdir,
                             check=False)
     sys.stdout.buffer.write(result.stdout)
-    ret_code = result.returncode
-    if args.picolibc_test and ret_code != 0:
-        ret_code = picolibc_alt_retcode( picolibc_test_name(image), ret_code)
-    return ret_code
+    return result.returncode
 
 
 def main():
@@ -79,8 +55,6 @@ def main():
                         help='ignored, used for compatibility with libc++ tests')
     parser.add_argument('command', nargs=argparse.REMAINDER,
                         help='image file to execute with optional arguments')
-    parser.add_argument('--picolibc-test', nargs='?', default=False, const=True,
-                        help="Enable return code fix for picolibc tests")
     args = parser.parse_args()
     ret_code = run(args)
     sys.exit(ret_code)
