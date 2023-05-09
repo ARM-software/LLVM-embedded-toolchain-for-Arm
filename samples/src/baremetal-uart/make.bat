@@ -36,7 +36,7 @@
 @if [%BIN_PATH%]==[] goto :bin_path_empty
 @call :build_fn
 :do_run
-qemu-system-arm.exe -M microbit -semihosting -nographic -device loader,file=hello.hex
+qemu-system-arm.exe -M microbit -nographic -device loader,file=hello.hex
 @exit /B
 
 :clean
