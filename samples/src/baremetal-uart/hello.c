@@ -47,11 +47,11 @@ int uart_putc(char ch, FILE* file)
 
 /* Redirect sdtio as per https://github.com/picolibc/picolibc/blob/main/doc/os.md */
 static FILE __stdio = FDEV_SETUP_STREAM(uart_putc, NULL, NULL, _FDEV_SETUP_WRITE);
-FILE *const stdin = &__stdio; 
-__strong_reference(stdin, stdout); 
+FILE *const stdin = &__stdio;
+__strong_reference(stdin, stdout);
 __strong_reference(stdin, stderr);
 
-int main(void) 
+int main(void)
 {
   uart_init();
   printf("Hello World!");

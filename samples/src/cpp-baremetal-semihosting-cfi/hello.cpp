@@ -26,7 +26,7 @@ class Bad { // not derived from Base
 int main(void) {
   Base* base_ptr = reinterpret_cast<Good*>(new Bad());
   base_ptr->print_type();
-  
+
   std::cout << "C++ CFI sample" << std::endl;
 
   return 0;
