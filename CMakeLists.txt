@@ -417,6 +417,10 @@ set(picolibc_specific_runtimes_options
 )
 
 add_custom_target(check-picolibc)
+# Set LLVM_DEFAULT_EXTERNAL_LIT to the directory of clang
+# which was build in previous step. This path is not exported
+# by add_subdirectory of llvm project
+set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
 
 function(add_picolibc directory variant target_triple flags qemu_params variant_runtime_options_var)
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
@@ -457,7 +461,6 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
 
     # picolibc tests
     string(REPLACE " " ":" qemu_params_list "${qemu_params}")
-    add_custom_target(check-picolibc_${variant})
     set(qemu_command "qemu-system-${cpu_family}")
     # Full list of picolibc tests
     set(picolibc_tests
@@ -498,10 +501,10 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
     )
     # remove tests failing on a given platform
     if(variant STREQUAL "armv4t")
-        list(REMOVE_ITEM picolibc_tests constructor-skip)
+        list(REMOVE_ITEM picolibc_tests constructor-skip test-except)
     endif()
     if(variant STREQUAL "armv5te")
-        list(REMOVE_ITEM picolibc_tests constructor-skip)
+        list(REMOVE_ITEM picolibc_tests constructor-skip test-except)
     endif()
     if(variant STREQUAL "armv6m_soft_nofp")
         list(REMOVE_ITEM picolibc_tests constructor-skip)
@@ -534,31 +537,31 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         list(REMOVE_ITEM picolibc_tests constructor-skip complex-funcs fenv ffs long_double math_errhandling math-funcs malloc_stress printf_scanf printf-tests rand regex test-efcvt test-strtod timegm time-tests)
     endif()
 
+    configure_lit_site_cfg(${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit.site.cfg.py.in
+                            picolibc_tests_${variant}/lit.cfg.py)
+    add_lit_testsuite(check-picolibc_${variant}
+        "Running picolibc tests: ${variant}"
+        ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}
+        DEPENDS picolibc_${variant} compiler_rt_${variant} llvm-toolchain-runtimes)
+
     function(picolibc_test test)
-        # -Oz parameter is added just like picolibc is doing, otherwise there is a build issue
-        # ld.lld: error: undefined symbol: __issignalingl  while building math_errhandling test.
-        add_custom_command(
-                OUTPUT picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
-                COMMAND ${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX} --config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg
+        set(BUILD_PARAMS --config ${variant}_semihost.cfg
                 -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld
                 -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
-                ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
-                COMMENT "Building: ${test} for ${variant}"
-                DEPENDS ${picolibc_SOURCE_DIR}/test/${test}.c picolibc_${variant} compiler_rt_${variant}
-        )
-        add_custom_target(
-                check-picolibc_${variant}-${test}
-                ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --picolibc-test --qemu-command ${qemu_command} --qemu-params=${qemu_params_list} check-picolibc_${variant}_build_${test}.out
-                DEPENDS picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
-                WORKING_DIRECTORY picolibc_tests_${variant}
-                COMMENT "TEST: ${variant} ${test}"
-        )
-        add_dependencies(check-picolibc_${variant} check-picolibc_${variant}-${test})
+                ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out)
+        string(REPLACE ";" " " BUILD_PARAMS "${BUILD_PARAMS}")
+        set(TEST_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-params=${qemu_params_list} check-picolibc_${variant}_build_${test}.out)
+        string(REPLACE ";" " " TEST_COMMAND "${TEST_COMMAND}")
+        set(PICOLIBC_LIT_TEST_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test.template)
+        # Some picolibc tests return non-zero value upon success, then use dedicated test template
+        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test-${test}.template)
+            set(PICOLIBC_LIT_TEST_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test-${test}.template)
+        endif()
+        configure_file(${PICOLIBC_LIT_TEST_TEMPLATE} ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/${test}.test)
     endfunction()
     if(flags MATCHES "-march=armv8-a")
         message("Picolibc tests disabled for ${variant}")
     else()
-        execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory picolibc_tests_${variant})
         foreach(test IN LISTS picolibc_tests)
             picolibc_test(${test})
         endforeach()
