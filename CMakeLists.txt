@@ -518,6 +518,9 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         ungetc
     )
     # remove tests failing on a given platform
+    if(variant STREQUAL "aarch64")
+        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
+    endif()
     if(variant STREQUAL "armv4t")
         list(REMOVE_ITEM picolibc_tests constructor-skip test-except)
     endif()
@@ -577,30 +580,27 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         endif()
         configure_file(${PICOLIBC_LIT_TEST_TEMPLATE} ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/${test}.test)
     endfunction()
-    if(flags MATCHES "-march=armv8-a")
-        message("Picolibc tests disabled for ${variant}")
-    else()
-        foreach(test IN LISTS picolibc_tests)
-            picolibc_test(${test})
-        endforeach()
-        # Test disabled due to duplicated symbol name div in test file and in picolibc
-        # picolibc_test(rounding-mode)
-        # Test disabled due to fail on armv8.1m.main_hard_nofp_mve
-        # picolibc_test(try-ilp32)
-        add_dependencies(check-picolibc check-picolibc_${variant})
 
-        # Use colon as a separator because comma and semicolon are used for
-        # other purposes in CMake.
-        string(REPLACE " " ":" qemu_params_colon "${qemu_params}")
-        set(test_executor
-            "${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-params=${qemu_params_colon}")
-        set(${variant_runtime_options_var}
-            -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld
-            -DLIBCXX_EXECUTOR=${test_executor}
-            -DLIBCXXABI_EXECUTOR=${test_executor}
-            -DLIBUNWIND_EXECUTOR=${test_executor}
-            PARENT_SCOPE)
-    endif()
+    foreach(test IN LISTS picolibc_tests)
+        picolibc_test(${test})
+    endforeach()
+    # Test disabled due to duplicated symbol name div in test file and in picolibc
+    # picolibc_test(rounding-mode)
+    # Test disabled due to fail on armv8.1m.main_hard_nofp_mve
+    # picolibc_test(try-ilp32)
+    add_dependencies(check-picolibc check-picolibc_${variant})
+
+    # Use colon as a separator because comma and semicolon are used for
+    # other purposes in CMake.
+    string(REPLACE " " ":" qemu_params_colon "${qemu_params}")
+    set(test_executor
+        "${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-params=${qemu_params_colon}")
+    set(${variant_runtime_options_var}
+        -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld
+        -DLIBCXX_EXECUTOR=${test_executor}
+        -DLIBCXXABI_EXECUTOR=${test_executor}
+        -DLIBUNWIND_EXECUTOR=${test_executor}
+        PARENT_SCOPE)
 
     add_dependencies(
         llvm-toolchain-runtimes
@@ -916,7 +916,7 @@ endfunction()
 # Define which library variants to build and which flags to use.
 # The order is <parent dir> <arch> <name suffix> <flags> <qemu params>
 add_library_variants(
-    aarch64         ""                  "-march=armv8-a"                                        "-M raspi3b"
+    aarch64         ""                  "-march=armv8-a"                                        "-M virt -cpu cortex-a57"
     armv4t          ""                  "-march=armv4t"                                         "-M musicpal -cpu arm926"
     armv5te         ""                  "-march=armv5te"                                        "-M musicpal -cpu arm926"
     armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"                        "-M mps2-an385"
