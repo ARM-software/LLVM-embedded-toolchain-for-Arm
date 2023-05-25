@@ -34,18 +34,26 @@ void uart_init()
   delay(1000);
 }
 
-void uart_send_message(char* message)
+int uart_putc(char ch, FILE* file)
 {
-  for(char* next_char = message; *next_char != '\0'; next_char++) {
-    *uart_txdrdy = 0;
-    *uart_txd = *next_char;
-    while (!*uart_txdrdy) {};
-  }
+  (void) file; /* unused */
+
+  *uart_txdrdy = 0;
+  *uart_txd = ch;
+  while (!*uart_txdrdy) {};
+
+  return ch;
 }
+
+/* Redirect sdtio as per https://github.com/picolibc/picolibc/blob/main/doc/os.md */
+static FILE __stdio = FDEV_SETUP_STREAM(uart_putc, NULL, NULL, _FDEV_SETUP_WRITE);
+FILE *const stdin = &__stdio; 
+__strong_reference(stdin, stdout); 
+__strong_reference(stdin, stderr);
 
 int main(void) 
 {
   uart_init();
-  uart_send_message("Hello World!");
+  printf("Hello World!");
   return 0;
 }
