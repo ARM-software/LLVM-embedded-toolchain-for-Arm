@@ -48,6 +48,7 @@
 #   git -C repos/llvm-project apply ../../patches/llvm-project.patch
 #   git -C repos clone https://github.com/picolibc/picolibc.git
 #   git -C repos/picolibc apply ../../patches/picolibc.patch
+#   git -C repos/picolibc apply ../../patches/picolibc/0001-tests-math_errhandling-ignore-exceptions.patch
 #   mkdir build
 #   cd build
 #   cmake .. -GNinja -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=../repos/llvm-project -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=../repos/picolibc
@@ -248,12 +249,23 @@ FetchContent_Declare(llvmproject
     SOURCE_SUBDIR do_not_add_llvm_subdir_yet
 )
 
+# For 0001-tests-math_errhandling-ignore-exceptions:
+#   "#pragma STDC FENV_ACCESS ON" is not supported by clang on arm targets.
+#   Following warning is issued, when one tries to use it:
+#     warning: '#pragma FENV_ACCESS' is not supported on this target - ignored [-Wignored-pragmas]
+#   Without "FENV_ACCESS ON", the results of functions querying floating point
+#   exceptions are undefined.
 FetchContent_Declare(picolibc
     GIT_REPOSITORY https://github.com/picolibc/picolibc.git
     GIT_TAG "${picolibc_TAG}"
     GIT_SHALLOW "${picolibc_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc.patch
+    PATCH_COMMAND
+        git reset --quiet --hard
+        && git clean --quiet --force -dx
+        && git apply
+            ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc.patch
+            ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc/0001-tests-math_errhandling-ignore-exceptions.patch
     # We only want to download the content, not configure it at this
     # stage. picolibc will be built in many configurations using
     # ExternalProject_Add using the sources that are checked out here.
@@ -516,10 +528,10 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv7em_hard_fpv4_sp_d16")
-        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv7em_hard_fpv5_d16")
-        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv8m.main_soft_nofp")
         list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
