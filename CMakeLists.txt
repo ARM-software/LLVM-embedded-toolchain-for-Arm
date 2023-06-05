@@ -380,9 +380,19 @@ add_custom_target(llvm-toolchain ALL)
 add_custom_target(llvm-toolchain-runtimes)
 
 # Groups all C++ runtime libraries tests
+add_custom_target(check-llvm-toolchain-runtimes)
+add_custom_target(check-compiler-rt)
 add_custom_target(check-cxxabi)
 add_custom_target(check-unwind)
 add_custom_target(check-cxx)
+
+add_dependencies(
+    check-llvm-toolchain-runtimes
+    check-compiler-rt
+    check-cxxabi
+    check-unwind
+    check-cxx
+)
 
 if(NOT LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
     add_dependencies(
@@ -421,6 +431,14 @@ add_custom_target(check-picolibc)
 # which was build in previous step. This path is not exported
 # by add_subdirectory of llvm project
 set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
+
+function(get_qemu_command target_triple)
+    if(target_triple MATCHES "^aarch64")
+        set(qemu_command "qemu-system-aarch64" PARENT_SCOPE)
+    else()
+        set(qemu_command "qemu-system-arm" PARENT_SCOPE)
+    endif()
+endfunction()
 
 function(add_picolibc directory variant target_triple flags qemu_params variant_runtime_options_var)
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
@@ -461,7 +479,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
 
     # picolibc tests
     string(REPLACE " " ":" qemu_params_list "${qemu_params}")
-    set(qemu_command "qemu-system-${cpu_family}")
+    get_qemu_command("${target_triple}")
     # Full list of picolibc tests
     set(picolibc_tests
         abort
@@ -594,7 +612,7 @@ function(get_runtimes_flags directory flags)
     set(runtimes_flags "${flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${LLVM_BINARY_DIR}/${directory}" PARENT_SCOPE)
 endfunction()
 
-function(add_compiler_rt directory variant target_triple flags libc_target)
+function(add_compiler_rt directory variant target_triple flags qemu_params libc_target)
     # We can't always put the exact target
     # architecture in the triple, because compiler-rt's cmake
     # system doesn't recognize every possible Arm architecture
@@ -616,6 +634,14 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
     endif()
 
     get_runtimes_flags("${directory}" "${flags}")
+    get_qemu_command("${target_triple}")
+
+    set(compiler_rt_test_emulator "${qemu_command} -L ${LLVM_BINARY_DIR}/${directory} ${qemu_params} -semihosting -nographic -kernel")
+    set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld")
+
+    if(variant STREQUAL "armv6m_soft_nofp")
+        set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
+    endif()
 
     ExternalProject_Add(
         compiler_rt_${variant}
@@ -647,10 +673,15 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         -DCOMPILER_RT_BUILD_SANITIZERS=OFF
         -DCOMPILER_RT_BUILD_XRAY=OFF
         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
+        -DCOMPILER_RT_INCLUDE_TESTS=ON
+        -DCOMPILER_RT_EMULATOR=${compiler_rt_test_emulator}
+        -DCOMPILER_RT_TEST_COMPILER=${LLVM_BINARY_DIR}/bin/clang
+        -DCOMPILER_RT_TEST_COMPILER_CFLAGS=${compiler_rt_test_flags}
         -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
         -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_CONFIG_PATH=${LLVM_BINARY_DIR}/bin/llvm-config${CMAKE_EXECUTABLE_SUFFIX}
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+        STEP_TARGETS build
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
@@ -741,6 +772,27 @@ function(add_libcxx_libcxxabi_libunwind directory variant target_triple flags li
     )
 endfunction()
 
+function(add_compiler_rt_tests variant)
+    ExternalProject_Add_Step(
+        compiler_rt_${variant}
+        check-compiler-rt
+        COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target check-compiler-rt
+        USES_TERMINAL TRUE
+        EXCLUDE_FROM_MAIN TRUE
+        ALWAYS TRUE
+    )
+    ExternalProject_Add_StepTargets(compiler_rt_${variant} check-compiler-rt)
+    ExternalProject_Add_StepDependencies(
+        compiler_rt_${variant}
+        check-compiler-rt
+        compiler_rt_${variant}-build
+    )
+    add_custom_target(check-compiler-rt-${variant})
+    add_dependencies(check-compiler-rt-${variant} compiler_rt_${variant}-check-compiler-rt)
+    add_dependencies(check-compiler-rt check-compiler-rt-${variant})
+    add_dependencies(check-llvm-toolchain-runtimes-${variant} check-compiler-rt-${variant})
+endfunction()
+
 function(add_libcxx_libcxxabi_libunwind_tests variant)
     foreach(check_target check-cxxabi check-unwind check-cxx)
         ExternalProject_Add_Step(
@@ -757,7 +809,10 @@ function(add_libcxx_libcxxabi_libunwind_tests variant)
             ${check_target}
             libcxx_libcxxabi_libunwind_${variant}-build
         )
+        add_custom_target(${check_target}-${variant})
+        add_dependencies(${check_target}-${variant} libcxx_libcxxabi_libunwind_${variant}-${check_target})
         add_dependencies(${check_target} libcxx_libcxxabi_libunwind_${variant}-${check_target})
+        add_dependencies(check-llvm-toolchain-runtimes-${variant} ${check_target}-${variant})
     endforeach()
 endfunction()
 
@@ -839,12 +894,15 @@ function(add_library_variants)
         set(variant_options)
         if(NOT PREBUILT_TARGET_LIBRARIES)
             add_picolibc("${directory}" "${variant}" "${target_triple}" "${flags}" "${qemu_params}" variant_options)
-            add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}")
+            add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${flags}" "${qemu_params}" "picolibc_${variant}")
             list(APPEND variant_options ${picolibc_specific_runtimes_options})
             add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}" "${variant_options}")
             if(flags MATCHES "-march=armv8")
                 message("C++ runtime libraries tests disabled for ${variant}")
             else()
+                add_custom_target(check-llvm-toolchain-runtimes-${variant})
+                add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
+                add_compiler_rt_tests("${variant}")
                 add_libcxx_libcxxabi_libunwind_tests("${variant}")
             endif()
         endif()
@@ -1024,6 +1082,7 @@ add_dependencies(
 # Run tests on the built toolchain.
 add_custom_target(check-llvm-toolchain)
 add_dependencies(check-llvm-toolchain check-picolibc)
+add_dependencies(check-llvm-toolchain check-compiler-rt)
 
 # Run tests on the packaged and unpacked toolchain.
 add_custom_target(check-package-llvm-toolchain)
