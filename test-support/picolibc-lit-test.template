@@ -1,0 +1,4 @@
+# Generated Picolibc lit for @variant@ @picolibc_SOURCE_DIR@/test/@test@.c
+# RUN: %clang @BUILD_PARAMS@
+# RUN: @TEST_COMMAND@
+# CHECK-OUTPUT: errorcode=0

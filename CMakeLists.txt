@@ -380,9 +380,19 @@ add_custom_target(llvm-toolchain ALL)
 add_custom_target(llvm-toolchain-runtimes)
 
 # Groups all C++ runtime libraries tests
+add_custom_target(check-llvm-toolchain-runtimes)
+add_custom_target(check-compiler-rt)
 add_custom_target(check-cxxabi)
 add_custom_target(check-unwind)
 add_custom_target(check-cxx)
+
+add_dependencies(
+    check-llvm-toolchain-runtimes
+    check-compiler-rt
+    check-cxxabi
+    check-unwind
+    check-cxx
+)
 
 if(NOT LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
     add_dependencies(
@@ -417,6 +427,18 @@ set(picolibc_specific_runtimes_options
 )
 
 add_custom_target(check-picolibc)
+# Set LLVM_DEFAULT_EXTERNAL_LIT to the directory of clang
+# which was build in previous step. This path is not exported
+# by add_subdirectory of llvm project
+set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
+
+function(get_qemu_command target_triple)
+    if(target_triple MATCHES "^aarch64")
+        set(qemu_command "qemu-system-aarch64" PARENT_SCOPE)
+    else()
+        set(qemu_command "qemu-system-arm" PARENT_SCOPE)
+    endif()
+endfunction()
 
 function(add_picolibc directory variant target_triple flags qemu_params variant_runtime_options_var)
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
@@ -456,9 +478,8 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
 
     # picolibc tests
-    string(REPLACE " " ";" qemu_params_list "${qemu_params}")
-    add_custom_target(check-picolibc_${variant})
-    set(qemu_command "qemu-system-${cpu_family}")
+    string(REPLACE " " ":" qemu_params_list "${qemu_params}")
+    get_qemu_command("${target_triple}")
     # Full list of picolibc tests
     set(picolibc_tests
         abort
@@ -498,67 +519,67 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
     )
     # remove tests failing on a given platform
     if(variant STREQUAL "armv4t")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip)
+        list(REMOVE_ITEM picolibc_tests constructor-skip test-except)
     endif()
     if(variant STREQUAL "armv5te")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip test-except)
     endif()
     if(variant STREQUAL "armv6m_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv7m_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv7em_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip)
     endif()
     if(variant STREQUAL "armv7em_hard_fpv4_sp_d16")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip math_errhandling test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
     endif()
     if(variant STREQUAL "armv7em_hard_fpv5_d16")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip math_errhandling test-except)
+        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
     endif()
     if(variant STREQUAL "armv8m.main_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double math_errhandling malloc_stress test-except timegm)
+        list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
     endif()
     if(variant STREQUAL "armv8m.main_hard_fp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip complex-funcs fenv long_double math_errhandling math-funcs malloc_stress printf_scanf rand test-efcvt test-except test-strtod timegm)
+        list(REMOVE_ITEM picolibc_tests constructor-skip complex-funcs fenv long_double math_errhandling math-funcs malloc_stress printf_scanf rand test-efcvt test-strtod timegm)
     endif()
     if(variant STREQUAL "armv8.1m.main_soft_nofp_nomve")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double math_errhandling malloc_stress test-except timegm)
+        list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
     endif()
     if(variant STREQUAL "armv8.1m.main_hard_fp")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip long_double math_errhandling malloc_stress test-except timegm)
+        list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
     endif()
     if(variant STREQUAL "armv8.1m.main_hard_nofp_mve")
-        list(REMOVE_ITEM picolibc_tests abort constructor-skip complex-funcs fenv ffs long_double math_errhandling math-funcs malloc_stress printf_scanf printf-tests rand regex test-efcvt test-except test-strtod timegm time-tests)
+        list(REMOVE_ITEM picolibc_tests constructor-skip complex-funcs fenv ffs long_double math_errhandling math-funcs malloc_stress printf_scanf printf-tests rand regex test-efcvt test-strtod timegm time-tests)
     endif()
 
+    configure_lit_site_cfg(${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit.site.cfg.py.in
+                            picolibc_tests_${variant}/lit.cfg.py)
+    add_lit_testsuite(check-picolibc_${variant}
+        "Running picolibc tests: ${variant}"
+        ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}
+        DEPENDS picolibc_${variant} compiler_rt_${variant} llvm-toolchain-runtimes)
+
     function(picolibc_test test)
-        # -Oz parameter is added just like picolibc is doing, otherwise there is a build issue
-        # ld.lld: error: undefined symbol: __issignalingl  while building math_errhandling test.
-        add_custom_command(
-                OUTPUT picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
-                COMMAND ${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX} --config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg
+        set(BUILD_PARAMS --config ${variant}_semihost.cfg
                 -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld
                 -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
-                ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
-                COMMENT "Building: ${test} for ${variant}"
-                DEPENDS ${picolibc_SOURCE_DIR}/test/${test}.c picolibc_${variant} compiler_rt_${variant}
-        )
-        add_custom_target(
-                check-picolibc_${variant}-${test}
-                ${qemu_command} ${qemu_params_list} -semihosting -nographic -kernel check-picolibc_${variant}_build_${test}.out
-                DEPENDS picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out
-                WORKING_DIRECTORY picolibc_tests_${variant}
-                COMMENT "TEST: ${variant} ${test}"
-        )
-        add_dependencies(check-picolibc_${variant} check-picolibc_${variant}-${test})
+                ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out)
+        string(REPLACE ";" " " BUILD_PARAMS "${BUILD_PARAMS}")
+        set(TEST_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-params=${qemu_params_list} check-picolibc_${variant}_build_${test}.out)
+        string(REPLACE ";" " " TEST_COMMAND "${TEST_COMMAND}")
+        set(PICOLIBC_LIT_TEST_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test.template)
+        # Some picolibc tests return non-zero value upon success, then use dedicated test template
+        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test-${test}.template)
+            set(PICOLIBC_LIT_TEST_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test-${test}.template)
+        endif()
+        configure_file(${PICOLIBC_LIT_TEST_TEMPLATE} ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/${test}.test)
     endfunction()
     if(flags MATCHES "-march=armv8-a")
         message("Picolibc tests disabled for ${variant}")
     else()
-        execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory picolibc_tests_${variant})
         foreach(test IN LISTS picolibc_tests)
             picolibc_test(${test})
         endforeach()
@@ -591,7 +612,7 @@ function(get_runtimes_flags directory flags)
     set(runtimes_flags "${flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${LLVM_BINARY_DIR}/${directory}" PARENT_SCOPE)
 endfunction()
 
-function(add_compiler_rt directory variant target_triple flags libc_target)
+function(add_compiler_rt directory variant target_triple flags qemu_params libc_target)
     # We can't always put the exact target
     # architecture in the triple, because compiler-rt's cmake
     # system doesn't recognize every possible Arm architecture
@@ -613,6 +634,14 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
     endif()
 
     get_runtimes_flags("${directory}" "${flags}")
+    get_qemu_command("${target_triple}")
+
+    set(compiler_rt_test_emulator "${qemu_command} -L ${LLVM_BINARY_DIR}/${directory} ${qemu_params} -semihosting -nographic -kernel")
+    set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld")
+
+    if(variant STREQUAL "armv6m_soft_nofp")
+        set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
+    endif()
 
     ExternalProject_Add(
         compiler_rt_${variant}
@@ -644,10 +673,14 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         -DCOMPILER_RT_BUILD_SANITIZERS=OFF
         -DCOMPILER_RT_BUILD_XRAY=OFF
         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
+        -DCOMPILER_RT_INCLUDE_TESTS=ON
+        -DCOMPILER_RT_EMULATOR=${compiler_rt_test_emulator}
+        -DCOMPILER_RT_TEST_COMPILER=${LLVM_BINARY_DIR}/bin/clang
+        -DCOMPILER_RT_TEST_COMPILER_CFLAGS=${compiler_rt_test_flags}
         -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
-        -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_CONFIG_PATH=${LLVM_BINARY_DIR}/bin/llvm-config${CMAKE_EXECUTABLE_SUFFIX}
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+        STEP_TARGETS build
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
@@ -717,7 +750,6 @@ function(add_libcxx_libcxxabi_libunwind directory variant target_triple flags li
         -DLIBUNWIND_REMEMBER_HEAP_ALLOC=ON
         -DLIBUNWIND_USE_COMPILER_RT=ON
         -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
-        -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_ENABLE_RUNTIMES=libcxxabi,libcxx,libunwind
         -DRUNTIME_TEST_ARCH_FLAGS=${flags}
         ${extra_cmake_options}
@@ -738,6 +770,27 @@ function(add_libcxx_libcxxabi_libunwind directory variant target_triple flags li
     )
 endfunction()
 
+function(add_compiler_rt_tests variant)
+    ExternalProject_Add_Step(
+        compiler_rt_${variant}
+        check-compiler-rt
+        COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target check-compiler-rt
+        USES_TERMINAL TRUE
+        EXCLUDE_FROM_MAIN TRUE
+        ALWAYS TRUE
+    )
+    ExternalProject_Add_StepTargets(compiler_rt_${variant} check-compiler-rt)
+    ExternalProject_Add_StepDependencies(
+        compiler_rt_${variant}
+        check-compiler-rt
+        compiler_rt_${variant}-build
+    )
+    add_custom_target(check-compiler-rt-${variant})
+    add_dependencies(check-compiler-rt-${variant} compiler_rt_${variant}-check-compiler-rt)
+    add_dependencies(check-compiler-rt check-compiler-rt-${variant})
+    add_dependencies(check-llvm-toolchain-runtimes-${variant} check-compiler-rt-${variant})
+endfunction()
+
 function(add_libcxx_libcxxabi_libunwind_tests variant)
     foreach(check_target check-cxxabi check-unwind check-cxx)
         ExternalProject_Add_Step(
@@ -754,7 +807,10 @@ function(add_libcxx_libcxxabi_libunwind_tests variant)
             ${check_target}
             libcxx_libcxxabi_libunwind_${variant}-build
         )
+        add_custom_target(${check_target}-${variant})
+        add_dependencies(${check_target}-${variant} libcxx_libcxxabi_libunwind_${variant}-${check_target})
         add_dependencies(${check_target} libcxx_libcxxabi_libunwind_${variant}-${check_target})
+        add_dependencies(check-llvm-toolchain-runtimes-${variant} ${check_target}-${variant})
     endforeach()
 endfunction()
 
@@ -836,12 +892,15 @@ function(add_library_variants)
         set(variant_options)
         if(NOT PREBUILT_TARGET_LIBRARIES)
             add_picolibc("${directory}" "${variant}" "${target_triple}" "${flags}" "${qemu_params}" variant_options)
-            add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}")
+            add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${flags}" "${qemu_params}" "picolibc_${variant}")
             list(APPEND variant_options ${picolibc_specific_runtimes_options})
             add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${flags}" "picolibc_${variant}" "${variant_options}")
             if(flags MATCHES "-march=armv8")
                 message("C++ runtime libraries tests disabled for ${variant}")
             else()
+                add_custom_target(check-llvm-toolchain-runtimes-${variant})
+                add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
+                add_compiler_rt_tests("${variant}")
                 add_libcxx_libcxxabi_libunwind_tests("${variant}")
             endif()
         endif()
@@ -1021,6 +1080,7 @@ add_dependencies(
 # Run tests on the built toolchain.
 add_custom_target(check-llvm-toolchain)
 add_dependencies(check-llvm-toolchain check-picolibc)
+add_dependencies(check-llvm-toolchain check-compiler-rt)
 
 # Run tests on the packaged and unpacked toolchain.
 add_custom_target(check-package-llvm-toolchain)
@@ -1117,7 +1177,6 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_SYSTEM_NAME=Windows
         -DCLANG_TABLEGEN=${LLVM_BINARY_DIR}/bin/clang-tblgen${CMAKE_EXECUTABLE_SUFFIX}
-        -DLLVM_CCACHE_BUILD=${LLVM_CCACHE_BUILD}
         -DLLVM_CONFIG_PATH=${LLVM_BINARY_DIR}/bin/llvm-config${CMAKE_EXECUTABLE_SUFFIX}
         -DLLVM_DISTRIBUTION_COMPONENTS=${LLVM_DISTRIBUTION_COMPONENTS_comma}
         -DLLVM_ENABLE_PROJECTS=${LLVM_ENABLE_PROJECTS_comma}

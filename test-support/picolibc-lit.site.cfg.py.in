@@ -1,0 +1,16 @@
+import lit
+
+# Test suite name, displayed in lit's reports of failed tests, e.g.
+#
+config.name = 'Picolibc @variant@'
+
+
+# Python class instance defining how tests are discovered and
+# executed. ShTest is the standard one, which uses RUN: comments in
+# the source files.
+config.test_format = lit.formats.ShTest()
+config.substitutions.append(("%clang", "@LLVM_BINARY_DIR@/bin/clang"))
+
+# Directory where the actual tests live, and filename extensions
+# within that directory that will be regarded as tests.
+config.suffixes = ['.test']
