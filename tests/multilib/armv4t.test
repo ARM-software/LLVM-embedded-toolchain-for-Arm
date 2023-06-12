@@ -1,0 +1,2 @@
+# RUN: %clang -print-multi-directory --target=arm-none-eabi | FileCheck %s
+# CHECK: arm-none-eabi/armv4t

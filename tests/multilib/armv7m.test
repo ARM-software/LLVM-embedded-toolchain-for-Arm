@@ -1,0 +1,2 @@
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi | FileCheck %s
+# CHECK: arm-none-eabi/armv7m_soft_nofp
