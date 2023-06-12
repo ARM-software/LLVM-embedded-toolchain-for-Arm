@@ -1126,6 +1126,7 @@ foreach(test
     baremetal-semihosting
     cpp-baremetal-semihosting
     cpp-baremetal-semihosting-cfi
+    cpp-baremetal-semihosting-prof
     cpp-baremetal-semihosting-ubsan
 )
     add_custom_target(
