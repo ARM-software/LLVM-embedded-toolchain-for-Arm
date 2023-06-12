@@ -1,0 +1,2 @@
+# RUN: %clang -print-multi-directory --target=armv5e-none-eabi | FileCheck %s
+# CHECK: arm-none-eabi/armv5te
