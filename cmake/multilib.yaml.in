@@ -108,7 +108,7 @@ Mappings:
 - Match: -march=thumbv8\.[1-9]m\.main.*\+dsp.*\+mve.*
   Flags:
   - -march=thumbv8.1m.main+dsp+mve
-- Match: -march=thumbv8\.[1-9]m\.main.*\+fp16.*\+lob.*\+mve\.fp.*
+- Match: -march=thumbv8\.[1-9]m\.main.*\+mve\.fp.*\+fp16.*\+lob.*
   Flags:
   - -march=thumbv8.1m.main+fp16+lob+mve.fp
 
