@@ -1,9 +1,13 @@
 [binaries]
-c = [@meson_c_args@]
+c = [@meson_c_args@, '-nostdlib']
 ar = '@LLVM_BINARY_DIR@/bin/llvm-ar@CMAKE_EXECUTABLE_SUFFIX@'
 strip = '@LLVM_BINARY_DIR@/bin/llvm-strip@CMAKE_EXECUTABLE_SUFFIX@'
 # only needed to run tests
-exe_wrapper = ['sh', '-c', 'test -z "$PICOLIBC_TEST" || run-@cpu_family@ "$@"', 'run-@cpu_family@']
+exe_wrapper = [
+    'sh',
+    '-c',
+    'test -z "$PICOLIBC_TEST" || @test_executor_bin@ "$@"',
+    @test_executor@]
 
 [host_machine]
 system = 'none'
@@ -13,3 +17,9 @@ endian = 'little'
 
 [properties]
 skip_sanity_check = true
+libgcc ='-lclang_rt.builtins'
+default_flash_addr = '@default_flash_addr@'
+default_flash_size = '@default_flash_size@'
+default_ram_addr   = '@default_ram_addr@'
+default_ram_size   = '@default_ram_size@'
+default_stack_size = '@default_stack_size@'

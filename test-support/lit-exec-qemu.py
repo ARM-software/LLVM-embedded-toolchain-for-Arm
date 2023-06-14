@@ -5,15 +5,53 @@
 # This script is a bridge between lit-based tests of LLVM C++ runtime libraries
 # (libc++abi, libunwind, libc++) and QEMU. It must handle the same command-line
 # arguments as llvm-project/libcxx/utils/run.py.
+# This is also a wrapper script to run picolibc tests with QEMU.
 
 import sys
 import argparse
 import subprocess
 import pathlib
 
+# https://mesonbuild.com/Unit-tests.html#skipped-tests-and-hard-errors
+EXIT_CODE_SKIP = 77
+
+disabled_tests = [
+    "picolibc_aarch64-build/test/math_errhandling",
+    "picolibc_armv7em_hard_fpv4_sp_d16-build/test/math_errhandling",
+    "picolibc_armv7em_hard_fpv5_d16-build/test/math_errhandling",
+    "picolibc_armv8m.main_hard_fp-build/test/printf_scanf",
+    "picolibc_armv8m.main_hard_fp-build/test/printff_scanff",
+    "picolibc_armv8m.main_hard_fp-build/test/printff-tests",
+    "picolibc_armv8m.main_hard_fp-build/test/math_errhandling",
+    "picolibc_armv8m.main_hard_fp-build/test/rounding-mode",
+    "picolibc_armv8m.main_hard_fp-build/test/long_double",
+    "picolibc_armv8m.main_hard_fp-build/test/rand",
+    "picolibc_armv8m.main_hard_fp-build/test/fenv",
+    "picolibc_armv8m.main_hard_fp-build/test/math-funcs",
+    "picolibc_armv8m.main_hard_fp-build/test/test-strtod",
+    "picolibc_armv8m.main_hard_fp-build/test/test-efcvt",
+    "picolibc_armv8m.main_hard_fp-build/test/complex-funcs",
+    "picolibc_armv8m.main_hard_fp-build/test/semihost/semihost-times",
+    "picolibc_armv8m.main_hard_fp-build/newlib/libm/test/math_test",
+    "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/sscanf",
+    "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/strtod",
+    "picolibc_armv8.1m.main_soft_nofp_nomve-build/newlib/libm/test/math_test",
+    "picolibc_armv8.1m.main_hard_fp-build/test/math_errhandling",
+    "picolibc_armv8.1m.main_hard_fp-build/newlib/libm/test/math_test",
+    "picolibc_armv8.1m.main_hard_nofp_mve-build/test/fenv",
+    "picolibc_armv8.1m.main_hard_nofp_mve-build/newlib/libm/test/math_test",
+    "picolibc_armv8.1m.main_hard_nofp_mve-build/test/math_errhandling",
+]
+
+
+def is_disabled(image):
+    return any([image.endswith(t) for t in disabled_tests])
+
 
 def run(args):
     """Execute the program using QEMU and return the subprocess return code."""
+    if is_disabled(args.image):
+        return EXIT_CODE_SKIP
     qemu_params = ["-M", args.qemu_machine]
     if args.qemu_cpu:
         qemu_params += ["-cpu", args.qemu_cpu]
@@ -42,8 +80,11 @@ def run(args):
         qemu_params += ["-device", f"loader,file={args.image},cpu-num=0"]
 
     qemu_cmd = [args.qemu_command] + qemu_params
+    # setting stdin to devnull prevents qemu from fiddling with the echo bit of
+    # the parent terminal
     result = subprocess.run(
         qemu_cmd,
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=sys.stderr,
         timeout=args.timeout,
