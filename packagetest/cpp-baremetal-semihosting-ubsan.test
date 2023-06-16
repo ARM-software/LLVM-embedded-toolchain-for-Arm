@@ -1,0 +1,5 @@
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-ubsan clean
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-ubsan run BIN_PATH=%unpack_directory/bin 2>&1 | FileCheck %s
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-ubsan clean
+# CHECK: UBSAN: add-overflow (recovered)
+# CHECK: C++ UBSan sample

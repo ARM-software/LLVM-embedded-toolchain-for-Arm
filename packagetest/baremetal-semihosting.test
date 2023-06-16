@@ -1,0 +1,4 @@
+# RUN: make -C %samples_dir/src/baremetal-semihosting clean
+# RUN: make -C %samples_dir/src/baremetal-semihosting run BIN_PATH=%unpack_directory/bin 2>&1 | FileCheck %s
+# RUN: make -C %samples_dir/src/baremetal-semihosting clean
+# CHECK: Hello World!
