@@ -572,7 +572,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
 
     function(picolibc_test test)
         set(BUILD_PARAMS --config ${variant}_semihost.cfg
-                -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld
+                -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/ldscripts/picolibc_${variant}.ld
                 -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
                 ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out)
         string(REPLACE ";" " " BUILD_PARAMS "${BUILD_PARAMS}")
@@ -601,7 +601,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
     set(test_executor
         "${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-params=${qemu_params_colon}")
     set(${variant_runtime_options_var}
-        -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld
+        -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/ldscripts/picolibc_${variant}.ld
         -DLIBCXX_EXECUTOR=${test_executor}
         -DLIBCXXABI_EXECUTOR=${test_executor}
         -DLIBUNWIND_EXECUTOR=${test_executor}
@@ -642,7 +642,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
     get_qemu_command("${target_triple}")
 
     set(compiler_rt_test_emulator "${qemu_command} -L ${LLVM_BINARY_DIR}/${directory} ${qemu_params} -semihosting -nographic -kernel")
-    set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tests/ldscripts/picolibc_${variant}.ld")
+    set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/ldscripts/picolibc_${variant}.ld")
 
     if(variant STREQUAL "armv6m_soft_nofp")
         set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
@@ -1184,7 +1184,7 @@ add_dependencies(
 add_custom_target(check-llvm-toolchain)
 add_dependencies(check-llvm-toolchain check-picolibc)
 add_dependencies(check-llvm-toolchain check-compiler-rt)
-add_subdirectory(tests)
+add_subdirectory(test)
 add_dependencies(check-llvm-toolchain check-llvm-toolchain-lit)
 
 # Run tests on the packaged and unpacked toolchain.
@@ -1200,7 +1200,7 @@ foreach(test
         COMMAND make clean
         COMMAND make run BIN_PATH=${LLVM_BINARY_DIR}/bin
         COMMAND make clean
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/smoketests/${test}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test/smoketests/${test}
     )
     add_dependencies(check-llvm-toolchain-smoketests-${test} llvm-toolchain)
     add_dependencies(check-llvm-toolchain check-llvm-toolchain-smoketests-${test})
@@ -1211,7 +1211,7 @@ foreach(test
         COMMAND make clean
         COMMAND make run BIN_PATH=${unpack_directory}/bin
         COMMAND make clean
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/smoketests/${test}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test/smoketests/${test}
     )
     add_dependencies(check-package-llvm-toolchain-smoketests-${test} unpack-llvm-toolchain)
     add_dependencies(check-package-llvm-toolchain check-package-llvm-toolchain-smoketests-${test})
