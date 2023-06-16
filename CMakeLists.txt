@@ -351,6 +351,7 @@ llvm_install_symlink(LLVM llvm-strip llvm-objcopy ALWAYS_GENERATE)
 # is more mature and works better with LLVM.
 find_program(MESON_EXECUTABLE meson REQUIRED)
 
+include(cmake/to_meson_list.cmake)
 
 # Generate VERSION.txt
 # Use add_custom_target instead of add_custom_command so that the target
@@ -470,12 +471,14 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
         BUILD_ALWAYS TRUE
         CONFIGURE_HANDLED_BY_BUILD TRUE
     )
+
     # Set meson_c_args to a comma-separated list of the clang path
     # and flags e.g. 'path/to/clang', '--target=armv6m-none-eabi',
     # '-march=armv6m'
-    set(meson_c_args "${flags}")
-    string(REPLACE " " "', '" meson_c_args "${meson_c_args}")
-    set(meson_c_args "'${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}', '${meson_c_args}'")
+    separate_arguments(flags)
+    list(PREPEND flags "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
+    list(APPEND flags --sysroot "${LLVM_BINARY_DIR}/${directory}")
+    to_meson_list("${flags}" meson_c_args)
     ExternalProject_Get_Property(picolibc_${variant} BINARY_DIR)
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
 
@@ -860,67 +863,69 @@ function(get_compiler_rt_target_triple target_arch flags)
     set(target_triple "${target_triple}" PARENT_SCOPE)
 endfunction()
 
-function(add_library_variants)
-    set(variant_args "${ARGN}")
-    while(variant_args)
-        list(POP_FRONT variant_args target_arch variant_suffix compile_flags multilib_flags qemu_params)
+function(add_library_variant target_arch)
+    set(one_value_args SUFFIX COMPILE_FLAGS MULTILIB_FLAGS QEMU_PARAMS)
+    cmake_parse_arguments(VARIANT "" "${one_value_args}" "" ${ARGN})
+    set(variant_suffix "${VARIANT_SUFFIX}")
+    set(compile_flags "${VARIANT_COMPILE_FLAGS}")
+    set(multilib_flags "${VARIANT_MULTILIB_FLAGS}")
+    set(qemu_params "${VARIANT_QEMU_PARAMS}")
 
-        if(variant_suffix)
-            set(variant "${target_arch}_${variant_suffix}")
+    if(variant_suffix)
+        set(variant "${target_arch}_${variant_suffix}")
+    else()
+        set(variant "${target_arch}")
+    endif()
+
+    if(LLVM_TOOLCHAIN_LIBRARY_VARIANTS)
+        if(NOT enable_${variant})
+            message("Disabling library variant ${variant}")
+            continue()
         else()
-            set(variant "${target_arch}")
+            message("Enabling library variant ${variant}")
         endif()
+    endif()
 
-        if(LLVM_TOOLCHAIN_LIBRARY_VARIANTS)
-            if(NOT enable_${variant})
-                message("Disabling library variant ${variant}")
-                continue()
-            else()
-                message("Enabling library variant ${variant}")
-            endif()
-        endif()
+    if(target_arch STREQUAL "aarch64")
+        set(parent_dir_name aarch64-none-elf)
+    else()
+        set(parent_dir_name arm-none-eabi)
+    endif()
 
-        if(target_arch STREQUAL "aarch64")
-            set(parent_dir_name aarch64-none-elf)
+    get_compiler_rt_target_triple("${target_arch}" "${compile_flags}")
+
+    set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
+    set(compile_flags "--target=${target_triple} ${compile_flags}")
+    make_config_cfg("${directory}" "${variant}" "${compile_flags}")
+    set(variant_options)
+    if(NOT PREBUILT_TARGET_LIBRARIES)
+        add_picolibc("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "${qemu_params}" variant_options)
+        add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "${qemu_params}" "picolibc_${variant}")
+        list(APPEND variant_options ${picolibc_specific_runtimes_options})
+        add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "picolibc_${variant}" "${variant_options}")
+        if(compile_flags MATCHES "-march=armv8")
+            message("C++ runtime libraries tests disabled for ${variant}")
         else()
-            set(parent_dir_name arm-none-eabi)
+            add_custom_target(check-llvm-toolchain-runtimes-${variant})
+            add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
+            add_compiler_rt_tests("${variant}")
+            add_libcxx_libcxxabi_libunwind_tests("${variant}")
         endif()
+    endif()
 
-        get_compiler_rt_target_triple("${target_arch}" "${compile_flags}")
+    string(APPEND multilib_yaml_content "- Dir: ${parent_dir_name}/${variant}\n")
 
-        set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
-        set(compile_flags "--target=${target_triple} ${compile_flags}")
-        make_config_cfg("${directory}" "${variant}" "${compile_flags}")
-        set(variant_options)
-        if(NOT PREBUILT_TARGET_LIBRARIES)
-            add_picolibc("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "${qemu_params}" variant_options)
-            add_compiler_rt("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "${qemu_params}" "picolibc_${variant}")
-            list(APPEND variant_options ${picolibc_specific_runtimes_options})
-            add_libcxx_libcxxabi_libunwind("${directory}" "${variant}" "${target_triple}" "${compile_flags}" "picolibc_${variant}" "${variant_options}")
-            if(compile_flags MATCHES "-march=armv8")
-                message("C++ runtime libraries tests disabled for ${variant}")
-            else()
-                add_custom_target(check-llvm-toolchain-runtimes-${variant})
-                add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
-                add_compiler_rt_tests("${variant}")
-                add_libcxx_libcxxabi_libunwind_tests("${variant}")
-            endif()
-        endif()
+    string(APPEND multilib_yaml_content "  Flags:\n")
+    string(REPLACE " " ";" multilib_flags_list ${multilib_flags})
+    foreach(flag ${multilib_flags_list})
+        string(APPEND multilib_yaml_content "  - ${flag}\n")
+    endforeach()
 
-        string(APPEND multilib_yaml_content "- Dir: ${parent_dir_name}/${variant}\n")
-
-        string(APPEND multilib_yaml_content "  Flags:\n")
-        string(REPLACE " " ";" multilib_flags_list ${multilib_flags})
-        foreach(flag ${multilib_flags_list})
-          string(APPEND multilib_yaml_content "  - ${flag}\n")
-        endforeach()
-
-        install(
-            DIRECTORY "${LLVM_BINARY_DIR}/${directory}/"
-            DESTINATION "${directory}"
-            COMPONENT llvm-toolchain-libs
-        )
-    endwhile()
+    install(
+        DIRECTORY "${LLVM_BINARY_DIR}/${directory}/"
+        DESTINATION "${directory}"
+        COMPONENT llvm-toolchain-libs
+    )
     set(multilib_yaml_content "${multilib_yaml_content}" PARENT_SCOPE)
 endfunction()
 
@@ -928,20 +933,93 @@ set(multilib_yaml_content "")
 
 # Define which library variants to build and which flags to use.
 # The order is <arch> <name suffix> <compile flags> <multilib selection flags> <qemu params>
-add_library_variants(
-    aarch64         ""                  "-march=armv8-a"                                        "--target=aarch64-none-unknown-elf"                                                         "-M virt -cpu cortex-a57"
-    armv4t          ""                  "-march=armv4t"                                         "--target=armv4t-none-unknown-eabi -mfpu=none"                                              "-M musicpal -cpu arm926"
-    armv5te         ""                  "-march=armv5te"                                        "--target=armv5e-none-unknown-eabi -mfpu=none"                                              "-M musicpal -cpu arm926"
-    armv6m          soft_nofp           "-mfloat-abi=soft -march=armv6m"                        "--target=thumbv6m-none-unknown-eabi -mfpu=none"                                            "-M mps2-an385"
-    armv7m          soft_nofp           "-mfloat-abi=soft -march=armv7m+nofp"                   "--target=thumbv7m-none-unknown-eabi -mfpu=none"                                            "-M mps2-an385 -cpu cortex-m3"
-    armv7em         soft_nofp           "-mfloat-abi=soft -march=armv7em -mfpu=none"            "--target=thumbv7em-none-unknown-eabi -mfpu=none"                                           "-M mps2-an386 -cpu cortex-m4"
-    armv7em         hard_fpv4_sp_d16    "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"     "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv4-sp-d16"                                  "-M mps2-an386 -cpu cortex-m4"
-    armv7em         hard_fpv5_d16       "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"        "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv5-d16"                                     "-M mps2-an500 -cpu cortex-m7"
-    armv8m.main     soft_nofp           "-mfloat-abi=soft -march=armv8m.main+nofp"              "--target=thumbv8m.main-none-unknown-eabi -mfpu=none"                                       "-M mps2-an505 -cpu cortex-m33"
-    armv8m.main     hard_fp             "-mfloat-abi=hard -march=armv8m.main+fp"                "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-d16"                                 "-M mps2-an505 -cpu cortex-m33"
-    armv8.1m.main   soft_nofp_nomve     "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"      "--target=thumbv8.1m.main-none-unknown-eabi -mfpu=none"                                     "-M mps3-an547 -cpu cortex-m55"
-    armv8.1m.main   hard_fp             "-mfloat-abi=hard -march=armv8.1m.main+fp"              "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"   "-M mps3-an547 -cpu cortex-m55"
-    armv8.1m.main   hard_nofp_mve       "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"        "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+dsp+mve -mfpu=none"    "-M mps3-an547 -cpu cortex-m55"
+add_library_variant(
+    aarch64
+    COMPILE_FLAGS "-march=armv8-a"
+    MULTILIB_FLAGS "--target=aarch64-none-unknown-elf"
+    QEMU_PARAMS "-M virt -cpu cortex-a57"
+)
+add_library_variant(
+    armv4t
+    COMPILE_FLAGS "-march=armv4t"
+    MULTILIB_FLAGS "--target=armv4t-none-unknown-eabi -mfpu=none"
+    QEMU_PARAMS "-M musicpal -cpu arm926"
+)
+add_library_variant(
+    armv5te
+    COMPILE_FLAGS "-march=armv5te"
+    MULTILIB_FLAGS "--target=armv5e-none-unknown-eabi -mfpu=none"
+    QEMU_PARAMS "-M musicpal -cpu arm926"
+)
+add_library_variant(
+    armv6m
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m"
+    MULTILIB_FLAGS "--target=thumbv6m-none-unknown-eabi -mfpu=none"
+    QEMU_PARAMS "-M mps2-an385"
+)
+add_library_variant(
+    armv7m
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m+nofp"
+    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
+    QEMU_PARAMS "-M mps2-an385 -cpu cortex-m3"
+)
+add_library_variant(
+    armv7em
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
+    QEMU_PARAMS "-M mps2-an386 -cpu cortex-m4"
+)
+add_library_variant(
+    armv7em
+    SUFFIX hard_fpv4_sp_d16
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv4-sp-d16"
+    QEMU_PARAMS "-M mps2-an386 -cpu cortex-m4"
+)
+add_library_variant(
+    armv7em
+    SUFFIX hard_fpv5_d16
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv5-d16"
+    QEMU_PARAMS "-M mps2-an500 -cpu cortex-m7"
+)
+add_library_variant(
+    armv8m.main
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8m.main+nofp"
+    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabi -mfpu=none"
+    QEMU_PARAMS "-M mps2-an505 -cpu cortex-m33"
+)
+add_library_variant(
+    armv8m.main
+    SUFFIX hard_fp
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8m.main+fp"
+    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-d16"
+    QEMU_PARAMS "-M mps2-an505 -cpu cortex-m33"
+)
+add_library_variant(
+    armv8.1m.main
+    SUFFIX soft_nofp_nomve
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabi -mfpu=none"
+    QEMU_PARAMS "-M mps3-an547 -cpu cortex-m55"
+)
+add_library_variant(
+    armv8.1m.main
+    SUFFIX hard_fp
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+fp"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
+    QEMU_PARAMS "-M mps3-an547 -cpu cortex-m55"
+)
+add_library_variant(
+    armv8.1m.main
+    SUFFIX hard_nofp_mve
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+dsp+mve -mfpu=none"
+    QEMU_PARAMS "-M mps3-an547 -cpu cortex-m55"
 )
 
 configure_file(
