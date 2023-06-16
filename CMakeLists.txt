@@ -572,7 +572,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
 
     function(picolibc_test test)
         set(BUILD_PARAMS --config ${variant}_semihost.cfg
-                -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/ldscripts/picolibc_${variant}.ld
+                -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-support/ldscripts/picolibc_${variant}.ld
                 -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
                 ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out)
         string(REPLACE ";" " " BUILD_PARAMS "${BUILD_PARAMS}")
@@ -601,7 +601,7 @@ function(add_picolibc directory variant target_triple flags qemu_params variant_
     set(test_executor
         "${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-params=${qemu_params_colon}")
     set(${variant_runtime_options_var}
-        -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/ldscripts/picolibc_${variant}.ld
+        -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-support/ldscripts/picolibc_${variant}.ld
         -DLIBCXX_EXECUTOR=${test_executor}
         -DLIBCXXABI_EXECUTOR=${test_executor}
         -DLIBUNWIND_EXECUTOR=${test_executor}
@@ -642,7 +642,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
     get_qemu_command("${target_triple}")
 
     set(compiler_rt_test_emulator "${qemu_command} -L ${LLVM_BINARY_DIR}/${directory} ${qemu_params} -semihosting -nographic -kernel")
-    set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/ldscripts/picolibc_${variant}.ld")
+    set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-support/ldscripts/picolibc_${variant}.ld")
 
     if(variant STREQUAL "armv6m_soft_nofp")
         set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
@@ -880,7 +880,7 @@ function(add_library_variant target_arch)
     if(LLVM_TOOLCHAIN_LIBRARY_VARIANTS)
         if(NOT enable_${variant})
             message("Disabling library variant ${variant}")
-            continue()
+            return()
         else()
             message("Enabling library variant ${variant}")
         endif()
@@ -1176,85 +1176,12 @@ add_dependencies(
 )
 
 
-
-# TODO move this into tests/CMakeLists.txt
-# Smoke tests
-
-# Run tests on the built toolchain.
 add_custom_target(check-llvm-toolchain)
 add_dependencies(check-llvm-toolchain check-picolibc)
 add_dependencies(check-llvm-toolchain check-compiler-rt)
 add_subdirectory(test)
 add_dependencies(check-llvm-toolchain check-llvm-toolchain-lit)
-
-# Run tests on the packaged and unpacked toolchain.
-add_custom_target(check-package-llvm-toolchain)
-
-# Smoke tests
-foreach(test
-    basic-semihosting
-    cpp-basic-semihosting
-)
-    add_custom_target(
-        check-llvm-toolchain-smoketests-${test}
-        COMMAND make clean
-        COMMAND make run BIN_PATH=${LLVM_BINARY_DIR}/bin
-        COMMAND make clean
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test/smoketests/${test}
-    )
-    add_dependencies(check-llvm-toolchain-smoketests-${test} llvm-toolchain)
-    add_dependencies(check-llvm-toolchain check-llvm-toolchain-smoketests-${test})
-
-    # Post-package tests
-    add_custom_target(
-        check-package-llvm-toolchain-smoketests-${test}
-        COMMAND make clean
-        COMMAND make run BIN_PATH=${unpack_directory}/bin
-        COMMAND make clean
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test/smoketests/${test}
-    )
-    add_dependencies(check-package-llvm-toolchain-smoketests-${test} unpack-llvm-toolchain)
-    add_dependencies(check-package-llvm-toolchain check-package-llvm-toolchain-smoketests-${test})
-endforeach()
-
-# Samples
-# If samples are included in the package then use the packaged samples in
-# post-package tests, otherwise use the samples from the source directory.
-if(llvm-toolchain-samples IN_LIST LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS)
-    set(check_package_samples_root_dir ${unpack_directory})
-else()
-    set(check_package_samples_root_dir ${CMAKE_CURRENT_SOURCE_DIR})
-endif()
-# Don't run the baremetal-uart sample because it never terminates.
-foreach(test
-    baremetal-semihosting-aarch64
-    baremetal-semihosting
-    cpp-baremetal-semihosting
-    cpp-baremetal-semihosting-cfi
-    cpp-baremetal-semihosting-prof
-    cpp-baremetal-semihosting-ubsan
-)
-    add_custom_target(
-        check-llvm-toolchain-samples-${test}
-        COMMAND make clean
-        COMMAND make run BIN_PATH=${LLVM_BINARY_DIR}/bin
-        COMMAND make clean
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/samples/src/${test}
-    )
-    add_dependencies(check-llvm-toolchain-samples-${test} llvm-toolchain)
-    add_dependencies(check-llvm-toolchain check-llvm-toolchain-samples-${test})
-
-    # Post-package tests
-    add_custom_target(
-        check-package-llvm-toolchain-samples-${test}
-        COMMAND make clean
-        COMMAND make run BIN_PATH=${unpack_directory}/bin
-        COMMAND make clean
-        WORKING_DIRECTORY ${check_package_samples_root_dir}/samples/src/${test}
-    )
-    add_dependencies(check-package-llvm-toolchain-samples-${test} unpack-llvm-toolchain)
-    add_dependencies(check-package-llvm-toolchain check-package-llvm-toolchain-samples-${test})
-endforeach()
+add_subdirectory(packagetest)
 
 if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
     find_program(MINGW_C_EXECUTABLE x86_64-w64-mingw32-gcc-posix REQUIRED)

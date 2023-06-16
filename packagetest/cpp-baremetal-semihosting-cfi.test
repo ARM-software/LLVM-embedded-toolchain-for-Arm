@@ -1,0 +1,10 @@
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-cfi clean
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-cfi run BIN_PATH=%unpack_directory/bin 2>&1 | FileCheck %s
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-cfi clean
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-cfi build-no-cfi
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-cfi run BIN_PATH=%unpack_directory/bin 2>&1 | FileCheck %s --check-prefix=NOCFI
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-cfi clean
+# CHECK-NOT: Bad
+# CHECK: hardfault
+# NOCFI: Bad
+# NOCFI: C++ CFI sample

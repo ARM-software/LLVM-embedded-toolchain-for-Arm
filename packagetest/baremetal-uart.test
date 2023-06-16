@@ -1,0 +1,5 @@
+# RUN: make -C %samples_dir/src/baremetal-uart clean
+# The sample never terminates so we can't run it here, but we can at
+# least make sure it builds.
+# RUN: make -C %samples_dir/src/baremetal-uart build BIN_PATH=%unpack_directory/bin
+# RUN: make -C %samples_dir/src/baremetal-uart clean
