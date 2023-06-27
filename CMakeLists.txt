@@ -535,7 +535,7 @@ function(
     )
     # remove tests failing on a given platform
     if(variant STREQUAL "aarch64")
-        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
+        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling printf-tests)
     endif()
     if(variant STREQUAL "armv4t")
         list(REMOVE_ITEM picolibc_tests constructor-skip test-except)

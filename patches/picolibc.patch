@@ -1,8 +1,8 @@
 diff --git a/meson.build b/meson.build
-index c49856ee0..3e927ea75 100644
+index 790d53d49..00edfe5ed 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -972,6 +972,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
+@@ -985,6 +985,12 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
    error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
  endif
  
@@ -32,8 +32,21 @@ index f7e7fa80c..75d7a9aaf 100644
  
  	.bss (NOLOAD) : {
  		*(.sbss*)
+diff --git a/test/testcases.c b/test/testcases.c
+index 790e782ab..184b8cd9f 100644
+--- a/test/testcases.c
++++ b/test/testcases.c
+@@ -650,5 +650,8 @@
+     /* make sure %c truncates to char */
+     wb[0] = 0x34;
+     result |= testw(__LINE__, wb, L"%c", wc);
++
++    result |= test(__LINE__, "0.3333333333333333", "%.16Lf", 0.3333333333333333333333333333333333L);
++    result |= test(__LINE__, "3.141592653589793", "%.15Lf", 3.1415926535897932384626433832795029L);
+ }
+ #endif
 diff --git a/test/tls.c b/test/tls.c
-index d3c0b08d4..7ac30d370 100644
+index c2ca7e599..bae0e4f3a 100644
 --- a/test/tls.c
 +++ b/test/tls.c
 @@ -43,7 +43,7 @@
