@@ -435,12 +435,30 @@ add_custom_target(check-picolibc)
 # by add_subdirectory of llvm project
 set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
 
-function(get_qemu_command target_triple)
+function(get_test_executor target_triple qemu_machine qemu_cpu qemu_params)
     if(target_triple MATCHES "^aarch64")
-        set(qemu_command "qemu-system-aarch64" PARENT_SCOPE)
+        set(qemu_command "qemu-system-aarch64")
     else()
-        set(qemu_command "qemu-system-arm" PARENT_SCOPE)
+        set(qemu_command "qemu-system-arm")
     endif()
+
+    # Use colon as a separator because comma and semicolon are used for
+    # other purposes in CMake.
+    string(REPLACE " " ":" qemu_params_list "${qemu_params}")
+
+    set(
+        test_executor
+        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+        --qemu-command ${qemu_command}
+        --qemu-machine ${qemu_machine})
+    if(qemu_cpu)
+        list(APPEND test_executor "--qemu-cpu" "${qemu_cpu}")
+    endif()
+    if(qemu_params_list)
+        list(APPEND test_executor "--qemu-params=${qemu_params_list}")
+    endif()
+    list(JOIN test_executor " " test_executor)
+    set(test_executor "${test_executor}" PARENT_SCOPE)
 endfunction()
 
 function(
@@ -449,9 +467,7 @@ function(
     variant
     target_triple
     flags
-    qemu_machine
-    qemu_cpu
-    qemu_params
+    test_executor
 )
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
         set(MESON_INSTALL_QUIET "--quiet")
@@ -491,11 +507,6 @@ function(
     ExternalProject_Get_Property(picolibc_${variant} BINARY_DIR)
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
 
-    # picolibc tests
-    # Use colon as a separator because comma and semicolon are used for
-    # other purposes in CMake.
-    string(REPLACE " " ":" qemu_params_list "${qemu_params}")
-    get_qemu_command("${target_triple}")
     # Full list of picolibc tests
     set(picolibc_tests
         abort
@@ -587,19 +598,7 @@ function(
                 -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
                 ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out)
         string(REPLACE ";" " " BUILD_PARAMS "${BUILD_PARAMS}")
-        set(
-            TEST_COMMAND
-            ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
-            --qemu-command ${qemu_command}
-            --qemu-machine ${qemu_machine})
-        if(qemu_cpu)
-            list(APPEND TEST_COMMAND "--qemu-cpu" "${qemu_cpu}")
-        endif()
-        if(qemu_params_list)
-            list(APPEND TEST_COMMAND "--qemu-params=${qemu_params_list}")
-        endif()
-        list(APPEND TEST_COMMAND check-picolibc_${variant}_build_${test}.out)
-        string(REPLACE ";" " " TEST_COMMAND "${TEST_COMMAND}")
+        set(TEST_COMMAND "${test_executor} check-picolibc_${variant}_build_${test}.out")
         set(PICOLIBC_LIT_TEST_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test.template)
         # Some picolibc tests return non-zero value upon success, then use dedicated test template
         if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test-${test}.template)
@@ -632,9 +631,7 @@ function(
     variant
     target_triple
     flags
-    qemu_machine
-    qemu_cpu
-    qemu_params
+    test_executor
     libc_target
 )
     # We can't always put the exact target
@@ -658,19 +655,6 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
     endif()
 
     get_runtimes_flags("${directory}" "${flags}")
-    get_qemu_command("${target_triple}")
-
-    # Use colon as a separator because comma and semicolon are used for
-    # other purposes in CMake.
-    string(REPLACE " " ":" qemu_params_colon "${qemu_params}")
-    set(test_executor
-        "${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-machine ${qemu_machine}")
-    if(qemu_cpu)
-        string(APPEND test_executor " --qemu-cpu ${qemu_cpu}")
-    endif()
-    if(qemu_params_colon)
-        string(APPEND test_executor " --qemu-params=${qemu_params_colon}")
-    endif()
 
     set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-support/ldscripts/picolibc_${variant}.ld")
     if(variant STREQUAL "armv6m_soft_nofp")
@@ -746,26 +730,11 @@ function(
     variant
     target_triple
     flags
-    qemu_machine
-    qemu_cpu
-    qemu_params
+    test_executor
     libc_target
     extra_cmake_options
 )
     get_runtimes_flags("${directory}" "${flags}")
-
-    # Use colon as a separator because comma and semicolon are used for
-    # other purposes in CMake.
-    string(REPLACE " " ":" qemu_params_colon "${qemu_params}")
-    get_qemu_command("${target_triple}")
-    set(test_executor
-        "${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py --qemu-command ${qemu_command} --qemu-machine ${qemu_machine}")
-    if(qemu_cpu)
-        string(APPEND test_executor " --qemu-cpu ${qemu_cpu}")
-    endif()
-    if(qemu_params_colon)
-        string(APPEND test_executor " --qemu-params=${qemu_params_colon}")
-    endif()
 
     ExternalProject_Add(
         libcxx_libcxxabi_libunwind_${variant}
@@ -958,24 +927,21 @@ function(add_library_variant target_arch)
     set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
     make_config_cfg("${directory}" "${variant}" "${VARIANT_COMPILE_FLAGS}")
+    get_test_executor("${target_triple}" "${VARIANT_QEMU_MACHINE}" "${VARIANT_QEMU_CPU}" "${VARIANT_QEMU_PARAMS}")
     if(NOT PREBUILT_TARGET_LIBRARIES)
         add_picolibc(
             "${directory}"
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${VARIANT_QEMU_MACHINE}"
-            "${VARIANT_QEMU_CPU}"
-            "${VARIANT_QEMU_PARAMS}"
+            "${test_executor}"
         )
         add_compiler_rt(
             "${directory}"
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${VARIANT_QEMU_MACHINE}"
-            "${VARIANT_QEMU_CPU}"
-            "${VARIANT_QEMU_PARAMS}"
+            "${test_executor}"
             "picolibc_${variant}"
         )
         add_libcxx_libcxxabi_libunwind(
@@ -983,9 +949,7 @@ function(add_library_variant target_arch)
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${VARIANT_QEMU_MACHINE}"
-            "${VARIANT_QEMU_CPU}"
-            "${VARIANT_QEMU_PARAMS}"
+            "${test_executor}"
             "picolibc_${variant}"
             "${picolibc_specific_runtimes_options}"
         )
