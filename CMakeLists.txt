@@ -1087,9 +1087,24 @@ add_library_variant(
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/multilib.yaml.in
-    ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml
+    ${CMAKE_CURRENT_BINARY_DIR}/multilib-without-fpus.yaml
     @ONLY
 )
+
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml
+  COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_CURRENT_BINARY_DIR}/multilib-without-fpus.yaml
+    ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml
+  COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py"
+    "--clang=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}"
+    "--llvm-source=${llvmproject_SOURCE_DIR}"
+    >> "${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml"
+  DEPENDS clang "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py")
+add_custom_target(multilib_yaml ALL DEPENDS
+  ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml)
+add_dependencies(llvm-toolchain-runtimes multilib_yaml)
+
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml
     DESTINATION ${TARGET_LIBRARIES_DIR}

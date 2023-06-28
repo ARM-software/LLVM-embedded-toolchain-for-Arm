@@ -1,0 +1,22 @@
+# RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv7m -mfpu=fpv5-d16 | FileCheck --check-prefixes=VFPV4-D16,FPV4-SP-D16,FPV5-SP-D16 %s
+
+# RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv7m -mfpu=fpv5-sp-d16 | FileCheck --check-prefix=FPV4-SP-D16 %s
+
+# RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv7m -mfpu=vfpv4-d16 | FileCheck --check-prefix=FPV4-SP-D16 %s
+
+# RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv7m -mfpu=fp-armv8-fullfp16-d16 | FileCheck --check-prefix=FP-ARMV8-FULLFP16-SP-D16 %s
+
+# RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv8 -mfpu=crypto-neon-fp-armv8 | FileCheck --check-prefixes=NEON-FP-ARMV8,NEON-VFPV4,FP-ARMV8 %s
+# RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv8 -mfpu=neon-fp-armv8 | FileCheck --check-prefixes=NEON-VFPV4,FP-ARMV8 %s
+
+# RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -march=armv8 -mfpu=vfpv3-d16 | FileCheck --check-prefixes=VFPV2,VFPV3XD %s
+
+# FP-ARMV8-FULLFP16-SP-D16: -mfpu=fp-armv8-fullfp16-sp-d16{{$}}
+# FP-ARMV8: -mfpu=fp-armv8{{$}}
+# FPV4-SP-D16: -mfpu=fpv4-sp-d16{{$}}
+# FPV5-SP-D16: -mfpu=fpv5-sp-d16{{$}}
+# NEON-FP-ARMV8: -mfpu=neon-fp-armv8{{$}}
+# NEON-VFPV4: -mfpu=neon-vfpv4{{$}}
+# VFPV2: -mfpu=vfpv2{{$}}
+# VFPV3XD: -mfpu=vfpv3xd{{$}}
+# VFPV4-D16: -mfpu=vfpv4-d16{{$}}
