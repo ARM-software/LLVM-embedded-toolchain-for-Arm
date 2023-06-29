@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Building from sources created by git archive (#242).
+
 ### Removed
 
 - Dependency on libtinfo.so.
