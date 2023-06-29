@@ -86,7 +86,9 @@ find . -type f -perm +0111 | xargs xattr -d com.apple.quarantine
 To use the toolchain, on the command line you need to provide:
 * A [configuration file](
   https://clang.llvm.org/docs/UsersManual.html#configuration-files) specified
-  with `--config`.
+  with `--config`, or a suitable set of command line options including the
+  `crt0` library to use - see
+  [using the toolchain without config files](#using-the-toolchain-without-config-files).
 * A [linker script](
   https://sourceware.org/binutils/docs/ld/Scripts.html) specified with `-T`.
   Default `picolibcpp.ld` & `picolibc.ld` scripts are provided and can be used
@@ -110,14 +112,40 @@ $ ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg
 
 ### Using the toolchain without config files
 
-Instead of using a config file you can provide a `--sysroot` option specifying
-the directory containing the`include` and `lib` directories of the libraries
-you want to use, in addition to various other required options:
+Instead of using a config file you can directly specify options.
+The following options are required:
 * The target triple
 * Disabling exceptions and RTTI
 * The `crt0` library - either `crt0` or `crt0-semihost`
-* The semihosting library, if desired.
- For example:
+* The semihosting library, if using `crt0-semihost`.
+* A linker script, the same as when using a config file.
+
+For example:
+```
+$ clang \
+--target=armv6m-none-eabi \
+-fno-exceptions \
+-fno-rtti \
+-lcrt0-semihost \
+-lsemihost \
+-T picolibc.ld \
+-o example example.c
+```
+
+`clang`'s multilib system will automatically select an appropriate set of
+libraries based on your compile flags. `clang` will emit a warning if no
+appropriate set of libraries can be found.
+
+To display the directory selected by the multilib system, add the flag
+`-print-multi-directory` to your `clang` command line options.
+
+To display all available multilibs run `clang` with the flag `-print-multi-lib`
+and a target triple like `--target=aarch64-none-elf` or `--target=arm-none-eabi`.
+
+It's possible that `clang` will choose a set of libraries that are not the ones
+you want to use. In this case you can bypass the multilib system by providing a
+`--sysroot` option specifying the directory containing the `include` and `lib`
+directories of the libraries you want to use. For example:
 
 ```
 $ clang \
