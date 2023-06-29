@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 - Building from sources created by git archive (#242).
 
+### Changed
+- Updated multilib to use LLVM multilib.yaml 1.0 (#250).
+
 ### Removed
 
 - Dependency on libtinfo.so.
