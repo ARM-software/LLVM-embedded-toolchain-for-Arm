@@ -15,33 +15,3 @@ index c49856ee0..3e927ea75 100644
  conf_data.set('_HAVE_CC_INHIBIT_LOOP_TO_LIBCALL',
  	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
  	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
-diff --git a/picolibc.ld.in b/picolibc.ld.in
-index f7e7fa80c..75d7a9aaf 100644
---- a/picolibc.ld.in
-+++ b/picolibc.ld.in
-@@ -207,10 +207,12 @@ SECTIONS
- 	 * across them.  We actually need memory allocated for tbss,
- 	 * so we create a special segment here just to make room
- 	 */
-+	/*
- 	.tbss_space (NOLOAD) : {
- 		. = ADDR(.tbss);
- 		. = . + SIZEOF(.tbss);
- 	} >ram AT>ram :ram
-+	*/
- 
- 	.bss (NOLOAD) : {
- 		*(.sbss*)
-diff --git a/test/tls.c b/test/tls.c
-index d3c0b08d4..7ac30d370 100644
---- a/test/tls.c
-+++ b/test/tls.c
-@@ -43,7 +43,7 @@
- #define DATA_VAL 0x600df00d
- #define DATA_VAL2 0x0a0a0a0a
- 
--#define OVERALIGN_DATA  128
-+#define OVERALIGN_DATA  256
- #define OVERALIGN_BSS   256
- 
- #define TLS_ALIGN      (OVERALIGN_DATA > OVERALIGN_BSS ? OVERALIGN_DATA : OVERALIGN_BSS)
