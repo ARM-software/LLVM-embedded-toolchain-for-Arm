@@ -6,3 +6,15 @@ index 20c4f52cd378..eefdedbcb4f4 100644
 -#==============================================================================#
 +#==============================================================================#
  # This file specifies intentionally untracked files that git should ignore.
+diff --git a/libcxx/src/CMakeLists.txt b/libcxx/src/CMakeLists.txt
+index 623d91905443..aea2aba3e0a7 100644
+--- a/libcxx/src/CMakeLists.txt
++++ b/libcxx/src/CMakeLists.txt
+@@ -12,7 +12,6 @@ set(LIBCXX_SOURCES
+   condition_variable.cpp
+   condition_variable_destructor.cpp
+   exception.cpp
+-  filesystem/filesystem_clock.cpp
+   filesystem/filesystem_error.cpp
+   filesystem/path_parser.h
+   filesystem/path.cpp
