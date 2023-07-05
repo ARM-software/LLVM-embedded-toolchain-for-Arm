@@ -783,6 +783,7 @@ function(
         -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
         -DLLVM_ENABLE_RUNTIMES=libcxxabi,libcxx,libunwind
         -DRUNTIME_TEST_ARCH_FLAGS=${flags}
+        -DRUNTIME_VARIANT_NAME=${variant}
         ${extra_cmake_options}
         STEP_TARGETS build
         USES_TERMINAL_CONFIGURE TRUE
