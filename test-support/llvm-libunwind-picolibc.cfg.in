@@ -4,6 +4,8 @@
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
+config.name = 'libunwind-@RUNTIME_VARIANT_NAME@'
+
 config.substitutions.append(('%{libc-include}', '@CMAKE_INSTALL_PREFIX@/include'))
 config.substitutions.append(('%{libc-lib}', '@CMAKE_INSTALL_PREFIX@/lib'))
 config.substitutions.append(('%{libc-linker-script}', '@LIBC_LINKER_SCRIPT@'))
