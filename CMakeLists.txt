@@ -538,8 +538,7 @@ function(
     # To solve this compiler_rt relies on picolibc to be just installed, not on
     # the full target, which would include tests. Picolibc tests, are enabled
     # only in tests step, otherwise, they would be built before install.
-    add_custom_target(compiler_rt_${variant}-available)
-    ExternalProject_Add_StepDependencies(picolibc_${variant} test compiler_rt_${variant}-available)
+    ExternalProject_Add_StepDependencies(picolibc_${variant} test compiler_rt_${variant}-install)
 
     add_dependencies(check-picolibc picolibc_${variant}-test)
     add_dependencies(
@@ -625,7 +624,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
         -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
-        STEP_TARGETS build
+        STEP_TARGETS build install
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
@@ -645,7 +644,6 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
             ${INSTALL_DIR}/lib/${target_triple} "${LLVM_BINARY_DIR}/${directory}/lib"
     )
 
-    add_dependencies(compiler_rt_${variant}-available compiler_rt_${variant})
     add_dependencies(
         llvm-toolchain-runtimes
         compiler_rt_${variant}
