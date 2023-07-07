@@ -7,7 +7,8 @@ exe_wrapper = [
     'sh',
     '-c',
     'test -z "$PICOLIBC_TEST" || @test_executor_bin@ "$@"',
-    @test_executor@]
+    '@test_executor_bin@',
+    @test_executor_params@]
 
 [host_machine]
 system = 'none'

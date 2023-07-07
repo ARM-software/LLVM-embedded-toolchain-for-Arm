@@ -435,7 +435,7 @@ add_custom_target(check-picolibc)
 # by add_subdirectory of llvm project
 set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
 
-function(get_test_executor target_triple qemu_machine qemu_cpu qemu_params)
+function(get_test_executor_params target_triple qemu_machine qemu_cpu qemu_params)
     if(target_triple MATCHES "^aarch64")
         set(qemu_command "qemu-system-aarch64")
     else()
@@ -447,18 +447,16 @@ function(get_test_executor target_triple qemu_machine qemu_cpu qemu_params)
     string(REPLACE " " ":" qemu_params_list "${qemu_params}")
 
     set(
-        test_executor
-        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+        test_executor_params
         --qemu-command ${qemu_command}
         --qemu-machine ${qemu_machine})
     if(qemu_cpu)
-        list(APPEND test_executor "--qemu-cpu" "${qemu_cpu}")
+        list(APPEND test_executor_params --qemu-cpu ${qemu_cpu})
     endif()
     if(qemu_params_list)
-        list(APPEND test_executor "--qemu-params=${qemu_params_list}")
+        list(APPEND test_executor_params "--qemu-params=${qemu_params_list}")
     endif()
-    list(JOIN test_executor " " test_executor)
-    set(test_executor "${test_executor}" PARENT_SCOPE)
+    set(test_executor_params "${test_executor_params}" PARENT_SCOPE)
 endfunction()
 
 function(
@@ -467,7 +465,7 @@ function(
     variant
     target_triple
     flags
-    test_executor
+    test_executor_params
     default_flash_addr
     default_flash_size
     default_ram_addr
@@ -526,9 +524,8 @@ function(
     list(APPEND flags --sysroot "${LLVM_BINARY_DIR}/${directory}")
     to_meson_list("${flags}" meson_c_args)
 
-    separate_arguments(test_executor)
-    list(GET test_executor 0 test_executor_bin)
-    to_meson_list("${test_executor}" test_executor)
+    set(test_executor_bin ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-test-wrapper.py)
+    to_meson_list("${test_executor_params}" test_executor_params)
 
     ExternalProject_Get_Property(picolibc_${variant} BINARY_DIR)
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
@@ -557,7 +554,7 @@ function(
     variant
     target_triple
     flags
-    test_executor
+    test_executor_params
     libc_target
 )
     # We can't always put the exact target
@@ -586,6 +583,13 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
     if(variant STREQUAL "armv6m_soft_nofp")
         set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
     endif()
+
+    set(
+        test_executor
+        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+        ${test_executor_params}
+    )
+    list(JOIN test_executor " " test_executor)
 
     ExternalProject_Add(
         compiler_rt_${variant}
@@ -656,11 +660,18 @@ function(
     variant
     target_triple
     flags
-    test_executor
+    test_executor_params
     libc_target
     extra_cmake_options
 )
     get_runtimes_flags("${directory}" "${flags}")
+
+    set(
+        test_executor
+        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+        ${test_executor_params}
+    )
+    list(JOIN test_executor " " test_executor)
 
     ExternalProject_Add(
         libcxx_libcxxabi_libunwind_${variant}
@@ -859,14 +870,19 @@ function(add_library_variant target_arch)
     set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
     make_config_cfg("${directory}" "${variant}" "${VARIANT_COMPILE_FLAGS}")
-    get_test_executor("${target_triple}" "${VARIANT_QEMU_MACHINE}" "${VARIANT_QEMU_CPU}" "${VARIANT_QEMU_PARAMS}")
+    get_test_executor_params(
+        "${target_triple}"
+        "${VARIANT_QEMU_MACHINE}"
+        "${VARIANT_QEMU_CPU}"
+        "${VARIANT_QEMU_PARAMS}"
+    )
     if(NOT PREBUILT_TARGET_LIBRARIES)
         add_picolibc(
             "${directory}"
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${test_executor}"
+            "${test_executor_params}"
             "${VARIANT_FLASH_ADDRESS}"
             "${VARIANT_FLASH_SIZE}"
             "${VARIANT_RAM_ADDRESS}"
@@ -878,7 +894,7 @@ function(add_library_variant target_arch)
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${test_executor}"
+            "${test_executor_params}"
             "picolibc_${variant}-install"
         )
         add_libcxx_libcxxabi_libunwind(
@@ -886,7 +902,7 @@ function(add_library_variant target_arch)
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${test_executor}"
+            "${test_executor_params}"
             "picolibc_${variant}-install"
             "${picolibc_specific_runtimes_options}"
         )
