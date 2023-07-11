@@ -554,7 +554,7 @@ function(
     variant
     target_triple
     flags
-    test_executor_params
+    test_executor
     libc_target
 )
     # We can't always put the exact target
@@ -583,13 +583,6 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
     if(variant STREQUAL "armv6m_soft_nofp")
         set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
     endif()
-
-    set(
-        test_executor
-        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
-        ${test_executor_params}
-    )
-    list(JOIN test_executor " " test_executor)
 
     ExternalProject_Add(
         compiler_rt_${variant}
@@ -660,18 +653,11 @@ function(
     variant
     target_triple
     flags
-    test_executor_params
+    test_executor
     libc_target
     extra_cmake_options
 )
     get_runtimes_flags("${directory}" "${flags}")
-
-    set(
-        test_executor
-        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
-        ${test_executor_params}
-    )
-    list(JOIN test_executor " " test_executor)
 
     ExternalProject_Add(
         libcxx_libcxxabi_libunwind_${variant}
@@ -876,6 +862,12 @@ function(add_library_variant target_arch)
         "${VARIANT_QEMU_CPU}"
         "${VARIANT_QEMU_PARAMS}"
     )
+    set(
+        lit_test_executor
+        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+        ${test_executor_params}
+    )
+    list(JOIN lit_test_executor " " lit_test_executor)
     if(NOT PREBUILT_TARGET_LIBRARIES)
         add_picolibc(
             "${directory}"
@@ -894,7 +886,7 @@ function(add_library_variant target_arch)
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${test_executor_params}"
+            "${lit_test_executor}"
             "picolibc_${variant}-install"
         )
         add_libcxx_libcxxabi_libunwind(
@@ -902,7 +894,7 @@ function(add_library_variant target_arch)
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${test_executor_params}"
+            "${lit_test_executor}"
             "picolibc_${variant}-install"
             "${picolibc_specific_runtimes_options}"
         )
