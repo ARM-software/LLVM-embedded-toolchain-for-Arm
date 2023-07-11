@@ -435,7 +435,7 @@ add_custom_target(check-picolibc)
 # by add_subdirectory of llvm project
 set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
 
-function(get_test_executor target_triple qemu_machine qemu_cpu qemu_params)
+function(get_test_executor_params target_triple qemu_machine qemu_cpu qemu_params)
     if(target_triple MATCHES "^aarch64")
         set(qemu_command "qemu-system-aarch64")
     else()
@@ -447,18 +447,16 @@ function(get_test_executor target_triple qemu_machine qemu_cpu qemu_params)
     string(REPLACE " " ":" qemu_params_list "${qemu_params}")
 
     set(
-        test_executor
-        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+        test_executor_params
         --qemu-command ${qemu_command}
         --qemu-machine ${qemu_machine})
     if(qemu_cpu)
-        list(APPEND test_executor "--qemu-cpu" "${qemu_cpu}")
+        list(APPEND test_executor_params --qemu-cpu ${qemu_cpu})
     endif()
     if(qemu_params_list)
-        list(APPEND test_executor "--qemu-params=${qemu_params_list}")
+        list(APPEND test_executor_params "--qemu-params=${qemu_params_list}")
     endif()
-    list(JOIN test_executor " " test_executor)
-    set(test_executor "${test_executor}" PARENT_SCOPE)
+    set(test_executor_params "${test_executor_params}" PARENT_SCOPE)
 endfunction()
 
 function(
@@ -467,7 +465,12 @@ function(
     variant
     target_triple
     flags
-    test_executor
+    test_executor_params
+    default_flash_addr
+    default_flash_size
+    default_ram_addr
+    default_ram_size
+    default_stack_size
 )
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
         set(MESON_INSTALL_QUIET "--quiet")
@@ -485,9 +488,23 @@ function(
         INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
         PREFIX picolibc/${variant}
         DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib llvm-strip
-        CONFIGURE_COMMAND ${MESON_EXECUTABLE} -Dincludedir=include -Dlibdir=lib -Dspecsdir=none -Dmultilib=false --prefix <INSTALL_DIR> --cross-file <BINARY_DIR>/meson-cross-build.txt ${picolibc_SOURCE_DIR}
-        BUILD_COMMAND ninja
+        CONFIGURE_COMMAND
+            ${MESON_EXECUTABLE}
+            setup
+            -Dincludedir=include
+            -Dlibdir=lib
+            -Dspecsdir=none
+            -Dmultilib=false
+            -Dtests-enable-stack-protector=false
+            --prefix <INSTALL_DIR>
+            --cross-file <BINARY_DIR>/meson-cross-build.txt
+            ${picolibc_SOURCE_DIR}
+        BUILD_COMMAND ${MESON_EXECUTABLE} configure -Dtests=false
+        COMMAND ${MESON_EXECUTABLE} compile
         INSTALL_COMMAND ${MESON_EXECUTABLE} install ${MESON_INSTALL_QUIET}
+        TEST_COMMAND ${MESON_EXECUTABLE} configure -Dtests=true
+        COMMAND ${MESON_EXECUTABLE} test
+        COMMAND ${MESON_EXECUTABLE} configure -Dtests=false
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_TEST TRUE
@@ -495,6 +512,8 @@ function(
         # Always run the build command so that incremental builds are correct.
         BUILD_ALWAYS TRUE
         CONFIGURE_HANDLED_BY_BUILD TRUE
+        TEST_EXCLUDE_FROM_MAIN
+        STEP_TARGETS install test
     )
 
     # Set meson_c_args to a comma-separated list of the clang path
@@ -504,117 +523,21 @@ function(
     list(PREPEND flags "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
     list(APPEND flags --sysroot "${LLVM_BINARY_DIR}/${directory}")
     to_meson_list("${flags}" meson_c_args)
+
+    set(test_executor_bin ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-test-wrapper.py)
+    to_meson_list("${test_executor_params}" test_executor_params)
+
     ExternalProject_Get_Property(picolibc_${variant} BINARY_DIR)
     configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/meson-cross-build.txt.in ${BINARY_DIR}/meson-cross-build.txt @ONLY)
 
-    # Full list of picolibc tests
-    set(picolibc_tests
-        abort
-        atexit
-        complex-funcs
-        constructor
-        constructor-skip
-        fenv
-        ffs
-        hosted-exit
-        long_double
-        malloc
-        malloc_stress
-        math_errhandling
-        math-funcs
-        on_exit
-        posix-io
-        printf_scanf
-        printf-tests
-        rand
-        regex
-        setjmp
-        stack-smash
-        test-efcvt
-        test-except
-        test-fopen
-        test-memset
-        test-mktemp
-        test-put
-        test-strchr
-        test-strtod
-        timegm
-        time-sprintf
-        time-tests
-        tls
-        ungetc
-    )
-    # remove tests failing on a given platform
-    if(variant STREQUAL "aarch64")
-        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
-    endif()
-    if(variant STREQUAL "armv4t")
-        list(REMOVE_ITEM picolibc_tests constructor-skip test-except)
-    endif()
-    if(variant STREQUAL "armv5te")
-        list(REMOVE_ITEM picolibc_tests constructor-skip test-except)
-    endif()
-    if(variant STREQUAL "armv6m_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests constructor-skip)
-    endif()
-    if(variant STREQUAL "armv7m_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests constructor-skip)
-    endif()
-    if(variant STREQUAL "armv7em_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests constructor-skip)
-    endif()
-    if(variant STREQUAL "armv7em_hard_fpv4_sp_d16")
-        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
-    endif()
-    if(variant STREQUAL "armv7em_hard_fpv5_d16")
-        list(REMOVE_ITEM picolibc_tests constructor-skip math_errhandling)
-    endif()
-    if(variant STREQUAL "armv8m.main_soft_nofp")
-        list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
-    endif()
-    if(variant STREQUAL "armv8m.main_hard_fp")
-        list(REMOVE_ITEM picolibc_tests constructor-skip complex-funcs fenv long_double math_errhandling math-funcs malloc_stress printf_scanf rand test-efcvt test-strtod timegm)
-    endif()
-    if(variant STREQUAL "armv8.1m.main_soft_nofp_nomve")
-        list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
-    endif()
-    if(variant STREQUAL "armv8.1m.main_hard_fp")
-        list(REMOVE_ITEM picolibc_tests constructor-skip long_double math_errhandling malloc_stress timegm)
-    endif()
-    if(variant STREQUAL "armv8.1m.main_hard_nofp_mve")
-        list(REMOVE_ITEM picolibc_tests constructor-skip complex-funcs fenv ffs long_double math_errhandling math-funcs malloc_stress printf_scanf printf-tests rand regex test-efcvt test-strtod timegm time-tests)
-    endif()
+    # Building picolibc tests requires compiler_rt to be installed.
+    # Building compiler_rt tests requires picolibc to be installed.
+    # To solve this compiler_rt relies on picolibc to be just installed, not on
+    # the full target, which would include tests. Picolibc tests, are enabled
+    # only in tests step, otherwise, they would be built before install.
+    ExternalProject_Add_StepDependencies(picolibc_${variant} test compiler_rt_${variant}-install)
 
-    configure_lit_site_cfg(${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit.site.cfg.py.in
-                            picolibc_tests_${variant}/lit.cfg.py)
-    add_lit_testsuite(check-picolibc_${variant}
-        "Running picolibc tests: ${variant}"
-        ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}
-        DEPENDS picolibc_${variant} compiler_rt_${variant} llvm-toolchain-runtimes)
-
-    function(picolibc_test test)
-        set(BUILD_PARAMS --config ${variant}_semihost.cfg
-                -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-support/ldscripts/picolibc_${variant}.ld
-                -nostdlib -lc -lg -lm -lclang_rt.builtins -lsemihost -Oz
-                ${picolibc_SOURCE_DIR}/test/${test}.c ${ARGN} -o ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/check-picolibc_${variant}_build_${test}.out)
-        string(REPLACE ";" " " BUILD_PARAMS "${BUILD_PARAMS}")
-        set(TEST_COMMAND "${test_executor} check-picolibc_${variant}_build_${test}.out")
-        set(PICOLIBC_LIT_TEST_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test.template)
-        # Some picolibc tests return non-zero value upon success, then use dedicated test template
-        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test-${test}.template)
-            set(PICOLIBC_LIT_TEST_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-lit-test-${test}.template)
-        endif()
-        configure_file(${PICOLIBC_LIT_TEST_TEMPLATE} ${CMAKE_CURRENT_BINARY_DIR}/picolibc_tests_${variant}/${test}.test)
-    endfunction()
-
-    foreach(test IN LISTS picolibc_tests)
-        picolibc_test(${test})
-    endforeach()
-    # Test disabled due to duplicated symbol name div in test file and in picolibc
-    # picolibc_test(rounding-mode)
-    # Test disabled due to fail on armv8.1m.main_hard_nofp_mve
-    # picolibc_test(try-ilp32)
-    add_dependencies(check-picolibc check-picolibc_${variant})
+    add_dependencies(check-picolibc picolibc_${variant}-test)
     add_dependencies(
         llvm-toolchain-runtimes
         picolibc_${variant}
@@ -631,7 +554,7 @@ function(
     variant
     target_triple
     flags
-    test_executor
+    test_executor_params
     libc_target
 )
     # We can't always put the exact target
@@ -656,10 +579,17 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
 
     get_runtimes_flags("${directory}" "${flags}")
 
-    set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-support/ldscripts/picolibc_${variant}.ld")
+    set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T picolibcpp.ld")
     if(variant STREQUAL "armv6m_soft_nofp")
         set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
     endif()
+
+    set(
+        test_executor
+        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+        ${test_executor_params}
+    )
+    list(JOIN test_executor " " test_executor)
 
     ExternalProject_Add(
         compiler_rt_${variant}
@@ -698,7 +628,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
         -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
-        STEP_TARGETS build
+        STEP_TARGETS build install
         USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
@@ -730,11 +660,18 @@ function(
     variant
     target_triple
     flags
-    test_executor
+    test_executor_params
     libc_target
     extra_cmake_options
 )
     get_runtimes_flags("${directory}" "${flags}")
+
+    set(
+        test_executor
+        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+        ${test_executor_params}
+    )
+    list(JOIN test_executor " " test_executor)
 
     ExternalProject_Add(
         libcxx_libcxxabi_libunwind_${variant}
@@ -759,7 +696,7 @@ function(
         # Let CMake know we're cross-compiling
         -DCMAKE_SYSTEM_NAME=Generic
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
-        -DLIBC_LINKER_SCRIPT=${CMAKE_CURRENT_SOURCE_DIR}/test-support/ldscripts/picolibc_${variant}.ld
+        -DLIBC_LINKER_SCRIPT=picolibcpp.ld
         -DLIBCXXABI_BAREMETAL=ON
         -DLIBCXXABI_ENABLE_ASSERTIONS=OFF
         -DLIBCXXABI_ENABLE_SHARED=OFF
@@ -899,6 +836,11 @@ function(add_library_variant target_arch)
         QEMU_MACHINE
         QEMU_CPU
         QEMU_PARAMS
+        FLASH_ADDRESS
+        FLASH_SIZE
+        RAM_ADDRESS
+        RAM_SIZE
+        STACK_SIZE
     )
     cmake_parse_arguments(VARIANT "" "${one_value_args}" "" ${ARGN})
 
@@ -928,30 +870,40 @@ function(add_library_variant target_arch)
     set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
     make_config_cfg("${directory}" "${variant}" "${VARIANT_COMPILE_FLAGS}")
-    get_test_executor("${target_triple}" "${VARIANT_QEMU_MACHINE}" "${VARIANT_QEMU_CPU}" "${VARIANT_QEMU_PARAMS}")
+    get_test_executor_params(
+        "${target_triple}"
+        "${VARIANT_QEMU_MACHINE}"
+        "${VARIANT_QEMU_CPU}"
+        "${VARIANT_QEMU_PARAMS}"
+    )
     if(NOT PREBUILT_TARGET_LIBRARIES)
         add_picolibc(
             "${directory}"
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${test_executor}"
+            "${test_executor_params}"
+            "${VARIANT_FLASH_ADDRESS}"
+            "${VARIANT_FLASH_SIZE}"
+            "${VARIANT_RAM_ADDRESS}"
+            "${VARIANT_RAM_SIZE}"
+            "${VARIANT_STACK_SIZE}"
         )
         add_compiler_rt(
             "${directory}"
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${test_executor}"
-            "picolibc_${variant}"
+            "${test_executor_params}"
+            "picolibc_${variant}-install"
         )
         add_libcxx_libcxxabi_libunwind(
             "${directory}"
             "${variant}"
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
-            "${test_executor}"
-            "picolibc_${variant}"
+            "${test_executor_params}"
+            "picolibc_${variant}-install"
             "${picolibc_specific_runtimes_options}"
         )
         if(VARIANT_COMPILE_FLAGS MATCHES "-march=armv8")
@@ -990,20 +942,37 @@ add_library_variant(
     MULTILIB_FLAGS "--target=aarch64-none-unknown-elf"
     QEMU_MACHINE "virt"
     QEMU_CPU "cortex-a57"
+    FLASH_ADDRESS 0x40000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x40400000
+    RAM_SIZE 2M
+    STACK_SIZE 8K
 )
 add_library_variant(
     armv4t
     COMPILE_FLAGS "-march=armv4t"
     MULTILIB_FLAGS "--target=armv4t-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "musicpal"
-    QEMU_CPU "arm926"
+    QEMU_MACHINE "none"
+    QEMU_CPU "ti925t"
+    QEMU_PARAMS "-m 1G"
+    FLASH_ADDRESS 0x00000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv5te
     COMPILE_FLAGS "-march=armv5te"
     MULTILIB_FLAGS "--target=armv5e-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "musicpal"
+    QEMU_MACHINE "none"
     QEMU_CPU "arm926"
+    QEMU_PARAMS "-m 1G"
+    FLASH_ADDRESS 0x00000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv6m
@@ -1011,6 +980,11 @@ add_library_variant(
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m"
     MULTILIB_FLAGS "--target=thumbv6m-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
+    FLASH_ADDRESS 0x00000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv7m
@@ -1019,6 +993,11 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
     QEMU_CPU "cortex-m3"
+    FLASH_ADDRESS 0x00000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv7em
@@ -1027,6 +1006,11 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
+    FLASH_ADDRESS 0x00000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv7em
@@ -1035,6 +1019,11 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv4-sp-d16"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
+    FLASH_ADDRESS 0x00000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv7em
@@ -1043,6 +1032,11 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv5-d16"
     QEMU_MACHINE "mps2-an500"
     QEMU_CPU "cortex-m7"
+    FLASH_ADDRESS 0x00000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv8m.main
@@ -1051,6 +1045,11 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
+    FLASH_ADDRESS 0x10000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x80000000
+    RAM_SIZE 16M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv8m.main
@@ -1059,6 +1058,11 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-d16"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
+    FLASH_ADDRESS 0x10000000
+    FLASH_SIZE 4M
+    RAM_ADDRESS 0x80000000
+    RAM_SIZE 16M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv8.1m.main
@@ -1067,6 +1071,11 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
+    FLASH_ADDRESS 0x10000000
+    FLASH_SIZE 2M
+    RAM_ADDRESS 0x60000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv8.1m.main
@@ -1075,6 +1084,11 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
+    FLASH_ADDRESS 0x10000000
+    FLASH_SIZE 2M
+    RAM_ADDRESS 0x60000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 add_library_variant(
     armv8.1m.main
@@ -1083,6 +1097,11 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+dsp+mve -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
+    FLASH_ADDRESS 0x10000000
+    FLASH_SIZE 2M
+    RAM_ADDRESS 0x60000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
 )
 
 configure_file(

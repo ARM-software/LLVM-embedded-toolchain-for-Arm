@@ -6,52 +6,10 @@
 # (libc++abi, libunwind, libc++) and QEMU. It must handle the same command-line
 # arguments as llvm-project/libcxx/utils/run.py.
 
-import sys
+from run_qemu import run_qemu
 import argparse
-import subprocess
 import pathlib
-
-
-def run(args):
-    """Execute the program using QEMU and return the subprocess return code."""
-    qemu_params = ["-M", args.qemu_machine]
-    if args.qemu_cpu:
-        qemu_params += ["-cpu", args.qemu_cpu]
-    if args.qemu_params:
-        qemu_params += args.qemu_params.split(":")
-
-    # Setup semihosting with chardev bound to stdio.
-    # This is needed to test semihosting functionality in picolibc.
-    qemu_params += ["-chardev", "stdio,mux=on,id=stdio0"]
-    semihosting_config = ["enable=on", "chardev=stdio0"] + [
-        "arg=" + arg.replace(",", ",,") for arg in args.arguments
-    ]
-    qemu_params += ["-semihosting-config", ",".join(semihosting_config)]
-
-    # Disable features we don't need and which could slow down the test or
-    # interfere with semihosting.
-    qemu_params += ["-monitor", "none", "-serial", "none", "-nographic"]
-
-    # Load the image to machine's memory and set the PC.
-    # "virt" machine cannot be used with load, as QEMU will try to put
-    # device tree blob at start of RAM conflicting with our code
-    # https://www.qemu.org/docs/master/system/arm/virt.html#hardware-configuration-information-for-bare-metal-programming
-    if args.qemu_machine == "virt":
-        qemu_params += ["-kernel", args.image]
-    else:
-        qemu_params += ["-device", f"loader,file={args.image},cpu-num=0"]
-
-    qemu_cmd = [args.qemu_command] + qemu_params
-    result = subprocess.run(
-        qemu_cmd,
-        stdout=subprocess.PIPE,
-        stderr=sys.stderr,
-        timeout=args.timeout,
-        cwd=args.execdir,
-        check=False,
-    )
-    sys.stdout.buffer.write(result.stdout)
-    return result.returncode
+import sys
 
 
 def main():
@@ -83,7 +41,7 @@ def main():
     parser.add_argument(
         "--execdir",
         type=pathlib.Path,
-        default=".",
+        default=pathlib.Path.cwd(),
         help="directory to run the program from",
     )
     parser.add_argument(
@@ -105,7 +63,16 @@ def main():
         help="optional arguments for the image",
     )
     args = parser.parse_args()
-    ret_code = run(args)
+    ret_code = run_qemu(
+        args.qemu_command,
+        args.qemu_machine,
+        args.qemu_cpu,
+        args.qemu_params.split(":") if args.qemu_params else [],
+        args.image,
+        args.arguments,
+        args.timeout,
+        args.execdir,
+    )
     sys.exit(ret_code)
 
 
