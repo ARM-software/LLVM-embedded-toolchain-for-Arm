@@ -512,7 +512,7 @@ function(
         # Always run the build command so that incremental builds are correct.
         BUILD_ALWAYS TRUE
         CONFIGURE_HANDLED_BY_BUILD TRUE
-        TEST_EXCLUDE_FROM_MAIN
+        TEST_EXCLUDE_FROM_MAIN TRUE
         STEP_TARGETS install test
     )
 
