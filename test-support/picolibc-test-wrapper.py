@@ -15,7 +15,6 @@ EXIT_CODE_SKIP = 77
 disabled_tests = [
     "picolibc_aarch64-build/test/math_errhandling",
     "picolibc_armv7em_hard_fpv4_sp_d16-build/test/math_errhandling",
-    "picolibc_armv7em_hard_fpv5_d16-build/test/math_errhandling",
     "picolibc_armv8m.main_hard_fp-build/test/printf_scanf",
     "picolibc_armv8m.main_hard_fp-build/test/printff_scanff",
     "picolibc_armv8m.main_hard_fp-build/test/printff-tests",
