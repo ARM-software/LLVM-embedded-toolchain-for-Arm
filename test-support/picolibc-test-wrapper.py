@@ -13,8 +13,14 @@ import sys
 EXIT_CODE_SKIP = 77
 
 disabled_tests = [
+    # compiler-rt does not properly set floating point exceptions for
+    # computations on types implemented in software
+    # https://github.com/picolibc/picolibc/pull/500
     "picolibc_aarch64-build/test/math_errhandling",
     "picolibc_armv7em_hard_fpv4_sp_d16-build/test/math_errhandling",
+    "picolibc_armv8.1m.main_hard_nofp_mve-build/test/fenv",
+    "picolibc_armv8.1m.main_hard_nofp_mve-build/test/math_errhandling",
+
     "picolibc_armv8m.main_hard_fp-build/test/printf_scanf",
     "picolibc_armv8m.main_hard_fp-build/test/printff_scanff",
     "picolibc_armv8m.main_hard_fp-build/test/printff-tests",
@@ -32,11 +38,8 @@ disabled_tests = [
     "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/sscanf",
     "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/strtod",
     "picolibc_armv8.1m.main_soft_nofp_nomve-build/newlib/libm/test/math_test",
-    "picolibc_armv8.1m.main_hard_fp-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_fp-build/newlib/libm/test/math_test",
-    "picolibc_armv8.1m.main_hard_nofp_mve-build/test/fenv",
     "picolibc_armv8.1m.main_hard_nofp_mve-build/newlib/libm/test/math_test",
-    "picolibc_armv8.1m.main_hard_nofp_mve-build/test/math_errhandling",
 ]
 
 
