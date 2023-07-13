@@ -111,9 +111,5 @@ The same build directory can be used for both native and MinGW toolchains.
 
 ## Divergences from upstream
 
-### picolibc:
-* Added a fix for building with -mthumb
-
-### LLVM:
-* Recognize $@ in a config file argument to mean the directory of the config
-  file, allowing toolchain relative paths.
+See [patches](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/tree/main/patches)
+directory for the current set of differences from upstream.
