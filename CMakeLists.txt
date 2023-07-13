@@ -505,7 +505,7 @@ function(
         TEST_COMMAND ${MESON_EXECUTABLE} configure -Dtests=true
         COMMAND ${MESON_EXECUTABLE} test
         COMMAND ${MESON_EXECUTABLE} configure -Dtests=false
-        USES_TERMINAL_CONFIGURE TRUE
+        USES_TERMINAL_CONFIGURE FALSE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_TEST TRUE
         LIST_SEPARATOR ,
@@ -622,7 +622,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         STEP_TARGETS build install
-        USES_TERMINAL_CONFIGURE TRUE
+        USES_TERMINAL_CONFIGURE FALSE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
         USES_TERMINAL_TEST TRUE
@@ -709,7 +709,7 @@ function(
         -DRUNTIME_VARIANT_NAME=${variant}
         ${extra_cmake_options}
         STEP_TARGETS build
-        USES_TERMINAL_CONFIGURE TRUE
+        USES_TERMINAL_CONFIGURE FALSE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
         USES_TERMINAL_TEST TRUE
