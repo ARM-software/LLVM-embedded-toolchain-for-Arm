@@ -21,12 +21,12 @@ build: hello.elf
 build-no-cfi: hello-no-cfi.elf
 
 hello.elf: *.cpp
-	$(BIN_PATH)/clang++ --config armv6m_soft_nofp_semihost.cfg -flto -fsanitize=cfi -fvisibility=hidden -fno-sanitize-ignorelist -g -c $^
-	$(BIN_PATH)/clang++ --config armv6m_soft_nofp_semihost.cfg -flto -T ../../ldscripts/microbit.ld -g -o hello.elf hello.o
+	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CPP_FLAGS) -flto -fsanitize=cfi -fvisibility=hidden -fno-sanitize-ignorelist -g -c $^
+	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CRT_SEMIHOST) $(CPP_FLAGS) -flto -T ../../ldscripts/microbit.ld -g -o hello.elf hello.o
 
 hello-no-cfi.elf: *.cpp
-	$(BIN_PATH)/clang++ --config armv6m_soft_nofp_semihost.cfg -flto -g -c $^
-	$(BIN_PATH)/clang++ --config armv6m_soft_nofp_semihost.cfg -flto -T ../../ldscripts/microbit.ld -g -o hello.elf hello.o
+	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CPP_FLAGS) -flto -g -c $^
+	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CRT_SEMIHOST) $(CPP_FLAGS) -flto -T ../../ldscripts/microbit.ld -g -o hello.elf hello.o
 
 %.hex: %.elf
 	$(BIN_PATH)/llvm-objcopy -O ihex $< $@

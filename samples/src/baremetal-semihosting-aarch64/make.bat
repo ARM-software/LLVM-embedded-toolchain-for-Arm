@@ -49,6 +49,6 @@ if exist hello.img del /q hello.img
 @exit /B 1
 
 :build_fn
-%BIN_PATH%\clang.exe --config aarch64_semihost.cfg -g -T ..\..\ldscripts\raspi3b.ld -o hello.elf hello.c
+%BIN_PATH%\clang.exe --target=aarch64-none-elf -lcrt0-semihost -lsemihost -g -T ..\..\ldscripts\raspi3b.ld -o hello.elf hello.c
 %BIN_PATH%\llvm-objcopy.exe -O binary hello.elf hello.img
 @exit /B

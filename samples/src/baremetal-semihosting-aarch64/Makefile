@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020, Arm Limited and affiliates.
+# Copyright (c) 2020-2023, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ include ../../Makefile.conf
 build: hello.elf
 
 hello.elf: *.c
-	$(BIN_PATH)/clang --config aarch64_semihost.cfg -g -T ../../ldscripts/raspi3b.ld -o hello.elf $^
+	$(BIN_PATH)/clang $(AARCH64_TARGET) $(CRT_SEMIHOST) -g -T ../../ldscripts/raspi3b.ld -o hello.elf $^
 
 %.img: %.elf
 	$(BIN_PATH)/llvm-objcopy -O binary $< $@

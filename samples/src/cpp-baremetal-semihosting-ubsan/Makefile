@@ -21,10 +21,10 @@ build: hello.elf
 build-trap: hello-trap.elf
 
 hello.elf: *.cpp		# build with minimal runtime mode
-	$(BIN_PATH)/clang++ --config armv6m_soft_nofp_semihost.cfg --std=c++17 -fsanitize=undefined -fsanitize-minimal-runtime -g -T ../../ldscripts/microbit.ld -o hello.elf $^
+	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CRT_SEMIHOST) $(CPP_FLAGS) --std=c++17 -fsanitize=undefined -fsanitize-minimal-runtime -g -T ../../ldscripts/microbit.ld -o hello.elf $^
 
 hello-trap.elf: *.cpp 	# build with trap mode
-	$(BIN_PATH)/clang++ --config armv6m_soft_nofp_semihost.cfg --std=c++17 -fsanitize=undefined -fsanitize-trap=all -g -T ../../ldscripts/microbit.ld -o hello.elf $^
+	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CRT_SEMIHOST) $(CPP_FLAGS) --std=c++17 -fsanitize=undefined -fsanitize-trap=all -g -T ../../ldscripts/microbit.ld -o hello.elf $^
 
 %.hex: %.elf
 	$(BIN_PATH)/llvm-objcopy -O ihex $< $@
