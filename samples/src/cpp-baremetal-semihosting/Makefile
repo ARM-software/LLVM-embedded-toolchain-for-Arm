@@ -20,7 +20,7 @@ include ../../Makefile.conf
 build: hello.elf
 
 hello.elf: *.cpp
-	$(BIN_PATH)/clang++ $(MB_TARGET) $(CRT_SEMIHOST) $(CPP_FLAGS) -g -T ../../ldscripts/microbit.ld -o hello.elf $^
+	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CRT_SEMIHOST) $(CPP_FLAGS) -g -T ../../ldscripts/microbit.ld -o hello.elf $^
 
 %.hex: %.elf
 	$(BIN_PATH)/llvm-objcopy -O ihex $< $@
