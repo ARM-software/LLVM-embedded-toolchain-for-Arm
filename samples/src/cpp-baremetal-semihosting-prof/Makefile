@@ -20,8 +20,8 @@ include ../../Makefile.conf
 build: hello.elf
 
 hello.elf: *.cpp
-	$(BIN_PATH)/clang --config armv6m_soft_nofp_semihost.cfg -g -c proflib.c
-	$(BIN_PATH)/clang++ --config armv6m_soft_nofp_semihost.cfg -g -T ../../ldscripts/microbit.ld -fprofile-instr-generate -fcoverage-mapping -o hello.elf hello.cpp proflib.o
+	$(BIN_PATH)/clang $(MB_TARGET) -g -c proflib.c
+	$(BIN_PATH)/clang++ $(MB_TARGET) $(CRT_SEMIHOST) $(CPP_FLAGS) -g -T ../../ldscripts/microbit.ld -fprofile-instr-generate -fcoverage-mapping -o hello.elf hello.cpp proflib.o
 
 %.hex: %.elf
 	$(BIN_PATH)/llvm-objcopy -O ihex $< $@
