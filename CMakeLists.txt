@@ -579,7 +579,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
 
     get_runtimes_flags("${directory}" "${flags}")
 
-    set(compiler_rt_test_flags "--config ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg -T picolibcpp.ld")
+    set(compiler_rt_test_flags "--target=${target_triple} -fno-exceptions -fno-rtti -lcrt0-semihost -lsemihost -T picolibcpp.ld")
     if(variant STREQUAL "armv6m_soft_nofp")
         set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
     endif()
@@ -769,23 +769,6 @@ function(add_libcxx_libcxxabi_libunwind_tests variant)
     endforeach()
 endfunction()
 
-function(make_config_cfg directory variant flags)
-    # Create clang configuration files
-    # https://clang.llvm.org/docs/UsersManual.html#configuration-files
-    set(crt0 "-lcrt0")
-    set(extra_args "")
-    configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/config.cfg.in ${LLVM_BINARY_DIR}/bin/${variant}.cfg)
-    set(crt0 "-lcrt0-semihost")
-    set(extra_args "\n-lsemihost")
-    configure_file(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cmake/config.cfg.in ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg)
-    install(FILES
-        ${LLVM_BINARY_DIR}/bin/${variant}.cfg
-        ${LLVM_BINARY_DIR}/bin/${variant}_semihost.cfg
-        DESTINATION bin
-        COMPONENT llvm-toolchain-config-files
-    )
-endfunction()
-
 function(get_compiler_rt_target_triple target_arch flags)
     if(target_arch STREQUAL "aarch64")
         set(target_triple "aarch64-none-elf")
@@ -855,7 +838,6 @@ function(add_library_variant target_arch)
 
     set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
-    make_config_cfg("${directory}" "${variant}" "${VARIANT_COMPILE_FLAGS}")
     get_test_executor_params(
         "${target_triple}"
         "${VARIANT_QEMU_MACHINE}"
