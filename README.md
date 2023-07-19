@@ -83,45 +83,23 @@ find . -type f -perm +0111 | xargs xattr -d com.apple.quarantine
 
 ### Using the toolchain
 
-To use the toolchain, on the command line you need to provide:
-* A [configuration file](
-  https://clang.llvm.org/docs/UsersManual.html#configuration-files) specified
-  with `--config`, or a suitable set of command line options including the
-  `crt0` library to use - see
-  [using the toolchain without config files](#using-the-toolchain-without-config-files).
+> *Note:* If you are using the toolchain in a shared environment with untrusted input,
+> make sure it is sufficiently sandboxed.
+
+To use the toolchain, on the command line you need to provide the following options:
+* The target triple.
+* Disabling C++ exceptions and RTTI that are not supported by the standard library provided yet.
+* The C runtime library: either `crt0` or `crt0-semihost`.
+* The semihosting library, if using `crt0-semihost`.
 * A [linker script](
   https://sourceware.org/binutils/docs/ld/Scripts.html) specified with `-T`.
-  Default `picolibcpp.ld` & `picolibc.ld` scripts are provided and can be used
+  Default `picolibcpp.ld` and `picolibc.ld` scripts are provided and can be used
   directly or included from a [custom linker script](
   https://github.com/picolibc/picolibc/blob/main/doc/linking.md#using-picolibcld).
 
 For example:
-
 ```
 $ PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
-$ clang --config armv6m_soft_nofp_semihost.cfg -T picolibc.ld -o example example.c
-```
-
-The available configuration files can be listed using:
-```
-$ ls <install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin/*.cfg
-```
-
-> *Note:* If you are using the toolchain in a shared environment with untrusted input,
-> make sure it is sufficiently sandboxed.
-
-### Using the toolchain without config files
-
-Instead of using a config file you can directly specify options.
-The following options are required:
-* The target triple
-* Disabling exceptions and RTTI
-* The `crt0` library - either `crt0` or `crt0-semihost`
-* The semihosting library, if using `crt0-semihost`.
-* A linker script, the same as when using a config file.
-
-For example:
-```
 $ clang \
 --target=armv6m-none-eabi \
 -fno-exceptions \

@@ -1,5 +1,0 @@
-${flags}
--fno-exceptions
--fno-rtti
---sysroot <CFGDIR>/../${directory}
-${crt0}${extra_args}
