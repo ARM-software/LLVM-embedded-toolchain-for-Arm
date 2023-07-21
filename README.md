@@ -137,6 +137,10 @@ $ clang \
 -o example example.c
 ```
 
+See [Migrating from Arm GNU Toolchain](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/blob/main/docs/migrating.md)
+for advise on using the LLVM Embedded Toolchain with existing projects
+relying on the Arm GNU Toolchain.
+
 ## Building from source
 
 LLVM Embedded Toolchain for Arm is an open source project and thus can be built
