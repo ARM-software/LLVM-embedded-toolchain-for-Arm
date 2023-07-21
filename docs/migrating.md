@@ -51,6 +51,10 @@ Toolchain version macros:
 |Minor|`__GNUC_MINOR__`|`__clang_minor__`|
 |Patch level|`__GNUC_PATCHLEVEL__`|`__clang_patchlevel__`|
 
+Note that `clang` defines GNU macros for compatibility too:
+`__GNUC__` equal to `4`, `__GNUC_MINOR__` equal to `2`,
+and `__GNUC_PATCHLEVEL__` equal to `1`.
+
 ## C and C++ language extensions
 
 LLVM supports the majority of GNU C and C++ extensions as described in
@@ -86,7 +90,7 @@ however uses different command line options to control selection of semihosting.
 |--------|-----------|------------|
 |No semihosting|`--specs=nosys.specs`|`-lcrt0`|
 |Semihosting|`--specs=rdimon.specs`|`-lcrt0-semihost -lsemihost`|
-|Newlib-nano|`--specs=nano.specs`|Not available: `picolibc` is a derivative of `newlib-nano`.
+|Newlib-nano|`--specs=nano.specs`|Not available: `picolibc` is an equivalent of `newlib-nano`.
 
 ## Linker
 
