@@ -57,7 +57,7 @@ and `__GNUC_PATCHLEVEL__` equal to `1`.
 
 ## C and C++ language extensions
 
-LLVM supports the majority of GNU C and C++ extensions as described in
+Clang supports the majority of GNU C and C++ extensions as described in
 [Clang Language Extensions](https://clang.llvm.org/docs/LanguageExtensions.html).
 
 The following feature checking macros can be used to test whether a particular
@@ -82,7 +82,7 @@ For example, GNU and LLVM compilers differ in:
 
 ## Multilib support
 
-LLVM toolchain provides multilib support similar to the GNU toolchain,
+LLVM toolchain for Arm provides multilib support similar to the GNU toolchain,
 see _Using the toolchain_ section in the [README](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/blob/main/README.md#using-the-toolchain),
 however uses different command line options to control selection of semihosting.
 
