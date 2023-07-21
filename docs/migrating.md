@@ -53,7 +53,7 @@ Toolchain version macros:
 
 ## C and C++ language extensions
 
-LLVM supports majority of GNU C and C++ extensions as described in
+LLVM supports the majority of GNU C and C++ extensions as described in
 [Clang Language Extensions](https://clang.llvm.org/docs/LanguageExtensions.html).
 
 The following feature checking macros can be used to test whether a particular
