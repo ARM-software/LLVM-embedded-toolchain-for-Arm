@@ -579,7 +579,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
 
     get_runtimes_flags("${directory}" "${flags}")
 
-    set(compiler_rt_test_flags "--target=${target_triple} -fno-exceptions -fno-rtti -lcrt0-semihost -lsemihost -T picolibcpp.ld")
+    set(compiler_rt_test_flags "${runtimes_flags} -fno-exceptions -fno-rtti -lcrt0-semihost -lsemihost -T picolibcpp.ld")
     if(variant STREQUAL "armv6m_soft_nofp")
         set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
     endif()
