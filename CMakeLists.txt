@@ -190,7 +190,7 @@ endif()
 # If lld is available then use it by default.
 find_program(LLD_EXECUTABLE lld)
 if(LLD_EXECUTABLE)
-    set(LLVM_ENABLE_LLD ON CACHE BOOL "")
+    set(LLVM_USE_LINKER lld CACHE STRING "")
 endif()
 
 # A lot of files get installed which makes the install messages too
