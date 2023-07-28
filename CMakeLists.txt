@@ -466,6 +466,8 @@ function(
     target_triple
     flags
     test_executor_params
+    default_boot_flash_addr
+    default_boot_flash_size
     default_flash_addr
     default_flash_size
     default_ram_addr
@@ -805,6 +807,8 @@ function(add_library_variant target_arch)
         QEMU_MACHINE
         QEMU_CPU
         QEMU_PARAMS
+        BOOT_FLASH_ADDRESS
+        BOOT_FLASH_SIZE
         FLASH_ADDRESS
         FLASH_SIZE
         RAM_ADDRESS
@@ -857,6 +861,8 @@ function(add_library_variant target_arch)
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
             "${test_executor_params}"
+            "${VARIANT_BOOT_FLASH_ADDRESS}"
+            "${VARIANT_BOOT_FLASH_SIZE}"
             "${VARIANT_FLASH_ADDRESS}"
             "${VARIANT_FLASH_SIZE}"
             "${VARIANT_RAM_ADDRESS}"
@@ -916,8 +922,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=aarch64-none-unknown-elf"
     QEMU_MACHINE "virt"
     QEMU_CPU "cortex-a57"
-    FLASH_ADDRESS 0x40000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x40000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x40000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x40400000
     RAM_SIZE 2M
     STACK_SIZE 8K
@@ -929,8 +937,10 @@ add_library_variant(
     QEMU_MACHINE "none"
     QEMU_CPU "ti925t"
     QEMU_PARAMS "-m 1G"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x00000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -942,8 +952,10 @@ add_library_variant(
     QEMU_MACHINE "none"
     QEMU_CPU "arm926"
     QEMU_PARAMS "-m 1G"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x00000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -954,8 +966,10 @@ add_library_variant(
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m"
     MULTILIB_FLAGS "--target=thumbv6m-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x00000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -967,8 +981,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
     QEMU_CPU "cortex-m3"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x00000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -980,8 +996,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x00000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -993,8 +1011,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv4-sp-d16"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x00000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -1006,8 +1026,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv5-d16"
     QEMU_MACHINE "mps2-an500"
     QEMU_CPU "cortex-m7"
-    FLASH_ADDRESS 0x00000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x00000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x20000000
     RAM_SIZE 2M
     STACK_SIZE 4K
@@ -1019,8 +1041,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
-    FLASH_ADDRESS 0x10000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x10000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x80000000
     RAM_SIZE 16M
     STACK_SIZE 4K
@@ -1032,8 +1056,10 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-d16"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
-    FLASH_ADDRESS 0x10000000
-    FLASH_SIZE 4M
+    BOOT_FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_SIZE 0x400
+    FLASH_ADDRESS 0x10000400
+    FLASH_SIZE 0x3ffd00
     RAM_ADDRESS 0x80000000
     RAM_SIZE 16M
     STACK_SIZE 4K
@@ -1045,7 +1071,9 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
-    FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 512K
+    FLASH_ADDRESS 0x01000000
     FLASH_SIZE 2M
     RAM_ADDRESS 0x60000000
     RAM_SIZE 2M
@@ -1058,7 +1086,9 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
-    FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 512K
+    FLASH_ADDRESS 0x01000000
     FLASH_SIZE 2M
     RAM_ADDRESS 0x60000000
     RAM_SIZE 2M
@@ -1071,7 +1101,9 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+dsp+mve -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
-    FLASH_ADDRESS 0x10000000
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 512K
+    FLASH_ADDRESS 0x01000000
     FLASH_SIZE 2M
     RAM_ADDRESS 0x60000000
     RAM_SIZE 2M

@@ -37,9 +37,6 @@ disabled_tests = [
     "picolibc_armv8m.main_hard_fp-build/newlib/libm/test/math_test",
     "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/sscanf",
     "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/strtod",
-    "picolibc_armv8.1m.main_soft_nofp_nomve-build/newlib/libm/test/math_test",
-    "picolibc_armv8.1m.main_hard_fp-build/newlib/libm/test/math_test",
-    "picolibc_armv8.1m.main_hard_nofp_mve-build/newlib/libm/test/math_test",
 ]
 
 
