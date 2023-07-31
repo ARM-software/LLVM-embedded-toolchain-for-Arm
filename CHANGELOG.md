@@ -8,10 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - Building from sources created by git archive (#242).
+- macOS no longer quarantines files from the macOS package.
 
 ### Changed
 - Updated multilib to use LLVM multilib.yaml 1.0 (#250).
 - `*.cfg` files for library variant selection removed in favor of multilib
+- The macOS package is now a .dmg instead of .tar.gz.
 
 ### Removed
 
