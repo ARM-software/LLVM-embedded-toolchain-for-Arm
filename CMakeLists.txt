@@ -632,15 +632,14 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         # Always run the build command so that incremental builds are correct.
         BUILD_ALWAYS TRUE
         CONFIGURE_HANDLED_BY_BUILD TRUE
-    )
-    ExternalProject_Get_Property(compiler_rt_${variant} INSTALL_DIR)
-    # Copy compiler-rt lib directory, moving libraries out of their
-    # target-specific subdirectory.
-    add_custom_command(
-        TARGET compiler_rt_${variant}
-        POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory
-            ${INSTALL_DIR}/lib/${target_triple} "${LLVM_BINARY_DIR}/${directory}/lib"
+        INSTALL_COMMAND ${CMAKE_COMMAND} --install .
+        # Copy compiler-rt lib directory, moving libraries out of their
+        # target-specific subdirectory.
+        COMMAND
+            ${CMAKE_COMMAND}
+            -E copy_directory
+            <INSTALL_DIR>/lib/${target_triple}
+            "${LLVM_BINARY_DIR}/${directory}/lib"
     )
 
     add_dependencies(
