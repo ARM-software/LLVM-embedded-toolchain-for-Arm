@@ -500,11 +500,15 @@ function(
             -Dtests-enable-stack-protector=false
             --prefix <INSTALL_DIR>
             --cross-file <BINARY_DIR>/meson-cross-build.txt
-            ${picolibc_SOURCE_DIR}
+            <SOURCE_DIR>
         BUILD_COMMAND ${MESON_EXECUTABLE} configure -Dtests=false
         COMMAND ${MESON_EXECUTABLE} compile
         INSTALL_COMMAND ${MESON_EXECUTABLE} install ${MESON_INSTALL_QUIET}
         TEST_COMMAND ${MESON_EXECUTABLE} configure -Dtests=true
+        # meson<0.64.0 does not properly apply new configuration after
+        # "meson configure -Dtests=false"
+        # use "meson setup --reconfigure" as a workaround
+        COMMAND ${MESON_EXECUTABLE} setup . <SOURCE_DIR> -Dtests=true --reconfigure
         COMMAND ${MESON_EXECUTABLE} test
         COMMAND ${MESON_EXECUTABLE} configure -Dtests=false
         USES_TERMINAL_CONFIGURE FALSE
