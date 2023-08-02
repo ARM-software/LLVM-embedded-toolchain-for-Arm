@@ -313,6 +313,9 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL TRUE)
 set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
 # When extracting the files put them in an ArmCompiler-.../ directory.
 set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY TRUE)
+# Compress package in parallel.
+set(CPACK_THREADS 0 CACHE STRING "")
+
 
 if(CMAKE_OSX_ARCHITECTURES)
     # For universal binaries don't include architecture in the package name.
@@ -1248,8 +1251,8 @@ elseif(CMAKE_OSX_ARCHITECTURES)
     set(cpack_generator DragNDrop)
     set(package_filename_extension ".dmg")
 else()
-    set(cpack_generator TGZ)
-    set(package_filename_extension ".tar.gz")
+    set(cpack_generator TXZ)
+    set(package_filename_extension ".tar.xz")
 endif()
 # CPACK_PACKAGE_FILE_NAME may refer to the source package so use this variable instead.
 set(binary_package_name ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
