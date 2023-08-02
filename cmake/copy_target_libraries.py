@@ -18,10 +18,10 @@ import tempfile
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--distribution-tgz",
+        "--distribution-file",
         required=True,
         help="""Copy from this LLVM Embedded Toolchain for Arm distribution
-        tar.gz file. This is a glob to make things easier on Windows.""",
+        tarfile. This is a glob to make things easier on Windows.""",
     )
     parser.add_argument(
         "--build-dir",
@@ -33,11 +33,11 @@ def main():
     # Find the distribution. This is a glob because scripts may not
     # know the version number and we can't rely on the Windows shell to
     # do it.
-    for distribution_tgz in glob.glob(args.distribution_tgz):
+    for distribution_file in glob.glob(args.distribution_file):
         break
     else:
         raise RuntimeError(
-            f"Distribution glob '{args.distribution_tgz}' not found"
+            f"Distribution glob '{args.distribution_file}' not found"
         )
 
     lib_dir = os.path.join(args.build_dir, "llvm", "lib")
@@ -52,7 +52,7 @@ def main():
         dir=args.build_dir,
     ) as tmp:
         # Extract the distribution package.
-        with tarfile.open(distribution_tgz) as tf:
+        with tarfile.open(distribution_file) as tf:
             tf.extractall(tmp)
 
         # Find the clang-runtimes directory in the extracted package

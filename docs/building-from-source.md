@@ -69,7 +69,7 @@ ninja check-llvm-toolchain
 
 ### Packaging the toolchain
 
-After building, create a zip or tar.gz file as appropriate for the platform:
+After building, create a zip or tar.xz file as appropriate for the platform:
 ```
 ninja package-llvm-toolchain
 ```
