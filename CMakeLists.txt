@@ -980,6 +980,72 @@ add_library_variant(
     RAM_SIZE 2M
     STACK_SIZE 4K
 )
+# clang does not correctly handle +nofp and +fp for armv7a and armv7r in march.
+# Using mfpu as a workaround.
+add_library_variant(
+    armv7a
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7a -mfpu=none"
+    MULTILIB_FLAGS "--target=armv7-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-a7"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+add_library_variant(
+    armv7a
+    SUFFIX hard_vfpv3_d16
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7a -mfpu=vfpv3-d16"
+    MULTILIB_FLAGS "--target=armv7-none-unknown-eabihf -mfpu=vfpv3-d16"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-a8"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+add_library_variant(
+    armv7r
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7r -mfpu=none"
+    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-r5f"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+add_library_variant(
+    armv7r
+    SUFFIX hard_vfpv3_d16
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3-d16"
+    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabihf -mfpu=vfpv3-d16"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-r5f"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
 add_library_variant(
     armv7m
     SUFFIX soft_nofp
@@ -1131,7 +1197,10 @@ add_custom_command(
     "--clang=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}"
     "--llvm-source=${llvmproject_SOURCE_DIR}"
     >> "${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml"
-  DEPENDS clang "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py")
+  DEPENDS
+    clang
+    "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py"
+    "${CMAKE_CURRENT_BINARY_DIR}/multilib-without-fpus.yaml")
 add_custom_target(multilib_yaml ALL DEPENDS
   ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml)
 add_dependencies(llvm-toolchain-runtimes multilib_yaml)
