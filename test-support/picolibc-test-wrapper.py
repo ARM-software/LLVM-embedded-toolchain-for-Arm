@@ -18,6 +18,7 @@ disabled_tests = [
     # https://github.com/picolibc/picolibc/pull/500
     "picolibc_aarch64-build/test/math_errhandling",
     "picolibc_armv7em_hard_fpv4_sp_d16-build/test/math_errhandling",
+    "picolibc_armv8.1m.main_hard_fp-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_nofp_mve-build/test/fenv",
     "picolibc_armv8.1m.main_hard_nofp_mve-build/test/math_errhandling",
 
