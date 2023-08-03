@@ -9,7 +9,7 @@
     "llvm-project": {
       "comment": "tagType can be branch, tag or commithash",
       "tagType": "branch",
-      "tag": "main"
+      "tag": "release/17.x"
     },
     "picolibc": {
       "tagType": "branch",
