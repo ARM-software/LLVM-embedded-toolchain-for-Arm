@@ -36,6 +36,11 @@ that are not supported include:
  - RTTI
  - Multithreading
 
+LLVM Embedded Toolchain for Arm uses the unstable libc++ ABI version. This ABI
+uses all the latest libc++ improvements and bugfixes, but may result in link
+errors when linking against objects compiled against older versions of the ABI.
+For more information see https://libcxx.llvm.org/DesignDocs/ABIVersioning.html.
+
 ## Components
 
 The LLVM Embedded Toolchain for Arm relies on the following upstream components
