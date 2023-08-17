@@ -127,6 +127,13 @@ set(LLVM_TOOLCHAIN_LIBRARY_VARIANTS
     "" CACHE STRING
     "Build only the specified library variants. If not specified then build all variants."
 )
+option(
+    LIBS_DEPEND_ON_TOOLS
+    "Automatically ensure tools like clang are up to date before building libraries.
+    Set this to OFF if you're working on the libraries and want to avoid rebuilding
+    the tools every time you update llvm-project."
+    ON
+)
 
 set(BUG_REPORT_URL "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/issues" CACHE STRING "")
 set(LLVM_DISTRIBUTION_COMPONENTS
@@ -417,6 +424,18 @@ foreach(variant ${LLVM_TOOLCHAIN_LIBRARY_VARIANTS})
     set(enable_${variant} TRUE)
 endforeach()
 
+if(LIBS_DEPEND_ON_TOOLS)
+    set(lib_tool_dependencies
+        clang
+        lld
+        llvm-ar
+        llvm-config
+        llvm-nm
+        llvm-ranlib
+        llvm-strip
+    )
+endif()
+
 set(picolibc_specific_runtimes_options
     -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
     -DLIBCXXABI_ENABLE_THREADS=OFF
@@ -492,7 +511,7 @@ function(
         SOURCE_DIR ${picolibc_SOURCE_DIR}
         INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
         PREFIX picolibc/${variant}
-        DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib llvm-strip
+        DEPENDS ${lib_tool_dependencies}
         CONFIGURE_COMMAND
             ${MESON_EXECUTABLE}
             setup
@@ -598,7 +617,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/compiler-rt
         PREFIX compiler-rt/${variant}
         INSTALL_DIR compiler-rt/${variant}/install
-        DEPENDS clang lld llvm-ar llvm-config llvm-nm llvm-ranlib ${libc_target}
+        DEPENDS ${lib_tool_dependencies} ${libc_target}
         CMAKE_ARGS
         -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
         -DCMAKE_ASM_COMPILER_TARGET=${target_triple}
@@ -672,7 +691,7 @@ function(
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/runtimes
         INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
         PREFIX libcxx_libcxxabi_libunwind/${variant}
-        DEPENDS clang compiler_rt_${variant} lld llvm-ar llvm-config llvm-nm llvm-ranlib ${libc_target}
+        DEPENDS ${lib_tool_dependencies} compiler_rt_${variant} ${libc_target}
         CMAKE_ARGS
         -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
         -DCMAKE_ASM_FLAGS=${runtimes_flags}
@@ -1189,6 +1208,14 @@ configure_file(
     @ONLY
 )
 
+set(multilib_yaml_depends
+    "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py"
+    "${CMAKE_CURRENT_BINARY_DIR}/multilib-without-fpus.yaml"
+)
+if(LIBS_DEPEND_ON_TOOLS)
+    list(APPEND multilib_yaml_depends clang)
+endif()
+
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml
   COMMAND ${CMAKE_COMMAND} -E copy
@@ -1198,10 +1225,8 @@ add_custom_command(
     "--clang=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}"
     "--llvm-source=${llvmproject_SOURCE_DIR}"
     >> "${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml"
-  DEPENDS
-    clang
-    "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py"
-    "${CMAKE_CURRENT_BINARY_DIR}/multilib-without-fpus.yaml")
+  DEPENDS ${multilib_yaml_depends}
+)
 add_custom_target(multilib_yaml ALL DEPENDS
   ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml)
 add_dependencies(llvm-toolchain-runtimes multilib_yaml)
