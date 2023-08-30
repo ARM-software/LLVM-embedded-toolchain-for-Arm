@@ -142,6 +142,11 @@ $ clang \
 -o example example.c
 ```
 
+Binary releases of the LLVM Embedded Toolchain for Arm are based on release
+branches of the upstream LLVM Project, thus can safely be used with all tools
+provided by LLVM [releases|https://github.com/llvm/llvm-project/releases]
+of matching version.
+
 See [Migrating from Arm GNU Toolchain](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/blob/main/docs/migrating.md)
 for advice on using LLVM Embedded Toolchain for Arm with existing projects
 relying on the Arm GNU Toolchain.
