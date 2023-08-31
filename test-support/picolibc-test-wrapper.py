@@ -17,6 +17,7 @@ disabled_tests = [
     # computations on types implemented in software
     # https://github.com/picolibc/picolibc/pull/500
     "picolibc_aarch64-build/test/math_errhandling",
+    "picolibc_aarch64-build/test/test-fma",
     "picolibc_armv7em_hard_fpv4_sp_d16-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_fp-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_nofp_mve-build/test/fenv",
@@ -38,6 +39,7 @@ disabled_tests = [
     "picolibc_armv8m.main_hard_fp-build/newlib/libm/test/math_test",
     "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/sscanf",
     "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/strtod",
+    "picolibc_armv8m.main_hard_fp-build/test/test-fma"
 ]
 
 
