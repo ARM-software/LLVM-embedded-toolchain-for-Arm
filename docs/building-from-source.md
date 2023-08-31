@@ -37,7 +37,7 @@ $ pip install meson
 ## Customizing
 
 To build additional library variants, edit the `CMakeLists.txt` by adding
-calls to the `add_library_variant` CMake function using exiting library
+calls to the `add_library_variant` CMake function using existing library
 variant definitions as a template.
 
 To build additional LLVM tools, edit the `CMakeLists.txt` by adding required
