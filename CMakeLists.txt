@@ -1082,6 +1082,21 @@ add_library_variant(
     STACK_SIZE 4K
 )
 add_library_variant(
+    armv7m
+    SUFFIX soft_fpv4_sp_d16
+    COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7m -mfpu=fpv4-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=fpv4-sp-d16"
+    QEMU_MACHINE "mps2-an386"
+    QEMU_CPU "cortex-m4"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+add_library_variant(
     armv7em
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
