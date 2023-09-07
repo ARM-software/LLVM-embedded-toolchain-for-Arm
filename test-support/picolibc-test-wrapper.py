@@ -19,6 +19,7 @@ disabled_tests = [
     "picolibc_aarch64-build/test/math_errhandling",
     "picolibc_aarch64-build/test/test-fma",
     "picolibc_armv7em_hard_fpv4_sp_d16-build/test/math_errhandling",
+    "picolibc_armv7m_soft_fpv4_sp_d16-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_fp-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_nofp_mve-build/test/fenv",
     "picolibc_armv8.1m.main_hard_nofp_mve-build/test/math_errhandling",
