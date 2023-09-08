@@ -1,2 +1,5 @@
 # RUN: %clang -print-multi-directory --target=armv7m-none-eabi | FileCheck %s
 # CHECK: arm-none-eabi/armv7m_soft_nofp
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfloat-abi=softfp | FileCheck --check-prefix=SOFT_FPV4 %s
+# SOFT_FPV4: arm-none-eabi/armv7m_soft_fpv4_sp_d16
