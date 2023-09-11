@@ -922,7 +922,6 @@ endfunction()
 set(multilib_yaml_content "")
 
 # Define which library variants to build and which flags to use.
-# The order is <arch> <name suffix> <compile flags> <multilib selection flags> <qemu params>
 add_library_variant(
     aarch64
     COMPILE_FLAGS "-march=armv8-a"
@@ -937,9 +936,12 @@ add_library_variant(
     RAM_SIZE 2M
     STACK_SIZE 8K
 )
+# For AArch32, clang uses different defaults for FPU selection than GCC, both
+# when "+fp" or "+fp.dp" are used and when no FPU specifier is provided in
+# "-march=". Using "-mfpu=" explicitly.
 add_library_variant(
     armv4t
-    COMPILE_FLAGS "-march=armv4t"
+    COMPILE_FLAGS "-march=armv4t -mfpu=none"
     MULTILIB_FLAGS "--target=armv4t-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "none"
     QEMU_CPU "ti925t"
@@ -954,7 +956,7 @@ add_library_variant(
 )
 add_library_variant(
     armv5te
-    COMPILE_FLAGS "-march=armv5te"
+    COMPILE_FLAGS "-march=armv5te -mfpu=none"
     MULTILIB_FLAGS "--target=armv5e-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "none"
     QEMU_CPU "arm926"
@@ -970,7 +972,7 @@ add_library_variant(
 add_library_variant(
     armv6m
     SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m -mfpu=none"
     MULTILIB_FLAGS "--target=thumbv6m-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -981,8 +983,6 @@ add_library_variant(
     RAM_SIZE 2M
     STACK_SIZE 4K
 )
-# clang does not correctly handle +nofp and +fp for armv7a and armv7r in march.
-# Using mfpu as a workaround.
 add_library_variant(
     armv7a
     SUFFIX soft_nofp
@@ -1071,7 +1071,7 @@ add_library_variant(
 add_library_variant(
     armv7m
     SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m+nofp"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
     MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
     QEMU_CPU "cortex-m3"
@@ -1137,7 +1137,7 @@ add_library_variant(
 add_library_variant(
     armv8m.main
     SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8m.main+nofp"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8m.main -mfpu=none"
     MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
@@ -1152,8 +1152,8 @@ add_library_variant(
 add_library_variant(
     armv8m.main
     SUFFIX hard_fp
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8m.main+fp"
-    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-d16"
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8m.main -mfpu=fpv5-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-sp-d16"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
     BOOT_FLASH_ADDRESS 0x10000000
@@ -1167,7 +1167,7 @@ add_library_variant(
 add_library_variant(
     armv8.1m.main
     SUFFIX soft_nofp_nomve
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nofp+nomve"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nomve -mfpu=none"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabi -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
@@ -1181,8 +1181,8 @@ add_library_variant(
 )
 add_library_variant(
     armv8.1m.main
-    SUFFIX hard_fp
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+fp"
+    SUFFIX hard_fp_nomve
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-sp-d16"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
@@ -1196,8 +1196,23 @@ add_library_variant(
 )
 add_library_variant(
     armv8.1m.main
+    SUFFIX hard_fpdp_nomve
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-d16"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16"
+    QEMU_MACHINE "mps3-an547"
+    QEMU_CPU "cortex-m55"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 512K
+    FLASH_ADDRESS 0x01000000
+    FLASH_SIZE 2M
+    RAM_ADDRESS 0x60000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+add_library_variant(
+    armv8.1m.main
     SUFFIX hard_nofp_mve
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nofp+mve"
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+mve -mfpu=none"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+dsp+mve -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"

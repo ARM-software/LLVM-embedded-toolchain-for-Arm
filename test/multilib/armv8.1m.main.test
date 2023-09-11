@@ -2,11 +2,14 @@
 # CHECK: arm-none-eabi/armv8.1m.main_soft_nofp
 # CHECK-EMPTY:
 
-# RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main+fp | FileCheck --check-prefix=HARD %s
-# HARD: arm-none-eabi/armv8.1m.main_hard_fp
+RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main -mfpu=fp-armv8-fullfp16-sp-d16 | FileCheck --check-prefix=HARD_FP %s
+# HARD_FP: arm-none-eabi/armv8.1m.main_hard_fp_nomve
 # HARD-EMPTY:
 
-# RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main+nofp+mve | FileCheck --check-prefix=MVE %s
+# RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main -mfpu=fp-armv8-fullfp16-d16 | FileCheck --check-prefix=HARD_FPDP %s
+# HARD_FPDP: arm-none-eabi/armv8.1m.main_hard_fpdp_nomve
+
+# RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main+mve -mfpu=none | FileCheck --check-prefix=MVE %s
 # MVE: arm-none-eabi/armv8.1m.main_hard_nofp_mve
 # MVE-EMPTY:
 

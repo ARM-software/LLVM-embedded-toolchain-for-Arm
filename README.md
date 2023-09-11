@@ -88,6 +88,7 @@ find . -type f -perm +0111 | xargs xattr -d com.apple.quarantine
 
 To use the toolchain, on the command line you need to provide the following options:
 * The target triple.
+* The FPU to use.
 * Disabling C++ exceptions and RTTI that are not supported by the standard library provided yet.
 * The C runtime library: either `crt0` or `crt0-semihost`.
 * The semihosting library, if using `crt0-semihost`.
@@ -102,6 +103,7 @@ For example:
 $ PATH=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/bin:$PATH
 $ clang \
 --target=armv6m-none-eabi \
+-mfpu=none \
 -fno-exceptions \
 -fno-rtti \
 -lcrt0-semihost \
@@ -129,6 +131,7 @@ directories of the libraries you want to use. For example:
 $ clang \
 --sysroot=<install-dir>/LLVMEmbeddedToolchainForArm-<revision>/lib/clang-runtimes/arm-none-eabi/armv6m_soft_nofp \
 --target=armv6m-none-eabi \
+-mfpu=none \
 -fno-exceptions \
 -fno-rtti \
 -lcrt0-semihost \
@@ -136,6 +139,9 @@ $ clang \
 -T picolibc.ld \
 -o example example.c
 ```
+
+The FPU selection can be skipped, but it is not recommended to as the defaults
+are different to GCC ones.
 
 See [Migrating from Arm GNU Toolchain](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/blob/main/docs/migrating.md)
 for advice on using LLVM Embedded Toolchain for Arm with existing projects
