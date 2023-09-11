@@ -1,2 +1,2 @@
-# RUN: %clang -print-multi-directory --target=armv6m-none-eabi | FileCheck %s
+# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mfpu=none | FileCheck %s
 # CHECK: arm-none-eabi/armv6m_soft_nofp
