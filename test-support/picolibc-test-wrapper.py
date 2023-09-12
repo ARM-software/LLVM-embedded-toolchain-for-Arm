@@ -17,30 +17,13 @@ disabled_tests = [
     # computations on types implemented in software
     # https://github.com/picolibc/picolibc/pull/500
     "picolibc_aarch64-build/test/math_errhandling",
-    "picolibc_aarch64-build/test/test-fma",
     "picolibc_armv7m_soft_fpv4_sp_d16-build/test/math_errhandling",
     "picolibc_armv7em_hard_fpv4_sp_d16-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_fp_nomve-build/test/math_errhandling",
-    "picolibc_armv8.1m.main_hard_nofp_mve-build/test/fenv",
     "picolibc_armv8.1m.main_hard_nofp_mve-build/test/math_errhandling",
-
-    "picolibc_armv8m.main_hard_fp-build/test/printf_scanf",
-    "picolibc_armv8m.main_hard_fp-build/test/printff_scanff",
-    "picolibc_armv8m.main_hard_fp-build/test/printff-tests",
     "picolibc_armv8m.main_hard_fp-build/test/math_errhandling",
-    "picolibc_armv8m.main_hard_fp-build/test/rounding-mode",
-    "picolibc_armv8m.main_hard_fp-build/test/long_double",
-    "picolibc_armv8m.main_hard_fp-build/test/rand",
-    "picolibc_armv8m.main_hard_fp-build/test/fenv",
-    "picolibc_armv8m.main_hard_fp-build/test/math-funcs",
-    "picolibc_armv8m.main_hard_fp-build/test/test-strtod",
-    "picolibc_armv8m.main_hard_fp-build/test/test-efcvt",
-    "picolibc_armv8m.main_hard_fp-build/test/complex-funcs",
-    "picolibc_armv8m.main_hard_fp-build/test/semihost/semihost-times",
-    "picolibc_armv8m.main_hard_fp-build/newlib/libm/test/math_test",
-    "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/sscanf",
-    "picolibc_armv8m.main_hard_fp-build/test/libc-testsuite/strtod",
-    "picolibc_armv8m.main_hard_fp-build/test/test-fma"
+
+    "picolibc_aarch64-build/test/test-fma"
 ]
 
 
