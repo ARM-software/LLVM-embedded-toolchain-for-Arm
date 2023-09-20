@@ -65,11 +65,10 @@ static const char *NamesLast = NULL;
 static char *CountersFirst = NULL;
 static char *CountersLast = NULL;
 
-#define INSTR_PROF_RAW_VERSION 8
 #define INSTR_PROF_RAW_VERSION_VAR __llvm_profile_raw_version
 #define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
 
-uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION;
+extern uint64_t INSTR_PROF_RAW_VERSION_VAR;
 int INSTR_PROF_PROFILE_RUNTIME_VAR;
 
 void __llvm_profile_dump(void);
