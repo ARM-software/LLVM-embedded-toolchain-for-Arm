@@ -323,23 +323,37 @@ set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY TRUE)
 # Compress package in parallel.
 set(CPACK_THREADS 0 CACHE STRING "")
 
+# set processor_name
+string(TOLOWER ${CMAKE_SYSTEM_PROCESSOR} processor_name)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    # If we're compiling on OSX we need to understand what targets we're
+    #  building for.
+    string(FIND "${CMAKE_OSX_ARCHITECTURES}" "x86_64" x86_result)
+    string(FIND "${CMAKE_OSX_ARCHITECTURES}" "arm64" arm64_result)
 
-if(CMAKE_OSX_ARCHITECTURES)
-    # For universal binaries don't include architecture in the package name.
-    set(CPACK_SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
+    if((NOT ${x86_result} EQUAL -1) AND (NOT ${arm64_result} EQUAL -1))
+        set(processor_name "universal")
+    elseif(NOT ${x86_result} EQUAL -1)
+        set(processor_name "x86_64")
+    elseif(NOT ${arm64_result} EQUAL -1)
+        set(processor_name "arm64")
+    # CMAKE_OSX_ARCHITECTURES wasn't set or malformed
+    # if it was malformed, we'll catch that later in the process
+    # otherwise processor_name is already the system processor name
+    endif()
 else()
-    string(TOLOWER ${CMAKE_SYSTEM_PROCESSOR} processor_name)
     string(REGEX MATCH "amd64|x64|x86" x86_match ${processor_name})
     if(x86_match)
         set(processor_name "x86_64")
     else()
         set(processor_name "AArch64")
     endif()
-    if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
-        set(CPACK_SYSTEM_NAME "Windows-${processor_name}")
-    else()
-        set(CPACK_SYSTEM_NAME "${CMAKE_SYSTEM_NAME}-${processor_name}")
-    endif()
+endif()
+
+if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
+    set(CPACK_SYSTEM_NAME "Windows-${processor_name}")
+else()
+    set(CPACK_SYSTEM_NAME "${CMAKE_SYSTEM_NAME}-${processor_name}")
 endif()
 
 add_subdirectory(
@@ -1375,7 +1389,7 @@ endif()
 if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW OR WIN32)
     set(cpack_generator ZIP)
     set(package_filename_extension ".zip")
-elseif(CMAKE_OSX_ARCHITECTURES)
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(cpack_generator DragNDrop)
     set(package_filename_extension ".dmg")
 else()
