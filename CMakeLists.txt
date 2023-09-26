@@ -502,8 +502,10 @@ function(
 
     if(target_triple MATCHES "^aarch64")
         set(cpu_family aarch64)
+        set(enable_long_double_test false)
     else()
         set(cpu_family arm)
+        set(enable_long_double_test true)
     endif()
 
     ExternalProject_Add(
@@ -520,6 +522,7 @@ function(
             -Dspecsdir=none
             -Dmultilib=false
             -Dtests-enable-stack-protector=false
+            -Dtest-long-double=${enable_long_double_test}
             --prefix <INSTALL_DIR>
             --cross-file <BINARY_DIR>/meson-cross-build.txt
             <SOURCE_DIR>
