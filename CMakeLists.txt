@@ -909,6 +909,7 @@ function(add_library_variant target_arch)
     foreach(flag ${multilib_flags_list})
         string(APPEND multilib_yaml_content "  - ${flag}\n")
     endforeach()
+    string(APPEND multilib_yaml_content "  ExclusiveGroup: stdlibs\n")
 
     install(
         DIRECTORY "${LLVM_BINARY_DIR}/${directory}/"
@@ -1048,21 +1049,6 @@ add_library_variant(
 )
 add_library_variant(
     armv7m
-    SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m+nofp"
-    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an385"
-    QEMU_CPU "cortex-m3"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
-    STACK_SIZE 4K
-)
-add_library_variant(
-    armv7m
     SUFFIX soft_fpv4_sp_d16
     COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7m -mfpu=fpv4-sp-d16"
     MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=fpv4-sp-d16"
@@ -1076,13 +1062,19 @@ add_library_variant(
     RAM_SIZE 2M
     STACK_SIZE 4K
 )
+# When no -mfpu=none is specified, the compiler internally adds all other
+# possible fpu settings before searching for matching variants. So for the
+# no-fpu variant to win, it has to be in multilab.yaml after all other
+# fpu variants. The order of variants in multilab.yaml depends on the order
+# of the add_library_variant calls. So the add_library_variant that adds
+# the soft_nofp for armv7m is placed after all other armv7m variants.
 add_library_variant(
-    armv7em
+    armv7m
     SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an386"
-    QEMU_CPU "cortex-m4"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m+nofp"
+    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "mps2-an385"
+    QEMU_CPU "cortex-m3"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
     FLASH_ADDRESS 0x00001000
@@ -1113,6 +1105,27 @@ add_library_variant(
     MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv5-d16"
     QEMU_MACHINE "mps2-an500"
     QEMU_CPU "cortex-m7"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 2M
+    STACK_SIZE 4K
+)
+# When no -mfpu=none is specified, the compiler internally adds all other
+# possible fpu settings before searching for matching variants. So for the
+# no-fpu variant to win, it has to be in multilab.yaml after all other
+# fpu variants. The order of variants in multilab.yaml depends on the order
+# of the add_library_variant calls. So the add_library_variant that adds
+# the soft_nofp for armv7em is placed after all other armv7em variants.
+add_library_variant(
+    armv7em
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "mps2-an386"
+    QEMU_CPU "cortex-m4"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
     FLASH_ADDRESS 0x00001000
