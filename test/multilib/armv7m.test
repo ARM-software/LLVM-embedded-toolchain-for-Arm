@@ -1,5 +1,10 @@
 # RUN: %clang -print-multi-directory --target=armv7m-none-eabi | FileCheck %s
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfloat-abi=softfp | FileCheck %s
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none | FileCheck %s
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -mfloat-abi=softfp | FileCheck %s
 # CHECK: arm-none-eabi/armv7m_soft_nofp
+# CHECK-EMPTY:
 
-# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfloat-abi=softfp | FileCheck --check-prefix=SOFT_FPV4 %s
-# SOFT_FPV4: arm-none-eabi/armv7m_soft_fpv4_sp_d16
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=vfp -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4 %s
+# SOFT-FPV4: arm-none-eabi/armv7m_soft_fpv4_sp_d16
+# SOFT-FPV4-EMPTY:

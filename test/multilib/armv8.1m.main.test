@@ -1,11 +1,14 @@
 # RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabi -mfpu=none | FileCheck %s
 # CHECK: arm-none-eabi/armv8.1m.main_soft_nofp
+# CHECK-EMPTY:
 
 # RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main+fp | FileCheck --check-prefix=HARD %s
 # HARD: arm-none-eabi/armv8.1m.main_hard_fp
+# HARD-EMPTY:
 
 # RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main+nofp+mve | FileCheck --check-prefix=MVE %s
 # MVE: arm-none-eabi/armv8.1m.main_hard_nofp_mve
+# MVE-EMPTY:
 
 # RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -mcpu=cortex-m55 | FileCheck --check-prefix=CORTEXM55 %s
 # CORTEXM55: -march=thumbv8.1m.main+fp16+lob+mve.fp
