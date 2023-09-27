@@ -1,5 +1,7 @@
 # RUN: %clang -print-multi-directory --target=armv8m.main-none-eabi -mfpu=none | FileCheck %s
 # CHECK: arm-none-eabi/armv8m.main_soft_nofp
+# CHECK-EMPTY:
 
 # RUN: %clang -print-multi-directory --target=armv8m.main-none-eabihf | FileCheck --check-prefix=HARD %s
 # HARD: arm-none-eabi/armv8m.main_hard_fp
+# HARD-EMPTY:
