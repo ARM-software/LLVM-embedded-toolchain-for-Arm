@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [17.0.1]
+### Fixed
+- clang generating incorrect FPU directives for Armv8.1-M CPUs (#301)
+- Multilib incorrectly selecting multiple library variants. (#307)
+
 ## [preview-17.0.0]
 
 ### Fixed
