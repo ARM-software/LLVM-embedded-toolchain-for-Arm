@@ -328,7 +328,7 @@ index 9c9af6068079..e7c37767c6ed 100644
 --- a/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
 +++ b/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
 @@ -996,6 +996,8 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
-
+ 
    // FPV5_D16 is identical to FP_ARMV8 except for the number of D registers, so
    // uses the FP_ARMV8_D16 build attribute.
 +  case ARM::FK_FP_ARMV8_FULLFP16_SP_D16:
