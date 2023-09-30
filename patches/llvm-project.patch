@@ -365,3 +365,25 @@ index b65d1b24e63d..3b2c737664f3 100644
        emitFPU(STI.hasFeature(ARM::FeatureD32)
                    ? ARM::FK_VFPV4
                    : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_VFPV4_D16
+diff --git a/llvm/test/CodeGen/ARM/build-attributes.ll b/llvm/test/CodeGen/ARM/build-attributes.ll
+index e8c83b92f3f9..0abe13aeb4fe 100644
+--- a/llvm/test/CodeGen/ARM/build-attributes.ll
++++ b/llvm/test/CodeGen/ARM/build-attributes.ll
+@@ -1734,7 +1734,7 @@
+ ; CORTEX-M55: .eabi_attribute 7, 77
+ ; CORTEX-M55: .eabi_attribute 8, 0
+ ; CORTEX-M55: .eabi_attribute 9, 3
+-; CORTEX-M55: .fpu fpv5-d16
++; CORTEX-M55: .fpu fp-armv8-fullfp16-d16
+ ; CORTEX-M55: .eabi_attribute 36, 1
+ ; CORTEX-M55-NOT: .eabi_attribute 44
+ ; CORTEX-M55: .eabi_attribute 46, 1
+@@ -1755,7 +1755,7 @@
+ ; CORTEX-M85: .eabi_attribute 7, 77   @ Tag_CPU_arch_profile
+ ; CORTEX-M85: .eabi_attribute 8, 0    @ Tag_ARM_ISA_use
+ ; CORTEX-M85: .eabi_attribute 9, 3    @ Tag_THUMB_ISA_use
+-; CORTEX-M85: .fpu    fpv5-d16
++; CORTEX-M85: .fpu fp-armv8-fullfp16-d16
+ ; CORTEX-M85: .eabi_attribute 36, 1   @ Tag_FP_HP_extension
+ ; CORTEX-M85: .eabi_attribute 48, 2   @ Tag_MVE_arch
+ ; CORTEX-M85: .eabi_attribute 46, 1   @ Tag_DSP_extension
