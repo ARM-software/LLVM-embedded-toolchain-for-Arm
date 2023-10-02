@@ -7,9 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ## [17.0.1]
+### Added
+- Added single precision library variants for Armv8.1-M.
+
 ### Fixed
 - clang generating incorrect FPU directives for Armv8.1-M CPUs (#301)
 - Multilib incorrectly selecting multiple library variants. (#307)
+
+### Changed
+- Added explicit -mfpu flags when building library variants
 
 ## [preview-17.0.0]
 
