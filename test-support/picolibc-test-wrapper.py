@@ -38,7 +38,7 @@ def run(args):
         args.qemu_cpu,
         args.qemu_params.split(":") if args.qemu_params else [],
         args.image,
-        args.arguments,
+        ["program-name"] + args.arguments,
         None,
         pathlib.Path.cwd(),
     )
