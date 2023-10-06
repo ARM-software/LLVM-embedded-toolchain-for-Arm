@@ -6,3 +6,384 @@ index 20c4f52cd378..eefdedbcb4f4 100644
 -#==============================================================================#
 +#==============================================================================#
  # This file specifies intentionally untracked files that git should ignore.
+diff --git a/clang/include/clang/Driver/Multilib.h b/clang/include/clang/Driver/Multilib.h
+index 1416559..6a9533e 100644
+--- a/clang/include/clang/Driver/Multilib.h
++++ b/clang/include/clang/Driver/Multilib.h
+@@ -39,13 +39,22 @@
+   std::string IncludeSuffix;
+   flags_list Flags;
+ 
++  // Optionally, a multilib can be assigned a string tag indicating that it's
++  // part of a group of mutually exclusive possibilities. If two or more
++  // multilibs have the same non-empty value of ExclusiveGroup, then only the
++  // last matching one of them will be selected.
++  //
++  // Setting this to the empty string is a special case, indicating that the
++  // directory is not mutually exclusive with anything else.
++  std::string ExclusiveGroup;
++
+ public:
+   /// GCCSuffix, OSSuffix & IncludeSuffix will be appended directly to the
+   /// sysroot string so they must either be empty or begin with a '/' character.
+   /// This is enforced with an assert in the constructor.
+   Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
+-           StringRef IncludeSuffix = {},
+-           const flags_list &Flags = flags_list());
++           StringRef IncludeSuffix = {}, const flags_list &Flags = flags_list(),
++           StringRef ExclusiveGroup = {});
+ 
+   /// Get the detected GCC installation path suffix for the multi-arch
+   /// target variant. Always starts with a '/', unless empty
+@@ -63,6 +72,9 @@
+   /// All elements begin with either '-' or '!'
+   const flags_list &flags() const { return Flags; }
+ 
++  /// Get the exclusive group label.
++  const std::string &exclusiveGroup() const { return ExclusiveGroup; }
++
+   LLVM_DUMP_METHOD void dump() const;
+   /// print summary of the Multilib
+   void print(raw_ostream &OS) const;
+diff --git a/clang/lib/Driver/Multilib.cpp b/clang/lib/Driver/Multilib.cpp
+index a37dffc..33b5db7 100644
+--- a/clang/lib/Driver/Multilib.cpp
++++ b/clang/lib/Driver/Multilib.cpp
+@@ -30,9 +30,10 @@
+ using namespace llvm::sys;
+ 
+ Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
+-                   StringRef IncludeSuffix, const flags_list &Flags)
++                   StringRef IncludeSuffix, const flags_list &Flags,
++                   StringRef ExclusiveGroup)
+     : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix),
+-      Flags(Flags) {
++      Flags(Flags), ExclusiveGroup(ExclusiveGroup) {
+   assert(GCCSuffix.empty() ||
+          (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
+   assert(OSSuffix.empty() ||
+@@ -97,13 +98,39 @@
+                          llvm::SmallVector<Multilib> &Selected) const {
+   llvm::StringSet<> FlagSet(expandFlags(Flags));
+   Selected.clear();
+-  llvm::copy_if(Multilibs, std::back_inserter(Selected),
+-                [&FlagSet](const Multilib &M) {
+-                  for (const std::string &F : M.flags())
+-                    if (!FlagSet.contains(F))
+-                      return false;
+-                  return true;
+-                });
++
++  // Decide which multilibs we're going to select at all
++  std::vector<bool> IsSelected(Multilibs.size(), false);
++  std::map<std::string, size_t> ExclusiveGroupMembers;
++  for (size_t i = 0, e = Multilibs.size(); i < e; ++i) {
++    const Multilib &M = Multilibs[i];
++
++    // If this multilib doesn't match all our flags, don't select it
++    if (!llvm::all_of(M.flags(), [&FlagSet](const std::string &F) {
++          return FlagSet.contains(F);
++        }))
++      continue;
++
++    // If this multilib has the same ExclusiveGroup as one we've already
++    // selected, de-select the previous one
++    const std::string &group = M.exclusiveGroup();
++    if (!group.empty()) {
++      auto it = ExclusiveGroupMembers.find(group);
++      if (it != ExclusiveGroupMembers.end())
++        IsSelected[it->second] = false;
++    }
++
++    // Select this multilib
++    IsSelected[i] = true;
++    if (!group.empty())
++      ExclusiveGroupMembers[group] = i;
++  }
++
++  // Now write the selected multilibs into the output
++  for (size_t i = 0, e = Multilibs.size(); i < e; ++i)
++    if (IsSelected[i])
++      Selected.push_back(Multilibs[i]);
++
+   return !Selected.empty();
+ }
+ 
+@@ -140,6 +167,7 @@
+ struct MultilibSerialization {
+   std::string Dir;
+   std::vector<std::string> Flags;
++  std::string ExclusiveGroup;
+ };
+ 
+ struct MultilibSetSerialization {
+@@ -154,6 +182,7 @@
+   static void mapping(llvm::yaml::IO &io, MultilibSerialization &V) {
+     io.mapRequired("Dir", V.Dir);
+     io.mapRequired("Flags", V.Flags);
++    io.mapOptional("ExclusiveGroup", V.ExclusiveGroup);
+   }
+   static std::string validate(IO &io, MultilibSerialization &V) {
+     if (StringRef(V.Dir).starts_with("/"))
+@@ -216,7 +245,7 @@
+     std::string Dir;
+     if (M.Dir != ".")
+       Dir = "/" + M.Dir;
+-    Multilibs.emplace_back(Dir, Dir, Dir, M.Flags);
++    Multilibs.emplace_back(Dir, Dir, Dir, M.Flags, M.ExclusiveGroup);
+   }
+ 
+   return MultilibSet(std::move(Multilibs), std::move(MS.FlagMatchers));
+diff --git a/clang/test/Driver/baremetal-multilib-layered.yaml b/clang/test/Driver/baremetal-multilib-layered.yaml
+index 2f86f8e..9c866db 100644
+--- a/clang/test/Driver/baremetal-multilib-layered.yaml
++++ b/clang/test/Driver/baremetal-multilib-layered.yaml
+@@ -8,30 +8,70 @@
+ # need to duplicate the C library for every libc++ variant.
+ # However -fno-exceptions is not yet supported for multilib selection
+ # so we use a more contrived -mfloat-abi example instead.
++# There are cases when only one of the matching multilibs should be selected.
++# The optional ExlusiveGroup flag can be used for those cases. When it
++# is specified, the last multilib in that group will be selected.
+ 
+-# RUN: rm -rf %T/baremetal_multilib_layered
+-# RUN: mkdir -p %T/baremetal_multilib_layered/bin
+-# RUN: mkdir -p %T/baremetal_multilib_layered/lib/clang-runtimes
+-# RUN: ln -s %clang %T/baremetal_multilib_layered/bin/clang
+-# RUN: ln -s %s %T/baremetal_multilib_layered/lib/clang-runtimes/multilib.yaml
++# RUN: rm -rf %t && split-file %s %t
++# RUN: mkdir -p %t/bin
++# RUN: mkdir -p %t/lib/clang-runtimes
++# RUN: ln -s %clang %t/bin/clang
+ 
+-# RUN: %T/baremetal_multilib_layered/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
++# No ExclusiveGroup flag.
++# Both variants will be selected.
++# RUN: rm -f %t/lib/clang-runtimes/multilib.yaml
++# RUN: ln -s %t/multilib-nogroups.yaml %t/lib/clang-runtimes/multilib.yaml
++# RUN: %t/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
+ # RUN:     --target=thumbv7m-none-eabi -mfloat-abi=softfp --sysroot= \
+-# RUN:   | FileCheck -DSYSROOT=%T/baremetal_multilib_layered %s
+-# CHECK:      "-cc1" "-triple" "thumbv7m-none-unknown-eabi"
+-# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include/c++/v1"
+-# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/soft/include/c++/v1"
+-# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include"
+-# CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/soft/include"
+-# CHECK-NEXT: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/lib"
+-# CHECK-SAME: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/soft/lib"
+-
+-# RUN: %T/baremetal_multilib_layered/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
++# RUN:   | FileCheck -DSYSROOT=%t %s --check-prefix=BOTH
++# RUN: %t/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
+ # RUN:     --target=arm-none-eabi -mfloat-abi=softfp --sysroot= \
+-# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-DIRECTORY %s
+-# CHECK-PRINT-MULTI-DIRECTORY:      soft
+-# CHECK-PRINT-MULTI-DIRECTORY-NEXT: softfp
++# RUN:   | FileCheck --check-prefix=BOTH-PRINT-MULTI-DIRECTORY %s
+ 
++# Variants belong to different ExclusiveGroups.
++# Both variants will be selected.
++# RUN: rm -f %t/lib/clang-runtimes/multilib.yaml
++# RUN: ln -s %t/multilib-diffgroups.yaml %t/lib/clang-runtimes/multilib.yaml
++# RUN: %t/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
++# RUN:     --target=thumbv7m-none-eabi -mfloat-abi=softfp --sysroot= \
++# RUN:   | FileCheck -DSYSROOT=%t %s --check-prefix=BOTH
++# RUN: %t/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
++# RUN:     --target=arm-none-eabi -mfloat-abi=softfp --sysroot= \
++# RUN:   | FileCheck --check-prefix=BOTH-PRINT-MULTI-DIRECTORY %s
++
++# BOTH:      "-cc1" "-triple" "thumbv7m-none-unknown-eabi"
++# BOTH-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include/c++/v1"
++# BOTH-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/soft/include/c++/v1"
++# BOTH-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include"
++# BOTH-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/soft/include"
++# BOTH-NEXT: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/lib"
++# BOTH-SAME: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/soft/lib"
++# BOTH-PRINT-MULTI-DIRECTORY:      soft
++# BOTH-PRINT-MULTI-DIRECTORY-NEXT:      softfp
++
++# Variants belong to the same ExclusiveGroup.
++# The last variant found (softfp) will be selected.
++# RUN: rm -f %t/lib/clang-runtimes/multilib.yaml
++# RUN: ln -s %t/multilib-samegroup.yaml %t/lib/clang-runtimes/multilib.yaml
++# RUN: %t/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
++# RUN:     --target=thumbv7m-none-eabi -mfloat-abi=softfp --sysroot= \
++# RUN:   | FileCheck -DSYSROOT=%t %s --check-prefix=SOFTFP
++# RUN: %t/bin/clang -no-canonical-prefixes -print-multi-directory 2>&1 \
++# RUN:     --target=arm-none-eabi -mfloat-abi=softfp --sysroot= \
++# RUN:   | FileCheck --check-prefix=SOFTFP-PRINT-MULTI-DIRECTORY %s
++
++# SOFTFP:      "-cc1" "-triple" "thumbv7m-none-unknown-eabi"
++# SOFTFP-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include/c++/v1"
++# SOFTFP-NOTE: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/soft/include/c++/v1"
++# SOFTFP-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include"
++# SOFTFP-NOT: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/soft/include"
++# SOFTFP-NEXT: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/lib"
++# SOFTFP-NOT: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/soft/lib"
++# SOFTFP-PRINT-MULTI-DIRECTORY:      softfp
++# SOFTFP-PRINT-MULTI-DIRECTORY-NOT:      soft
++
++
++//--- multilib-nogroups.yaml
+ ---
+ MultilibVersion: 1.0
+ Variants:
+@@ -43,3 +83,33 @@
+ - Match: -mfloat-abi=softfp
+   Flags: [-mfloat-abi=soft]
+ ...
++
++//--- multilib-diffgroups.yaml
++---
++MultilibVersion: 1.0
++Variants:
++- Dir: soft
++  Flags: [-mfloat-abi=soft]
++  ExclusiveGroup: G1
++- Dir: softfp
++  Flags: [-mfloat-abi=softfp]
++  ExclusiveGroup: G2
++Mappings:
++- Match: -mfloat-abi=softfp
++  Flags: [-mfloat-abi=soft]
++...
++
++//--- multilib-samegroup.yaml
++---
++MultilibVersion: 1.0
++Variants:
++- Dir: soft
++  Flags: [-mfloat-abi=soft]
++  ExclusiveGroup: G
++- Dir: softfp
++  Flags: [-mfloat-abi=softfp]
++  ExclusiveGroup: G
++Mappings:
++- Match: -mfloat-abi=softfp
++  Flags: [-mfloat-abi=soft]
++...
+diff --git a/clang/test/CodeGen/arm-v8.1m-check-fpu.ll b/clang/test/CodeGen/arm-v8.1m-check-fpu.ll
+new file mode 100644
+index 000000000000..5cff0457a190
+--- /dev/null
++++ b/clang/test/CodeGen/arm-v8.1m-check-fpu.ll
+@@ -0,0 +1,55 @@
++; REQUIRES: arm-registered-target
++; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m85 -mfloat-abi=hard -save-temps=obj -S -o - %s | FileCheck %s
++; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m55 -mfloat-abi=hard -save-temps=obj -S -o - %s | FileCheck %s
++; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m85 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
++; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m55 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
++; CHECK: .fpu   fp-armv8-fullfp16-d16
++target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
++target triple = "thumbv8.1m.main-none-unknown-eabihf"
++
++%struct.dummy_t = type { float, float, float, float }
++
++define dso_local signext i8 @foo(ptr noundef %handle) #0 {
++entry:
++  %handle.addr = alloca ptr, align 4
++  store ptr %handle, ptr %handle.addr, align 4
++  %0 = load ptr, ptr %handle.addr, align 4
++  %a = getelementptr inbounds %struct.dummy_t, ptr %0, i32 0, i32 0
++  %1 = load float, ptr %a, align 4
++  %sub = fsub float 0x3F5439DE40000000, %1
++  %2 = load ptr, ptr %handle.addr, align 4
++  %a1 = getelementptr inbounds %struct.dummy_t, ptr %2, i32 0, i32 0
++  %3 = load float, ptr %a1, align 4
++  %4 = call float @llvm.fmuladd.f32(float 0x3F847AE140000000, float %sub, float %3)
++  store float %4, ptr %a1, align 4
++  %5 = load ptr, ptr %handle.addr, align 4
++  %b = getelementptr inbounds %struct.dummy_t, ptr %5, i32 0, i32 1
++  %6 = load float, ptr %b, align 4
++  %sub2 = fsub float 0x3F5439DE40000000, %6
++  %7 = load ptr, ptr %handle.addr, align 4
++  %b3 = getelementptr inbounds %struct.dummy_t, ptr %7, i32 0, i32 1
++  %8 = load float, ptr %b3, align 4
++  %9 = call float @llvm.fmuladd.f32(float 0x3F947AE140000000, float %sub2, float %8)
++  store float %9, ptr %b3, align 4
++  %10 = load ptr, ptr %handle.addr, align 4
++  %c = getelementptr inbounds %struct.dummy_t, ptr %10, i32 0, i32 2
++  %11 = load float, ptr %c, align 4
++  %sub4 = fsub float 0x3F5439DE40000000, %11
++  %12 = load ptr, ptr %handle.addr, align 4
++  %c5 = getelementptr inbounds %struct.dummy_t, ptr %12, i32 0, i32 2
++  %13 = load float, ptr %c5, align 4
++  %14 = call float @llvm.fmuladd.f32(float 0x3F9EB851E0000000, float %sub4, float %13)
++  store float %14, ptr %c5, align 4
++  %15 = load ptr, ptr %handle.addr, align 4
++  %d = getelementptr inbounds %struct.dummy_t, ptr %15, i32 0, i32 3
++  %16 = load float, ptr %d, align 4
++  %sub6 = fsub float 0x3F5439DE40000000, %16
++  %17 = load ptr, ptr %handle.addr, align 4
++  %d7 = getelementptr inbounds %struct.dummy_t, ptr %17, i32 0, i32 3
++  %18 = load float, ptr %d7, align 4
++  %19 = call float @llvm.fmuladd.f32(float 0x3FA47AE140000000, float %sub6, float %18)
++  store float %19, ptr %d7, align 4
++  ret i8 0
++}
++
++declare float @llvm.fmuladd.f32(float, float, float) #1
+diff --git a/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp b/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
+index 9c9af6068079..e7c37767c6ed 100644
+--- a/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
++++ b/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
+@@ -996,6 +996,8 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
+ 
+   // FPV5_D16 is identical to FP_ARMV8 except for the number of D registers, so
+   // uses the FP_ARMV8_D16 build attribute.
++  case ARM::FK_FP_ARMV8_FULLFP16_SP_D16:
++  case ARM::FK_FP_ARMV8_FULLFP16_D16:
+   case ARM::FK_FPV5_SP_D16:
+   case ARM::FK_FPV5_D16:
+     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPARMv8B,
+diff --git a/llvm/lib/Target/ARM/MCTargetDesc/ARMTargetStreamer.cpp b/llvm/lib/Target/ARM/MCTargetDesc/ARMTargetStreamer.cpp
+index b65d1b24e63d..3b2c737664f3 100644
+--- a/llvm/lib/Target/ARM/MCTargetDesc/ARMTargetStreamer.cpp
++++ b/llvm/lib/Target/ARM/MCTargetDesc/ARMTargetStreamer.cpp
+@@ -238,14 +238,18 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
+                         ? ARMBuildAttrs::AllowNeonARMv8_1a
+                         : ARMBuildAttrs::AllowNeonARMv8);
+   } else {
+-    if (STI.hasFeature(ARM::FeatureFPARMv8_D16_SP))
++    if (STI.hasFeature(ARM::FeatureFPARMv8_D16_SP)) {
+       // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
+       // FPU, but there are two different names for it depending on the CPU.
+-      emitFPU(STI.hasFeature(ARM::FeatureD32)
+-                  ? ARM::FK_FP_ARMV8
+-                  : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_FPV5_D16
+-                                                      : ARM::FK_FPV5_SP_D16));
+-    else if (STI.hasFeature(ARM::FeatureVFP4_D16_SP))
++      if (STI.hasFeature(ARM::FeatureD32))
++        emitFPU(ARM::FK_FP_ARMV8);
++      else if (STI.hasFeature(ARM::FeatureFP64))
++        emitFPU(STI.hasFeature(ARM::FeatureFullFP16)
++                    ? ARM::FK_FP_ARMV8_FULLFP16_D16
++                    : ARM::FK_FPV5_D16);
++      else
++        emitFPU(ARM::FK_FPV5_SP_D16);
++    } else if (STI.hasFeature(ARM::FeatureVFP4_D16_SP))
+       emitFPU(STI.hasFeature(ARM::FeatureD32)
+                   ? ARM::FK_VFPV4
+                   : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_VFPV4_D16
+diff --git a/llvm/test/CodeGen/ARM/build-attributes.ll b/llvm/test/CodeGen/ARM/build-attributes.ll
+index e8c83b92f3f9..0abe13aeb4fe 100644
+--- a/llvm/test/CodeGen/ARM/build-attributes.ll
++++ b/llvm/test/CodeGen/ARM/build-attributes.ll
+@@ -1734,7 +1734,7 @@
+ ; CORTEX-M55: .eabi_attribute 7, 77
+ ; CORTEX-M55: .eabi_attribute 8, 0
+ ; CORTEX-M55: .eabi_attribute 9, 3
+-; CORTEX-M55: .fpu fpv5-d16
++; CORTEX-M55: .fpu fp-armv8-fullfp16-d16
+ ; CORTEX-M55: .eabi_attribute 36, 1
+ ; CORTEX-M55-NOT: .eabi_attribute 44
+ ; CORTEX-M55: .eabi_attribute 46, 1
+@@ -1755,7 +1755,7 @@
+ ; CORTEX-M85: .eabi_attribute 7, 77   @ Tag_CPU_arch_profile
+ ; CORTEX-M85: .eabi_attribute 8, 0    @ Tag_ARM_ISA_use
+ ; CORTEX-M85: .eabi_attribute 9, 3    @ Tag_THUMB_ISA_use
+-; CORTEX-M85: .fpu    fpv5-d16
++; CORTEX-M85: .fpu fp-armv8-fullfp16-d16
+ ; CORTEX-M85: .eabi_attribute 36, 1   @ Tag_FP_HP_extension
+ ; CORTEX-M85: .eabi_attribute 48, 2   @ Tag_MVE_arch
+ ; CORTEX-M85: .eabi_attribute 46, 1   @ Tag_DSP_extension

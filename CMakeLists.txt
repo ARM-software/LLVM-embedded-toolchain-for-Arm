@@ -946,6 +946,7 @@ function(add_library_variant target_arch)
     foreach(flag ${multilib_flags_list})
         string(APPEND multilib_yaml_content "  - ${flag}\n")
     endforeach()
+    string(APPEND multilib_yaml_content "  ExclusiveGroup: stdlibs\n")
 
     install(
         DIRECTORY "${LLVM_BINARY_DIR}/${directory}/"
@@ -958,6 +959,9 @@ endfunction()
 set(multilib_yaml_content "")
 
 # Define which library variants to build and which flags to use.
+# For most variants, the "flash" memory is placed in address range, where
+# simulated boards have RAM. This is because code for some tests does not fit
+# the real flash.
 add_library_variant(
     aarch64
     COMPILE_FLAGS "-march=armv8-a"
@@ -967,9 +971,9 @@ add_library_variant(
     BOOT_FLASH_ADDRESS 0x40000000
     BOOT_FLASH_SIZE 0x1000
     FLASH_ADDRESS 0x40001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x40400000
-    RAM_SIZE 2M
+    FLASH_SIZE 0xfff000
+    RAM_ADDRESS 0x41000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 8K
 )
 # For AArch32, clang uses different defaults for FPU selection than GCC, both
@@ -984,10 +988,10 @@ add_library_variant(
     QEMU_PARAMS "-m 1G"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x20000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x21000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -999,10 +1003,10 @@ add_library_variant(
     QEMU_PARAMS "-m 1G"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x20000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x21000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1013,10 +1017,10 @@ add_library_variant(
     QEMU_MACHINE "mps2-an385"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x21000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x21600000
+    RAM_SIZE 0xa00000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1029,10 +1033,10 @@ add_library_variant(
     QEMU_PARAMS "-m 1G"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x20000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x21000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1045,10 +1049,10 @@ add_library_variant(
     QEMU_PARAMS "-m 1G"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x20000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x21000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1061,10 +1065,10 @@ add_library_variant(
     QEMU_PARAMS "-m 1G"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x20000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x21000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1077,25 +1081,10 @@ add_library_variant(
     QEMU_PARAMS "-m 1G"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
-    STACK_SIZE 4K
-)
-add_library_variant(
-    armv7m
-    SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an385"
-    QEMU_CPU "cortex-m3"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x20000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x21000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1107,25 +1096,31 @@ add_library_variant(
     QEMU_CPU "cortex-m4"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x21000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x21600000
+    RAM_SIZE 0xa00000
     STACK_SIZE 4K
 )
+# When no -mfpu=none is specified, the compiler internally adds all other
+# possible fpu settings before searching for matching variants. So for the
+# no-fpu variant to win, it has to be in multilab.yaml after all other
+# fpu variants. The order of variants in multilab.yaml depends on the order
+# of the add_library_variant calls. So the add_library_variant that adds
+# the soft_nofp for armv7m is placed after all other armv7m variants.
 add_library_variant(
-    armv7em
+    armv7m
     SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an386"
-    QEMU_CPU "cortex-m4"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "mps2-an385"
+    QEMU_CPU "cortex-m3"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x21000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x21600000
+    RAM_SIZE 0xa00000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1137,10 +1132,10 @@ add_library_variant(
     QEMU_CPU "cortex-m4"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x21000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x21600000
+    RAM_SIZE 0xa00000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1152,10 +1147,31 @@ add_library_variant(
     QEMU_CPU "cortex-m7"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x00001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x20000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x60000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x60600000
+    RAM_SIZE 0xa00000
+    STACK_SIZE 4K
+)
+# When no -mfpu=none is specified, the compiler internally adds all other
+# possible fpu settings before searching for matching variants. So for the
+# no-fpu variant to win, it has to be in multilab.yaml after all other
+# fpu variants. The order of variants in multilab.yaml depends on the order
+# of the add_library_variant calls. So the add_library_variant that adds
+# the soft_nofp for armv7em is placed after all other armv7em variants.
+add_library_variant(
+    armv7em
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "mps2-an386"
+    QEMU_CPU "cortex-m4"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x21000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x21600000
+    RAM_SIZE 0xa00000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1167,10 +1183,10 @@ add_library_variant(
     QEMU_CPU "cortex-m33"
     BOOT_FLASH_ADDRESS 0x10000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x10001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x80000000
-    RAM_SIZE 16M
+    FLASH_ADDRESS 0x80000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x80600000
+    RAM_SIZE 0xa00000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1182,10 +1198,10 @@ add_library_variant(
     QEMU_CPU "cortex-m33"
     BOOT_FLASH_ADDRESS 0x10000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x10001000
-    FLASH_SIZE 0x3ff000
-    RAM_ADDRESS 0x80000000
-    RAM_SIZE 16M
+    FLASH_ADDRESS 0x80000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x80600000
+    RAM_SIZE 0xa00000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1197,10 +1213,10 @@ add_library_variant(
     QEMU_CPU "cortex-m55"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 512K
-    FLASH_ADDRESS 0x01000000
-    FLASH_SIZE 2M
-    RAM_ADDRESS 0x60000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x60000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x61000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1212,10 +1228,10 @@ add_library_variant(
     QEMU_CPU "cortex-m55"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 512K
-    FLASH_ADDRESS 0x01000000
-    FLASH_SIZE 2M
-    RAM_ADDRESS 0x60000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x60000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x61000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1227,10 +1243,10 @@ add_library_variant(
     QEMU_CPU "cortex-m55"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 512K
-    FLASH_ADDRESS 0x01000000
-    FLASH_SIZE 2M
-    RAM_ADDRESS 0x60000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x60000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x61000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 add_library_variant(
@@ -1242,10 +1258,10 @@ add_library_variant(
     QEMU_CPU "cortex-m55"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 512K
-    FLASH_ADDRESS 0x01000000
-    FLASH_SIZE 2M
-    RAM_ADDRESS 0x60000000
-    RAM_SIZE 2M
+    FLASH_ADDRESS 0x60000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x61000000
+    RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
 
