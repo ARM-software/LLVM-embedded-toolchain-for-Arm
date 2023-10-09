@@ -450,21 +450,6 @@ if(LIBS_DEPEND_ON_TOOLS)
     )
 endif()
 
-set(picolibc_specific_runtimes_options
-    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
-    -DLIBCXXABI_ENABLE_THREADS=OFF
-    -DLIBCXX_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libc++-picolibc.cfg.in
-    -DLIBCXX_ENABLE_EXCEPTIONS=OFF
-    -DLIBCXXABI_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libc++abi-picolibc.cfg.in
-    -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF
-    -DLIBCXX_ENABLE_RANDOM_DEVICE=OFF
-    -DLIBCXX_ENABLE_RTTI=OFF
-    -DLIBCXX_ENABLE_THREADS=OFF
-    -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
-    -DLIBUNWIND_ENABLE_THREADS=OFF
-    -DLIBUNWIND_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libunwind-picolibc.cfg.in
-)
-
 add_custom_target(check-picolibc)
 # Set LLVM_DEFAULT_EXTERNAL_LIT to the directory of clang
 # which was build in previous step. This path is not exported
@@ -692,6 +677,22 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
 endfunction()
 
 function(
+    extend_with_exception_and_rtti
+    extended_name
+    base_name
+    enable_exceptions
+    enable_rtti
+)
+    if(${enable_exceptions})
+        set(base_name ${base_name}_exceptions)
+    endif()
+    if(${enable_rtti})
+        set(base_name ${base_name}_rtti)
+    endif()
+    set(${extended_name} ${base_name} PARENT_SCOPE)
+endfunction()
+
+function(
     add_libcxx_libcxxabi_libunwind
     directory
     variant
@@ -699,15 +700,32 @@ function(
     flags
     test_executor
     libc_target
-    extra_cmake_options
+    enable_exceptions
+    enable_rtti
 )
     get_runtimes_flags("${directory}" "${flags}")
 
+    set(extra_cmake_options
+            -DLIBCXXABI_ENABLE_EXCEPTIONS=${enable_exceptions}
+            -DLIBCXXABI_ENABLE_THREADS=OFF
+            -DLIBCXXABI_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libc++abi-picolibc.cfg.in
+            -DLIBCXX_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libc++-picolibc.cfg.in
+            -DLIBCXX_ENABLE_EXCEPTIONS=OFF
+            -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF
+            -DLIBCXX_ENABLE_RANDOM_DEVICE=OFF
+            -DLIBCXX_ENABLE_RTTI=${enable_rtti}
+            -DLIBCXX_ENABLE_THREADS=OFF
+            -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
+            -DLIBUNWIND_ENABLE_THREADS=OFF
+            -DLIBUNWIND_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libunwind-picolibc.cfg.in
+        )
+    extend_with_exception_and_rtti(target_name "libcxx_libcxxabi_libunwind_${variant}" ${enable_exceptions} ${enable_rtti})
+    extend_with_exception_and_rtti(prefix "libcxx_libcxxabi_libunwind/${variant}" ${enable_exceptions} ${enable_rtti})
     ExternalProject_Add(
-        libcxx_libcxxabi_libunwind_${variant}
+        ${target_name}
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/runtimes
         INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
-        PREFIX libcxx_libcxxabi_libunwind/${variant}
+        PREFIX ${prefix}
         DEPENDS ${lib_tool_dependencies} compiler_rt_${variant} ${libc_target}
         CMAKE_ARGS
         -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
@@ -734,6 +752,7 @@ function(
         -DLIBCXXABI_LIBCXX_INCLUDES="${LLVM_BINARY_DIR}/${directory}/include/c++/v1"
         -DLIBCXXABI_USE_COMPILER_RT=ON
         -DLIBCXXABI_USE_LLVM_UNWINDER=ON
+        -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${enable_exceptions}
         -DLIBCXXABI_EXECUTOR=${test_executor}
         -DLIBCXX_ABI_UNSTABLE=ON
         -DLIBCXX_CXX_ABI=libcxxabi
@@ -766,7 +785,7 @@ function(
 
     add_dependencies(
         llvm-toolchain-runtimes
-        libcxx_libcxxabi_libunwind_${variant}
+        ${target_name}
     )
 endfunction()
 
@@ -791,26 +810,29 @@ function(add_compiler_rt_tests variant)
     add_dependencies(check-llvm-toolchain-runtimes-${variant} check-compiler-rt-${variant})
 endfunction()
 
-function(add_libcxx_libcxxabi_libunwind_tests variant)
+function(add_libcxx_libcxxabi_libunwind_tests variant enable_exceptions enable_rtti)
+    extend_with_exception_and_rtti(target_name "libcxx_libcxxabi_libunwind_${variant}" ${enable_exceptions} ${enable_rtti})
+    extend_with_exception_and_rtti(target_postfix "${variant}" ${enable_exceptions} ${enable_rtti})
+
     foreach(check_target check-cxxabi check-unwind check-cxx)
         ExternalProject_Add_Step(
-            libcxx_libcxxabi_libunwind_${variant}
+            ${target_name}
             ${check_target}
             COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target ${check_target}
             USES_TERMINAL TRUE
             EXCLUDE_FROM_MAIN TRUE
             ALWAYS TRUE
         )
-        ExternalProject_Add_StepTargets(libcxx_libcxxabi_libunwind_${variant} ${check_target})
+        ExternalProject_Add_StepTargets(${target_name} ${check_target})
         ExternalProject_Add_StepDependencies(
-            libcxx_libcxxabi_libunwind_${variant}
+            ${target_name}
             ${check_target}
-            libcxx_libcxxabi_libunwind_${variant}-build
+            ${target_name}-build
         )
-        add_custom_target(${check_target}-${variant})
-        add_dependencies(${check_target}-${variant} libcxx_libcxxabi_libunwind_${variant}-${check_target})
-        add_dependencies(${check_target} libcxx_libcxxabi_libunwind_${variant}-${check_target})
-        add_dependencies(check-llvm-toolchain-runtimes-${variant} ${check_target}-${variant})
+        add_custom_target(${check_target}-${target_postfix})
+        add_dependencies(${check_target}-${target_postfix} ${target_name}-${check_target})
+        add_dependencies(${check_target} ${target_name}-${check_target})
+        add_dependencies(check-llvm-toolchain-runtimes-${variant} ${check_target}-${target_postfix})
     endforeach()
 endfunction()
 
@@ -927,7 +949,28 @@ function(add_library_variant target_arch)
             "${VARIANT_COMPILE_FLAGS}"
             "${lit_test_executor}"
             "picolibc_${variant}-install"
-            "${picolibc_specific_runtimes_options}"
+            OFF
+            OFF
+        )
+        add_libcxx_libcxxabi_libunwind(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${VARIANT_COMPILE_FLAGS}"
+            "${lit_test_executor}"
+            "picolibc_${variant}-install"
+            ON
+            OFF
+        )
+        add_libcxx_libcxxabi_libunwind(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${VARIANT_COMPILE_FLAGS}"
+            "${lit_test_executor}"
+            "picolibc_${variant}-install"
+            ON
+            ON
         )
         if(VARIANT_COMPILE_FLAGS MATCHES "-march=armv8")
             message("C++ runtime libraries tests disabled for ${variant}")
@@ -935,7 +978,9 @@ function(add_library_variant target_arch)
             add_custom_target(check-llvm-toolchain-runtimes-${variant})
             add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
             add_compiler_rt_tests("${variant}")
-            add_libcxx_libcxxabi_libunwind_tests("${variant}")
+            add_libcxx_libcxxabi_libunwind_tests("${variant}" OFF OFF)
+            add_libcxx_libcxxabi_libunwind_tests("${variant}" ON OFF)
+            add_libcxx_libcxxabi_libunwind_tests("${variant}" ON ON)
         endif()
     endif()
 
