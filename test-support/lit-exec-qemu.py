@@ -35,8 +35,8 @@ def main():
     parser.add_argument(
         "--timeout",
         type=int,
-        default=60,
-        help="timeout, in seconds (default: 60)",
+        default=120,
+        help="timeout, in seconds (default: 120)",
     )
     parser.add_argument(
         "--execdir",
@@ -69,7 +69,7 @@ def main():
         args.qemu_cpu,
         args.qemu_params.split(":") if args.qemu_params else [],
         args.image,
-        args.arguments,
+        [args.image] + args.arguments,
         args.timeout,
         args.execdir,
     )

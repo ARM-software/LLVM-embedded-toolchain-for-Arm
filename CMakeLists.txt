@@ -45,7 +45,7 @@
 # If you prefer you can check out and patch the repos manually and use those:
 #   mkdir repos
 #   git -C repos clone https://github.com/llvm/llvm-project.git
-#   git -C repos/llvm-project apply ../../patches/llvm-project.patch
+#   git -C repos/llvm-project am ../../patches/llvm-project/*.patch
 #   git -C repos clone https://github.com/picolibc/picolibc.git
 #   git -C repos/picolibc apply ../../patches/picolibc.patch
 #   mkdir build
@@ -244,12 +244,13 @@ endfunction()
 read_repo_version(llvmproject llvm-project)
 read_repo_version(picolibc picolibc)
 
+file(GLOB llvm_project_patches ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/*.patch)
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
     GIT_TAG "${llvmproject_TAG}"
     GIT_SHALLOW "${llvmproject_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project.patch
+    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git am ${llvm_project_patches}
     # Add the llvm subdirectory later to ensure that
     # LLVMEmbeddedToolchainForArm is the first project declared.
     # Otherwise CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT
