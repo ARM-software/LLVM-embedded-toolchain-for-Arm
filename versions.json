@@ -14,6 +14,10 @@
     "picolibc": {
       "tagType": "branch",
       "tag": "main"
+    },
+    "newlib": {
+      "tagType": "tag",
+      "tag": "newlib-4.1.0"
     }
   }
 }

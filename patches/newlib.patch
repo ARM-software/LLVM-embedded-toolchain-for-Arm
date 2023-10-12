@@ -1,0 +1,620 @@
+diff --git a/libgloss/arm/cpu-init/rdimon-aem.S b/libgloss/arm/cpu-init/rdimon-aem.S
+index 95b86e4d..b91034ae 100644
+--- a/libgloss/arm/cpu-init/rdimon-aem.S
++++ b/libgloss/arm/cpu-init/rdimon-aem.S
+@@ -60,7 +60,7 @@
+ 
+ _rdimon_hw_init_hook:
+     @ Only run the code on CPU 0 - otherwise spin
+-    mrc         15, 0, r4, cr0, cr0, 5  @ Read MPIDR
++    mrc         p15, 0, r4, cr0, cr0, 5  @ Read MPIDR
+     ands        r4, r4, #15
+ spin:
+     bne spin
+@@ -70,15 +70,15 @@ spin:
+ #ifdef __ARMEB__
+     @ Setup for Big Endian
+     setend      be
+-    mrc         15, 0, r4, cr1, cr0, 0  @ Read SCTLR
++    mrc         p15, 0, r4, cr1, cr0, 0  @ Read SCTLR
+     orr         r4, r4, #(1<<25)        @ Switch to Big Endian (Set SCTLR.EE)
+-    mcr         15, 0, r4, cr1, cr0, 0  @ Write SCTLR
++    mcr         p15, 0, r4, cr1, cr0, 0  @ Write SCTLR
+ #else
+     @ Setup for Little Endian
+     setend      le
+-    mrc         15, 0, r4, cr1, cr0, 0  @ Read SCTLR
++    mrc         p15, 0, r4, cr1, cr0, 0  @ Read SCTLR
+     bic         r4, r4, #(1<<25)        @ Switch to LE (unset SCTLR.EE)
+-    mcr         15, 0, r4, cr1, cr0, 0  @ Write SCTLR
++    mcr         p15, 0, r4, cr1, cr0, 0  @ Write SCTLR
+ #endif
+ 
+     bl          is_a15_a7
+@@ -87,44 +87,44 @@ spin:
+     @ Write zero into the ACTLR to turn everything on.
+     itt		eq
+     moveq       r4, #0
+-    mcreq       15, 0, r4, c1, c0, 1
++    mcreq       p15, 0, r4, c1, c0, 1
+     isb
+ 
+     @ For Cortex-A15 and Cortex-A7 only:
+     @ Set ACTLR:SMP bit before enabling the caches and MMU,
+     @ or performing any cache and TLB maintenance operations.
+     ittt	eq
+-    mrceq       15, 0, r4, c1, c0, 1    @ Read ACTLR
++    mrceq       p15, 0, r4, c1, c0, 1    @ Read ACTLR
+     orreq       r4, r4, #(1<<6)         @ Enable ACTLR:SMP
+-    mcreq       15, 0, r4, c1, c0, 1    @ Write ACTLR
++    mcreq       p15, 0, r4, c1, c0, 1    @ Write ACTLR
+     isb
+ 
+     @ Setup for exceptions being taken to Thumb/ARM state
+-    mrc         15, 0, r4, cr1, cr0, 0	@ Read SCTLR
++    mrc         p15, 0, r4, cr1, cr0, 0	@ Read SCTLR
+ #if defined(__thumb__)
+     orr         r4, r4, #(1 << 30)	@ Enable SCTLR.TE
+ #else
+     bic         r4, r4, #(1 << 30)      @ Disable SCTLR.TE
+ #endif
+-    mcr         15, 0, r4, cr1, cr0, 0  @ Write SCTLR
++    mcr         p15, 0, r4, cr1, cr0, 0  @ Write SCTLR
+ 
+     bl          __reset_caches
+ 
+-    mrc         15, 0, r4, cr1, cr0, 0  @ Read SCTLR
++    mrc         p15, 0, r4, cr1, cr0, 0  @ Read SCTLR
+     orr         r4, r4, #(1<<22)        @ Enable unaligned mode
+     bic         r4, r4, #2              @ Disable alignment faults
+     bic         r4, r4, #1              @ Disable MMU
+-    mcr         15, 0, r4, cr1, cr0, 0  @ Write SCTLR
++    mcr         p15, 0, r4, cr1, cr0, 0  @ Write SCTLR
+ 
+     mov         r4, #0
+-    mcr         15, 0, r4, cr8, cr7, 0  @ Write TLBIALL - Invaliidate unified
++    mcr         p15, 0, r4, cr8, cr7, 0  @ Write TLBIALL - Invaliidate unified
+                                         @ TLB
+     @ Setup MMU Primary table P=V mapping.
+     mvn         r4, #0
+-    mcr         15, 0, r4, cr3, cr0, 0  @ Write DACR
++    mcr         p15, 0, r4, cr3, cr0, 0  @ Write DACR
+ 
+     mov         r4, #0                  @ Always use TTBR0, no LPAE
+-    mcr         15, 0, r4, cr2, cr0, 2  @ Write TTBCR
++    mcr         p15, 0, r4, cr2, cr0, 2  @ Write TTBCR
+     adr         r4, page_table_addr	@ Load the base for vectors
+     ldr         r4, [r4]
+     mrc         p15, 0, r0, c0, c0, 5   @ read MPIDR
+@@ -138,24 +138,24 @@ spin:
+     addne       r4, r4, #0x58
+     add         r4, r4, #1
+ 
+-    mcr         15, 0, r4, cr2, cr0, 0  @ Write TTBR0
++    mcr         p15, 0, r4, cr2, cr0, 0  @ Write TTBR0
+ 
+     mov         r0, #34 @ 0x22          @ TR0 and TR1 - normal memory
+     orr         r0, r0, #(1 << 19)      @ Shareable
+-    mcr         15, 0, r0, cr10, cr2, 0 @ Write PRRR
++    mcr         p15, 0, r0, cr10, cr2, 0 @ Write PRRR
+     movw        r0, #0x33
+     movt        r0, #0x33
+-    mcr         15, 0, r0, cr10, cr2, 1 @ Write NMRR
+-    mrc         15, 0, r0, cr1, cr0, 0  @ Read SCTLR
++    mcr         p15, 0, r0, cr10, cr2, 1 @ Write NMRR
++    mrc         p15, 0, r0, cr1, cr0, 0  @ Read SCTLR
+     bic         r0, r0, #(1 << 28)      @ Clear TRE bit
+-    mcr         15, 0, r0, cr1, cr0, 0  @ Write SCTLR
++    mcr         p15, 0, r0, cr1, cr0, 0  @ Write SCTLR
+ 
+     @ Now install the vector code - we move the Vector code from where it is
+     @ in the image to be based at _rdimon_vector_base.  We have to do this copy
+     @ as the code is all PC-relative.  We actually cheat and do a BX <reg> so
+     @ that we are at a known address relatively quickly and have to move as
+     @ little code as possible.
+-    mov         r7, #(VectorCode_Limit - VectorCode)
++    mov         r7, #:lower16:(VectorCode_Limit - VectorCode)
+     adr         r5, VectorCode
+     adr         r6, vector_base_addr	@ Load the base for vectors
+     ldr         r6, [r6]
+@@ -166,25 +166,25 @@ copy_loop:                              @ Do the copy
+     subs        r7, r7, #4
+     bne         copy_loop
+ 
+-    mrc         15, 0, r4, cr1, cr0, 0  @ Read SCTLR
++    mrc         p15, 0, r4, cr1, cr0, 0  @ Read SCTLR
+     bic         r4, r4, #0x1000         @ Disable I Cache
+     bic         r4, r4, #4              @ Disable D Cache
+     orr         r4, r4, #1              @ Enable MMU
+     bic         r4, r4, #(1 << 28)      @ Clear TRE bit
+-    mcr         15, 0, r4, cr1, cr0, 0  @ Write SCTLR
+-    mrc         15, 0, r4, cr1, cr0, 2  @ Read CPACR
++    mcr         p15, 0, r4, cr1, cr0, 0  @ Write SCTLR
++    mrc         p15, 0, r4, cr1, cr0, 2  @ Read CPACR
+     orr         r4, r4, #0x00f00000     @ Turn on VFP Co-procs
+     bic         r4, r4, #0x80000000     @ Clear ASEDIS bit
+-    mcr         15, 0, r4, cr1, cr0, 2  @ Write CPACR
++    mcr         p15, 0, r4, cr1, cr0, 2  @ Write CPACR
+     isb
+     mov         r4, #0
+-    mcr         15, 0, r4, cr7, cr5, 4  @ Flush prefetch buffer
+-    mrc         15, 0, r4, cr1, cr0, 2  @ Read CPACR
++    mcr         p15, 0, r4, cr7, cr5, 4  @ Flush prefetch buffer
++    mrc         p15, 0, r4, cr1, cr0, 2  @ Read CPACR
+     ubfx        r4, r4, #20, #4		@ Extract bits [20, 23)
+     cmp         r4, #0xf		@ If not all set then the CPU does not
+     itt		eq			@ have FP or Advanced SIMD.
+     moveq       r4, #0x40000000		@ Enable FP and Advanced SIMD
+-    mcreq       10, 7, r4, cr8, cr0, 0  @ vmsr  fpexc, r4
++    mcreq       p10, 7, r4, cr8, cr0, 0  @ vmsr  fpexc, r4
+ skip_vfp_enable:
+     bl          __enable_caches         @ Turn caches on
+     bx		r10                     @ Return to CRT startup routine
+@@ -286,7 +286,8 @@ vector_common_2:
+     bl          out_nl
+ 
+     @ Dump the registers
+-    adrl        r6, register_names
++    add         r6, pc, #(register_names-.-8) & 0xFF
++    add         r6, r6, #(register_names-.-4) & ~0xFF
+     mov         r7, #0
+ dump_r_loop:
+     mov         r0, r6
+@@ -386,14 +387,14 @@ register_names:
+     @ Enable the caches
+ __enable_caches:
+     mov         r0, #0
+-    mcr         15, 0, r0, cr8, cr7, 0  @ Invalidate all unified-TLB
++    mcr         p15, 0, r0, cr8, cr7, 0  @ Invalidate all unified-TLB
+     mov         r0, #0
+-    mcr         15, 0, r0, cr7, cr5, 6  @ Invalidate branch predictor
+-    mrc         15, 0, r4, cr1, cr0, 0  @ Read SCTLR
++    mcr         p15, 0, r0, cr7, cr5, 6  @ Invalidate branch predictor
++    mrc         p15, 0, r4, cr1, cr0, 0  @ Read SCTLR
+     orr         r4, r4, #0x800          @ Enable branch predictor
+-    mcr         15, 0, r4, cr1, cr0, 0  @ Set SCTLR
++    mcr         p15, 0, r4, cr1, cr0, 0  @ Set SCTLR
+     mov         r5, lr                  @ Save LR as we're going to BL
+-    mrc         15, 0, r4, cr1, cr0, 0  @ Read SCTLR
++    mrc         p15, 0, r4, cr1, cr0, 0  @ Read SCTLR
+     bl          init_cpu_client_enable_icache
+     cmp         r0, #0
+     it		ne
+@@ -402,24 +403,24 @@ __enable_caches:
+     cmp         r0, #0
+     it		ne
+     orrne       r4, r4, #4
+-    mcr         15, 0, r4, cr1, cr0, 0  @ Enable D-Cache
++    mcr         p15, 0, r4, cr1, cr0, 0  @ Enable D-Cache
+     bx          r5                      @ Return
+ 
+ __reset_caches:
+     mov         ip, lr                  @ Save LR
+     mov         r0, #0
+-    mcr         15, 0, r0, cr7, cr5, 6  @ Invalidate branch predictor
+-    mrc         15, 0, r6, cr1, cr0, 0  @ Read SCTLR
+-    mrc         15, 0, r0, cr1, cr0, 0  @ Read SCTLR!
++    mcr         p15, 0, r0, cr7, cr5, 6  @ Invalidate branch predictor
++    mrc         p15, 0, r6, cr1, cr0, 0  @ Read SCTLR
++    mrc         p15, 0, r0, cr1, cr0, 0  @ Read SCTLR!
+     bic         r0, r0, #0x1000         @ Disable I cache
+-    mcr         15, 0, r0, cr1, cr0, 0  @ Write SCTLR
+-    mrc         15, 1, r0, cr0, cr0, 1  @ Read CLIDR
++    mcr         p15, 0, r0, cr1, cr0, 0  @ Write SCTLR
++    mrc         p15, 1, r0, cr0, cr0, 1  @ Read CLIDR
+     tst         r0, #3                  @ Harvard Cache?
+     mov         r0, #0
+     it		ne
+-    mcrne       15, 0, r0, cr7, cr5, 0  @ Invalidate Instruction Cache?
++    mcrne       p15, 0, r0, cr7, cr5, 0  @ Invalidate Instruction Cache?
+ 
+-    mrc         15, 0, r1, cr1, cr0, 0  @ Read SCTLR (again!)
++    mrc         p15, 0, r1, cr1, cr0, 0  @ Read SCTLR (again!)
+     orr         r1, r1, #0x800          @ Enable branch predictor
+ 
+                                         @ If we're not enabling caches we have
+@@ -436,25 +437,25 @@ __reset_caches:
+     cmpeq       r0, #0
+     beq         Finished1
+ 
+-    mcr         15, 0, r1, cr1, cr0, 0  @ Write SCTLR (turn on Branch predictor & I-cache)
++    mcr         p15, 0, r1, cr1, cr0, 0  @ Write SCTLR (turn on Branch predictor & I-cache)
+ 
+-    mrc         15, 1, r0, cr0, cr0, 1  @ Read CLIDR
++    mrc         p15, 1, r0, cr0, cr0, 1  @ Read CLIDR
+     ands        r3, r0, #0x7000000
+     lsr         r3, r3, #23             @ Total cache levels << 1
+     beq         Finished1
+ 
+     mov         lr, #0                  @ lr = cache level << 1
+ Loop11:
+-    mrc         15, 1, r0, cr0, cr0, 1  @ Read CLIDR
++    mrc         p15, 1, r0, cr0, cr0, 1  @ Read CLIDR
+     add         r2, lr, lr, lsr #1      @ r2 holds cache 'set' position
+     lsr         r1, r0, r2              @ Bottom 3-bits are Ctype for this level
+     and         r1, r1, #7              @ Get those 3-bits alone
+     cmp         r1, #2
+     blt         Skip1                   @ No cache or only I-Cache at this level
+-    mcr         15, 2, lr, cr0, cr0, 0  @ Write CSSELR
++    mcr         p15, 2, lr, cr0, cr0, 0  @ Write CSSELR
+     mov         r1, #0
+     isb         sy
+-    mrc         15, 1, r1, cr0, cr0, 0  @ Read CCSIDR
++    mrc         p15, 1, r1, cr0, cr0, 0  @ Read CCSIDR
+     and         r2, r1, #7              @ Extract line length field
+     add         r2, r2, #4              @ Add 4 for the line length offset (log2 16 bytes)
+     movw        r0, #0x3ff
+@@ -469,8 +470,8 @@ Loop31:
+     orr         r1, r1, r5, lsl r2      @ factor in set number
+     tst         r6, #4                  @ D-Cache on?
+     ite         eq
+-    mcreq       15, 0, r1, cr7, cr6, 2  @ No - invalidate by set/way
+-    mcrne       15, 0, r1, cr7, cr14, 2 @ yes - clean + invalidate by set/way
++    mcreq       p15, 0, r1, cr7, cr6, 2  @ No - invalidate by set/way
++    mcrne       p15, 0, r1, cr7, cr14, 2 @ yes - clean + invalidate by set/way
+     subs        r7, r7, #1              @ Decrement way number
+     bge         Loop31
+     subs        r5, r5, #1              @ Decrement set number
+@@ -481,18 +482,18 @@ Skip1:
+     bgt         Loop11
+ Finished1:
+     @ Now we know the caches are clean we can:
+-    mrc         15, 0, r4, cr1, cr0, 0  @ Read SCTLR
++    mrc         p15, 0, r4, cr1, cr0, 0  @ Read SCTLR
+     bic         r4, r4, #4              @ Disable D-Cache
+-    mcr         15, 0, r4, cr1, cr0, 0  @ Write SCTLR
++    mcr         p15, 0, r4, cr1, cr0, 0  @ Write SCTLR
+     mov         r4, #0
+-    mcr         15, 0, r4, cr7, cr5, 6  @ Write BPIALL
++    mcr         p15, 0, r4, cr7, cr5, 6  @ Write BPIALL
+ 
+     bx          ip                      @ Return
+ 
+     @ Set Z if this is a Cortex-A15 or Cortex_A7
+     @ Other flags corrupted
+ is_a15_a7:
+-    mrc         15, 0, r8, c0, c0, 0
++    mrc         p15, 0, r8, c0, c0, 0
+     movw        r9, #0xfff0
+     movt        r9, #0xff0f
+     and         r8, r8, r9
+diff --git a/libgloss/arm/crt0.S b/libgloss/arm/crt0.S
+index 8490bde2..8b85b28f 100644
+--- a/libgloss/arm/crt0.S
++++ b/libgloss/arm/crt0.S
+@@ -565,7 +565,7 @@ change_back:
+ 
+ 	/* For Thumb, constants must be after the code since only 
+ 	   positive offsets are supported for PC relative addresses.  */
+-	.align 0
++	.p2align 2
+ .LC0:
+ #ifdef ARM_RDI_MONITOR
+ 	.word	HeapBase
+diff --git a/libgloss/arm/linux-crt0.c b/libgloss/arm/linux-crt0.c
+index 6b2d62a9..000a2c72 100644
+--- a/libgloss/arm/linux-crt0.c
++++ b/libgloss/arm/linux-crt0.c
+@@ -29,7 +29,7 @@ asm("\n"
+ __attribute__((naked, used))
+ static void _start_thumb(void)
+ #else
+-__attribute__((naked))
++//__attribute__((naked))
+ void _start(void)
+ #endif
+ {
+diff --git a/libgloss/arm/syscalls.c b/libgloss/arm/syscalls.c
+index fc394f94..0b3287df 100644
+--- a/libgloss/arm/syscalls.c
++++ b/libgloss/arm/syscalls.c
+@@ -180,7 +180,7 @@ initialise_monitor_handles (void)
+   const char * name;
+ 
+   name = ":tt";
+-  asm ("mov r0,%2; mov r1, #0; swi %a1; mov %0, r0"
++  asm ("movs r0,%2; movs r1, #0; swi %a1; mov %0, r0"
+        : "=r"(fh)
+        : "i" (SWI_Open),"r"(name)
+        : "r0","r1");
+@@ -189,14 +189,14 @@ initialise_monitor_handles (void)
+   if (_has_ext_stdout_stderr ())
+   {
+     name = ":tt";
+-    asm ("mov r0,%2; mov r1, #4; swi %a1; mov %0, r0"
++    asm ("movs r0,%2; movs r1, #4; swi %a1; mov %0, r0"
+ 	 : "=r"(fh)
+ 	 : "i" (SWI_Open),"r"(name)
+ 	 : "r0","r1");
+     monitor_stdout = fh;
+ 
+     name = ":tt";
+-    asm ("mov r0,%2; mov r1, #8; swi %a1; mov %0, r0"
++    asm ("movs r0,%2; movs r1, #8; swi %a1; mov %0, r0"
+ 	 : "=r"(fh)
+ 	 : "i" (SWI_Open),"r"(name)
+ 	 : "r0","r1");
+diff --git a/libgloss/arm/trap.S b/libgloss/arm/trap.S
+index 845ad017..2056c2ad 100644
+--- a/libgloss/arm/trap.S
++++ b/libgloss/arm/trap.S
+@@ -5,7 +5,7 @@
+ 
+ /* .text is used instead of .section .text so it works with arm-aout too.  */
+ 	.text
+-        .align 0
++        .p2align 2
+         .global __rt_stkovf_split_big
+         .global __rt_stkovf_split_small
+ 
+diff --git a/libgloss/libnosys/configure b/libgloss/libnosys/configure
+index 7c23c7a0..2fc58416 100755
+--- a/libgloss/libnosys/configure
++++ b/libgloss/libnosys/configure
+@@ -2058,7 +2058,7 @@ case "${target}" in
+ esac
+ 
+ case "${target}" in
+-  *-*-elf)
++  *-*-elf|*-*-eabi*)
+         $as_echo "#define HAVE_ELF 1" >>confdefs.h
+ 
+ 
+diff --git a/newlib/libc/include/wchar.h b/newlib/libc/include/wchar.h
+index 0d3e636f..cdc3e4ef 100644
+--- a/newlib/libc/include/wchar.h
++++ b/newlib/libc/include/wchar.h
+@@ -69,7 +69,7 @@ typedef __gnuc_va_list va_list;
+ 
+ _BEGIN_STD_C
+ 
+-#if __POSIX_VISIBLE >= 200809 || _XSI_VISIBLE
++#if 1 // __POSIX_VISIBLE >= 200809 || _XSI_VISIBLE
+ /* As in stdio.h, <sys/reent.h> defines __FILE. */
+ #if !defined(__FILE_defined)
+ typedef __FILE FILE;
+diff --git a/newlib/libc/machine/aarch64/memchr.S b/newlib/libc/machine/aarch64/memchr.S
+index 53f5d6bc..81fceccc 100644
+--- a/newlib/libc/machine/aarch64/memchr.S
++++ b/newlib/libc/machine/aarch64/memchr.S
+@@ -110,7 +110,7 @@ def_fn memchr
+ 	and	vhas_chr2.16b, vhas_chr2.16b, vrepmask.16b
+ 	addp	vend.16b, vhas_chr1.16b, vhas_chr2.16b		/* 256->128 */
+ 	addp	vend.16b, vend.16b, vend.16b			/* 128->64 */
+-	mov	synd, vend.2d[0]
++	mov	synd, vend.d[0]
+ 	/* Clear the soff*2 lower bits */
+ 	lsl	tmp, soff, #1
+ 	lsr	synd, synd, tmp
+@@ -130,7 +130,7 @@ def_fn memchr
+ 	/* Use a fast check for the termination condition */
+ 	orr	vend.16b, vhas_chr1.16b, vhas_chr2.16b
+ 	addp	vend.2d, vend.2d, vend.2d
+-	mov	synd, vend.2d[0]
++	mov	synd, vend.d[0]
+ 	/* We're not out of data, loop if we haven't found the character */
+ 	cbz	synd, .Lloop
+ 
+@@ -140,7 +140,7 @@ def_fn memchr
+ 	and	vhas_chr2.16b, vhas_chr2.16b, vrepmask.16b
+ 	addp	vend.16b, vhas_chr1.16b, vhas_chr2.16b		/* 256->128 */
+ 	addp	vend.16b, vend.16b, vend.16b			/* 128->64 */
+-	mov	synd, vend.2d[0]
++	mov	synd, vend.d[0]
+ 	/* Only do the clear for the last possible block */
+ 	b.hi	.Ltail
+ 
+diff --git a/newlib/libc/machine/aarch64/strchr.S b/newlib/libc/machine/aarch64/strchr.S
+index 2448dbc7..70610783 100644
+--- a/newlib/libc/machine/aarch64/strchr.S
++++ b/newlib/libc/machine/aarch64/strchr.S
+@@ -117,7 +117,7 @@ def_fn strchr
+ 	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
+ 	lsr	tmp1, tmp3, tmp1
+ 
+-	mov	tmp3, vend1.2d[0]
++	mov	tmp3, vend1.d[0]
+ 	bic	tmp1, tmp3, tmp1	// Mask padding bits.
+ 	cbnz	tmp1, .Ltail
+ 
+@@ -132,7 +132,7 @@ def_fn strchr
+ 	orr	vend2.16b, vhas_nul2.16b, vhas_chr2.16b
+ 	orr	vend1.16b, vend1.16b, vend2.16b
+ 	addp	vend1.2d, vend1.2d, vend1.2d
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ 	cbz	tmp1, .Lloop
+ 
+ 	/* Termination condition found.  Now need to establish exactly why
+@@ -146,7 +146,7 @@ def_fn strchr
+ 	addp	vend1.16b, vend1.16b, vend2.16b		// 256->128
+ 	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
+ 
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ .Ltail:
+ 	/* Count the trailing zeros, by bit reversing...  */
+ 	rbit	tmp1, tmp1
+diff --git a/newlib/libc/machine/aarch64/strchrnul.S b/newlib/libc/machine/aarch64/strchrnul.S
+index a0ac13b7..fd2002f0 100644
+--- a/newlib/libc/machine/aarch64/strchrnul.S
++++ b/newlib/libc/machine/aarch64/strchrnul.S
+@@ -109,7 +109,7 @@ def_fn strchrnul
+ 	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
+ 	lsr	tmp1, tmp3, tmp1
+ 
+-	mov	tmp3, vend1.2d[0]
++	mov	tmp3, vend1.d[0]
+ 	bic	tmp1, tmp3, tmp1	// Mask padding bits.
+ 	cbnz	tmp1, .Ltail
+ 
+@@ -124,7 +124,7 @@ def_fn strchrnul
+ 	orr	vhas_chr2.16b, vhas_nul2.16b, vhas_chr2.16b
+ 	orr	vend1.16b, vhas_chr1.16b, vhas_chr2.16b
+ 	addp	vend1.2d, vend1.2d, vend1.2d
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ 	cbz	tmp1, .Lloop
+ 
+ 	/* Termination condition found.  Now need to establish exactly why
+@@ -134,7 +134,7 @@ def_fn strchrnul
+ 	addp	vend1.16b, vhas_chr1.16b, vhas_chr2.16b		// 256->128
+ 	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
+ 
+-	mov	tmp1, vend1.2d[0]
++	mov	tmp1, vend1.d[0]
+ .Ltail:
+ 	/* Count the trailing zeros, by bit reversing...  */
+ 	rbit	tmp1, tmp1
+diff --git a/newlib/libc/machine/aarch64/strrchr.S b/newlib/libc/machine/aarch64/strrchr.S
+index d64fc09b..1b6f0756 100644
+--- a/newlib/libc/machine/aarch64/strrchr.S
++++ b/newlib/libc/machine/aarch64/strrchr.S
+@@ -120,10 +120,10 @@ def_fn strrchr
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr2.16b	// 256->128
+ 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul1.16b	// 128->64
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr1.16b	// 128->64
+-	mov	nul_match, vhas_nul1.2d[0]
++	mov	nul_match, vhas_nul1.d[0]
+ 	lsl	tmp1, tmp1, #1
+ 	mov	const_m1, #~0
+-	mov	chr_match, vhas_chr1.2d[0]
++	mov	chr_match, vhas_chr1.d[0]
+ 	lsr	tmp3, const_m1, tmp1
+ 
+ 	bic	nul_match, nul_match, tmp3	// Mask padding bits.
+@@ -146,15 +146,15 @@ def_fn strrchr
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr2.16b	// 256->128
+ 	addp	vend1.16b, vend1.16b, vend1.16b	// 128->64
+ 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr1.16b	// 128->64
+-	mov	nul_match, vend1.2d[0]
+-	mov	chr_match, vhas_chr1.2d[0]
++	mov	nul_match, vend1.d[0]
++	mov	chr_match, vhas_chr1.d[0]
+ 	cbz	nul_match, .Lloop
+ 
+ 	and	vhas_nul1.16b, vhas_nul1.16b, vrepmask_0.16b
+ 	and	vhas_nul2.16b, vhas_nul2.16b, vrepmask_0.16b
+ 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul2.16b
+ 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul1.16b
+-	mov	nul_match, vhas_nul1.2d[0]
++	mov	nul_match, vhas_nul1.d[0]
+ 
+ .Ltail:
+ 	/* Work out exactly where the string ends.  */
+diff --git a/newlib/libc/stdlib/aligned_alloc.c b/newlib/libc/stdlib/aligned_alloc.c
+index feb22c24..06b3883c 100644
+--- a/newlib/libc/stdlib/aligned_alloc.c
++++ b/newlib/libc/stdlib/aligned_alloc.c
+@@ -28,6 +28,7 @@
+ 
+ #include <reent.h>
+ #include <stdlib.h>
++#include <malloc.h>
+ 
+ void *
+ aligned_alloc (size_t align, size_t size)
+diff --git a/newlib/libc/sys/arm/crt0.S b/newlib/libc/sys/arm/crt0.S
+index 5e677a23..6faf7409 100644
+--- a/newlib/libc/sys/arm/crt0.S
++++ b/newlib/libc/sys/arm/crt0.S
+@@ -556,7 +556,7 @@ change_back:
+ 
+ 	/* For Thumb, constants must be after the code since only 
+ 	   positive offsets are supported for PC relative addresses.  */
+-	.align 0
++	.p2align 2
+ .LC0:
+ #ifdef ARM_RDI_MONITOR
+ 	.word	HeapBase
+diff --git a/newlib/libc/sys/arm/trap.S b/newlib/libc/sys/arm/trap.S
+index 681b3dbe..8a49f39f 100644
+--- a/newlib/libc/sys/arm/trap.S
++++ b/newlib/libc/sys/arm/trap.S
+@@ -4,7 +4,7 @@
+ 
+ /* .text is used instead of .section .text so it works with arm-aout too.  */
+ 	.text
+-        .align 0
++        .p2align 2
+         .global __rt_stkovf_split_big
+         .global __rt_stkovf_split_small
+ 
+diff --git a/newlib/libm/machine/arm/sf_ceil.c b/newlib/libm/machine/arm/sf_ceil.c
+index b6efbff0..44fdf834 100644
+--- a/newlib/libm/machine/arm/sf_ceil.c
++++ b/newlib/libm/machine/arm/sf_ceil.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_floor.c b/newlib/libm/machine/arm/sf_floor.c
+index 7bc95808..44c38c42 100644
+--- a/newlib/libm/machine/arm/sf_floor.c
++++ b/newlib/libm/machine/arm/sf_floor.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_nearbyint.c b/newlib/libm/machine/arm/sf_nearbyint.c
+index c70d8444..126673e9 100644
+--- a/newlib/libm/machine/arm/sf_nearbyint.c
++++ b/newlib/libm/machine/arm/sf_nearbyint.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_rint.c b/newlib/libm/machine/arm/sf_rint.c
+index d9c383a7..5def2100 100644
+--- a/newlib/libm/machine/arm/sf_rint.c
++++ b/newlib/libm/machine/arm/sf_rint.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_round.c b/newlib/libm/machine/arm/sf_round.c
+index 232fc084..88c53ba1 100644
+--- a/newlib/libm/machine/arm/sf_round.c
++++ b/newlib/libm/machine/arm/sf_round.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
+diff --git a/newlib/libm/machine/arm/sf_trunc.c b/newlib/libm/machine/arm/sf_trunc.c
+index 64e4aeb9..c08fa6fe 100644
+--- a/newlib/libm/machine/arm/sf_trunc.c
++++ b/newlib/libm/machine/arm/sf_trunc.c
+@@ -24,7 +24,7 @@
+    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+ 
+-#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
++#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
+ #include <math.h>
+ 
+ float
