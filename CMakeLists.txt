@@ -135,6 +135,15 @@ option(
     ON
 )
 
+set(LLVM_TOOLCHAIN_C_LIBRARY
+    "picolibc" CACHE STRING
+    "Which C library to use."
+)
+set_property(CACHE LLVM_TOOLCHAIN_C_LIBRARY
+    PROPERTY STRINGS picolibc newlib)
+option(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL
+    "Make cpack build an overlay package that can be unpacked over the main toolchain to install a secondary set of libraries based on newlib.")
+
 set(BUG_REPORT_URL "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/issues" CACHE STRING "")
 set(LLVM_DISTRIBUTION_COMPONENTS
     clang-format
@@ -206,6 +215,7 @@ set(CMAKE_INSTALL_MESSAGE NEVER CACHE STRING "")
 
 include(ExternalProject)
 include(FetchContent)
+include(ProcessorCount)
 
 # Check out and patch llvm-project and picolibc.
 #
@@ -242,7 +252,7 @@ function(read_repo_version output_variable_prefix repo)
     set(${output_variable_prefix}_SHALLOW "${shallow}" PARENT_SCOPE)
 endfunction()
 read_repo_version(llvmproject llvm-project)
-read_repo_version(picolibc picolibc)
+read_repo_version(${LLVM_TOOLCHAIN_C_LIBRARY} ${LLVM_TOOLCHAIN_C_LIBRARY})
 
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
@@ -269,8 +279,18 @@ FetchContent_Declare(picolibc
     SOURCE_SUBDIR do_not_add_picolibc_subdir
 )
 
+FetchContent_Declare(newlib
+    GIT_REPOSITORY https://sourceware.org/git/newlib-cygwin.git
+    GIT_TAG "${newlib_TAG}"
+    GIT_SHALLOW "${newlib_SHALLOW}"
+    GIT_PROGRESS TRUE
+    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/newlib.patch
+    # Similarly to picolibc, we don't do the configuration here.
+    SOURCE_SUBDIR do_not_add_newlib_subdir
+)
+
 FetchContent_MakeAvailable(llvmproject)
-FetchContent_MakeAvailable(picolibc)
+FetchContent_MakeAvailable(${LLVM_TOOLCHAIN_C_LIBRARY})
 
 function(get_llvm_version_numbers llvmproject_SOURCE_DIR)
     # Grab the version out of LLVM sources
@@ -307,9 +327,23 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     )
 endif()
 
+if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
+    install(
+        FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/newlib.cfg
+        DESTINATION bin
+        COMPONENT llvm-toolchain-newlib-configs
+    )
+endif()
+
 # These must be set before include(CPack) which the llvm CMakeLists.txt does.
 # Restrict which LLVM components are installed.
-if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
+if(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+    set(CPACK_COMPONENTS_ALL
+        llvm-toolchain-libs
+        llvm-toolchain-newlib-configs
+        llvm-toolchain-third-party-licenses)
+elseif(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
     set(CPACK_COMPONENTS_ALL ${LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS} llvm-toolchain-mingw)
 else()
     set(CPACK_COMPONENTS_ALL ${LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS} ${LLVM_DISTRIBUTION_COMPONENTS})
@@ -370,10 +404,12 @@ llvm_install_symlink(LLVM llvm-ranlib llvm-ar ALWAYS_GENERATE)
 llvm_install_symlink(LLVM llvm-readelf llvm-readobj ALWAYS_GENERATE)
 llvm_install_symlink(LLVM llvm-strip llvm-objcopy ALWAYS_GENERATE)
 
-# For building picolibc use Meson.
-# Although picolibc has support for building with CMake, the Meson code
-# is more mature and works better with LLVM.
-find_program(MESON_EXECUTABLE meson REQUIRED)
+if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
+    # For building picolibc use Meson.
+    # Although picolibc has support for building with CMake, the Meson code
+    # is more mature and works better with LLVM.
+    find_program(MESON_EXECUTABLE meson REQUIRED)
+endif()
 
 include(cmake/to_meson_list.cmake)
 
@@ -388,7 +424,12 @@ add_custom_target(
     -DLLVMEmbeddedToolchainForArm_VERSION=${LLVMEmbeddedToolchainForArm_VERSION}
     -DLLVMEmbeddedToolchainForArm_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
     -Dllvmproject_SOURCE_DIR=${llvmproject_SOURCE_DIR}
+    # only one of picolibc and newlib source dirs is needed, but easiest to
+    # specify both definitions
     -Dpicolibc_SOURCE_DIR=${picolibc_SOURCE_DIR}
+    -Dnewlib_SOURCE_DIR=${newlib_SOURCE_DIR}
+    # but we do tell the script which library we're actually using
+    -DLLVM_TOOLCHAIN_C_LIBRARY=${LLVM_TOOLCHAIN_C_LIBRARY}
     -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/generate_version_txt.cmake
     BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/VERSION.txt
 )
@@ -465,11 +506,38 @@ set(picolibc_specific_runtimes_options
     -DLIBUNWIND_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libunwind-picolibc.cfg.in
 )
 
+set(newlib_specific_runtimes_options
+    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+    -DLIBCXXABI_ENABLE_THREADS=OFF
+    -DLIBCXX_ENABLE_EXCEPTIONS=OFF
+    -DLIBCXX_ENABLE_THREADS=OFF
+    -DLIBCXX_ENABLE_RTTI=OFF
+    -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF
+    -DLIBCXX_ENABLE_RANDOM_DEVICE=OFF
+    -DLIBCXX_ENABLE_WIDE_CHARACTERS=ON
+    -DLIBCXX_ENABLE_LOCALIZATION=OFF
+    -DLIBUNWIND_ENABLE_THREADS=OFF
+)
+
+if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib AND
+        LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+    # If we're building newlib with the intention of installing it as
+    # an overlay on the main package archive, then all of newlib's
+    # includes, libraries and multilib.yaml go in a subdirectory of
+    # lib/clang-runtimes. Configuration files in the bin directory
+    # will make it easy to reset the sysroot to point at that subdir.
+    set(library_subdir "/newlib")
+else()
+    set(library_subdir "")
+endif()
+
 add_custom_target(check-picolibc)
 # Set LLVM_DEFAULT_EXTERNAL_LIT to the directory of clang
 # which was build in previous step. This path is not exported
 # by add_subdirectory of llvm project
 set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
+
+add_custom_target(check-newlib) # FIXME: put things in this
 
 function(get_test_executor_params target_triple qemu_machine qemu_cpu qemu_params)
     if(target_triple MATCHES "^aarch64")
@@ -588,6 +656,117 @@ function(
         picolibc_${variant}
     )
 endfunction()
+
+function(
+    add_newlib
+    directory
+    variant
+    target_triple
+    flags
+    test_executor_params
+    default_boot_flash_addr
+    default_boot_flash_size
+    default_flash_addr
+    default_flash_size
+    default_ram_addr
+    default_ram_size
+    default_stack_size
+)
+    if(target_triple MATCHES "^aarch64")
+        set(cpu_family aarch64)
+    else()
+        set(cpu_family arm)
+    endif()
+
+    set(sysroot "${LLVM_BINARY_DIR}/${directory}")
+
+    set(build_env
+      "CC_FOR_TARGET=${LLVM_BINARY_DIR}/bin/clang -target ${target_triple} -ffreestanding"
+      "CXX_FOR_TARGET=${LLVM_BINARY_DIR}/bin/clang++ -target ${target_triple} -ffreestanding"
+      "AR_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-ar"
+      "AS_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-as"
+      "NM_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-nm"
+      "OBJDUMP_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-objdump"
+      "RANLIB_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-ranlib"
+      "READELF_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-readelf"
+      "STRIP_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-strip"
+      "CFLAGS_FOR_TARGET=${flags} -Wno-error=implicit-function-declaration -D__USES_INITFINI__ -UHAVE_INIT_FINI__ -U_HAVE_INIT_FINI__ -UHAVE_INIT_FINI --sysroot ${sysroot}"
+      "CCASFLAGS=${flags} -Wno-error=implicit-function-declaration -D__USES_INITFINI__ -UHAVE_INIT_FINI__ -U_HAVE_INIT_FINI__ -UHAVE_INIT_FINI --sysroot ${sysroot}"
+    )
+
+    set(make_flags)
+    ProcessorCount(nproc)
+    if(NOT nproc EQUAL 0)
+        set(make_flags -j${nproc})
+    endif()
+
+    ExternalProject_Add(
+        newlib_${variant}
+        SOURCE_DIR ${newlib_SOURCE_DIR}
+        INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
+        PREFIX newlib/${variant}
+        DEPENDS ${lib_tool_dependencies}
+        CONFIGURE_COMMAND
+            ${CMAKE_COMMAND} -E env ${build_env}
+            <SOURCE_DIR>/configure
+            --target=${target_triple}
+            --prefix "${sysroot}"
+            --exec_prefix <BINARY_DIR>/tmpinstall
+            --enable-newlib-io-long-long
+            --enable-newlib-register-fini
+            --disable-newlib-supplied-syscalls
+            --enable-newlib-io-c99-formats
+            --disable-nls
+            --enable-lite-exit
+            --disable-multilib
+        BUILD_COMMAND
+            ${CMAKE_COMMAND} -E env ${build_env}
+            make ${make_flags}
+            &&
+            "${LLVM_BINARY_DIR}/bin/llvm-ar" rcs
+            <BINARY_DIR>/${target_triple}/libgloss/${cpu_family}/libcrt0-rdimon.a
+            <BINARY_DIR>/${target_triple}/libgloss/${cpu_family}/rdimon-crt0.o
+            &&
+            "${LLVM_BINARY_DIR}/bin/llvm-ar" rcs
+            <BINARY_DIR>/${target_triple}/libgloss/${cpu_family}/libcrt0-nosys.a
+            <BINARY_DIR>/${target_triple}/libgloss/${cpu_family}/crt0.o
+        INSTALL_COMMAND
+            make install
+            &&
+            ${CMAKE_COMMAND} -E copy_directory
+            <BINARY_DIR>/tmpinstall/${target_triple}
+            ${sysroot}
+            &&
+            ${CMAKE_COMMAND} -E copy
+            <BINARY_DIR>/${target_triple}/libgloss/${cpu_family}/libcrt0-rdimon.a
+            ${sysroot}/lib
+            &&
+            ${CMAKE_COMMAND} -E copy
+            <BINARY_DIR>/${target_triple}/libgloss/${cpu_family}/libcrt0-nosys.a
+            ${sysroot}/lib
+        # FIXME: TEST_COMMAND?
+        USES_TERMINAL_CONFIGURE FALSE
+        USES_TERMINAL_BUILD TRUE
+        # Always run the build command so that incremental builds are correct.
+        BUILD_ALWAYS TRUE
+        CONFIGURE_HANDLED_BY_BUILD TRUE
+        TEST_EXCLUDE_FROM_MAIN TRUE
+        STEP_TARGETS install # FIXME: test?
+    )
+
+    add_dependencies(
+        llvm-toolchain-runtimes
+        newlib_${variant}
+    )
+endfunction()
+
+macro(add_libc)
+    if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
+        add_picolibc(${ARGN})
+    elseif(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
+        add_newlib(${ARGN})
+    endif()
+endmacro()
 
 function(get_runtimes_flags directory flags)
     set(runtimes_flags "${flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${LLVM_BINARY_DIR}/${directory}" PARENT_SCOPE)
@@ -883,7 +1062,7 @@ function(add_library_variant target_arch)
 
     get_compiler_rt_target_triple("${target_arch}" "${VARIANT_COMPILE_FLAGS}")
 
-    set(directory "${TARGET_LIBRARIES_DIR}/${parent_dir_name}/${variant}")
+    set(directory "${TARGET_LIBRARIES_DIR}${library_subdir}/${parent_dir_name}/${variant}")
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
     get_test_executor_params(
         "${target_triple}"
@@ -898,7 +1077,7 @@ function(add_library_variant target_arch)
     )
     list(JOIN lit_test_executor " " lit_test_executor)
     if(NOT PREBUILT_TARGET_LIBRARIES)
-        add_picolibc(
+        add_libc(
             "${directory}"
             "${variant}"
             "${target_triple}"
@@ -918,7 +1097,7 @@ function(add_library_variant target_arch)
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
             "${lit_test_executor}"
-            "picolibc_${variant}-install"
+            "${LLVM_TOOLCHAIN_C_LIBRARY}_${variant}-install"
         )
         add_libcxx_libcxxabi_libunwind(
             "${directory}"
@@ -926,8 +1105,8 @@ function(add_library_variant target_arch)
             "${target_triple}"
             "${VARIANT_COMPILE_FLAGS}"
             "${lit_test_executor}"
-            "picolibc_${variant}-install"
-            "${picolibc_specific_runtimes_options}"
+            "${LLVM_TOOLCHAIN_C_LIBRARY}_${variant}-install"
+            "${${LLVM_TOOLCHAIN_C_LIBRARY}_specific_runtimes_options}"
         )
         if(VARIANT_COMPILE_FLAGS MATCHES "-march=armv8")
             message("C++ runtime libraries tests disabled for ${variant}")
@@ -1280,23 +1459,23 @@ if(LIBS_DEPEND_ON_TOOLS)
 endif()
 
 add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}/multilib.yaml
   COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_CURRENT_BINARY_DIR}/multilib-without-fpus.yaml
-    ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml
+    ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}/multilib.yaml
   COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py"
     "--clang=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}"
     "--llvm-source=${llvmproject_SOURCE_DIR}"
-    >> "${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml"
+    >> "${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}/multilib.yaml"
   DEPENDS ${multilib_yaml_depends}
 )
 add_custom_target(multilib_yaml ALL DEPENDS
-  ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml)
+  ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}/multilib.yaml)
 add_dependencies(llvm-toolchain-runtimes multilib_yaml)
 
 install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}/multilib.yaml
-    DESTINATION ${TARGET_LIBRARIES_DIR}
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}/multilib.yaml
+    DESTINATION ${TARGET_LIBRARIES_DIR}${library_subdir}
     COMPONENT llvm-toolchain-libs
 )
 
@@ -1319,9 +1498,23 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
 endif()
 configure_file(cmake/THIRD-PARTY-LICENSES.txt.in THIRD-PARTY-LICENSES.txt)
 
+if(NOT LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+    set(third_party_license_summary_install_dir .)
+    set(third_party_license_files_install_dir third-party-licenses)
+else()
+    # If we're building an overlay archive, put all the license files
+    # one level down in third-party-licenses/newlib, so that
+    # COPYING.NEWLIB doesn't collide with the file of the same name
+    # from picolibc, and the LLVM license files are also duplicated
+    # (in case the overlay archive is used with a non-matching version
+    # of the main toolchain).
+    set(third_party_license_summary_install_dir third-party-licenses/newlib)
+    set(third_party_license_files_install_dir third-party-licenses/newlib)
+endif()
+
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/THIRD-PARTY-LICENSES.txt
-    DESTINATION .
+    DESTINATION ${third_party_license_summary_install_dir}
     COMPONENT llvm-toolchain-third-party-licenses
 )
 
@@ -1333,14 +1526,25 @@ set(third_party_license_files
     ${llvmproject_SOURCE_DIR}/libcxx/LICENSE.TXT        LIBCXX-LICENSE.txt
     ${llvmproject_SOURCE_DIR}/libcxxabi/LICENSE.TXT     LIBCXXABI-LICENSE.txt
     ${llvmproject_SOURCE_DIR}/libunwind/LICENSE.TXT     LIBUNWIND-LICENSE.txt
-    ${picolibc_SOURCE_DIR}/COPYING.NEWLIB               COPYING.NEWLIB
-    ${picolibc_SOURCE_DIR}/COPYING.picolibc             COPYING.picolibc
 )
+if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
+    list(APPEND third_party_license_files
+        ${picolibc_SOURCE_DIR}/COPYING.NEWLIB           COPYING.NEWLIB
+        ${picolibc_SOURCE_DIR}/COPYING.picolibc         COPYING.picolibc
+    )
+endif()
+if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
+    list(APPEND third_party_license_files
+        ${newlib_SOURCE_DIR}/COPYING.NEWLIB             COPYING.NEWLIB
+        ${newlib_SOURCE_DIR}/COPYING.LIBGLOSS           COPYING.LIBGLOSS
+    )
+endif()
+
 while(third_party_license_files)
     list(POP_FRONT third_party_license_files source_file destination_name)
     install(
         FILES ${source_file}
-        DESTINATION third-party-licenses
+        DESTINATION ${third_party_license_files_install_dir}
         COMPONENT llvm-toolchain-third-party-licenses
         RENAME ${destination_name}
     )
@@ -1405,7 +1609,8 @@ endif()
 if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW OR WIN32)
     set(cpack_generator ZIP)
     set(package_filename_extension ".zip")
-elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin"
+        AND NOT LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
     set(cpack_generator DragNDrop)
     set(package_filename_extension ".dmg")
 else()
@@ -1447,7 +1652,7 @@ add_dependencies(
 
 
 add_custom_target(check-llvm-toolchain)
-add_dependencies(check-llvm-toolchain check-picolibc)
+add_dependencies(check-llvm-toolchain check-${LLVM_TOOLCHAIN_C_LIBRARY})
 add_dependencies(check-llvm-toolchain check-compiler-rt)
 add_subdirectory(test)
 add_dependencies(check-llvm-toolchain check-llvm-toolchain-lit)
