@@ -244,7 +244,12 @@ endfunction()
 read_repo_version(llvmproject llvm-project)
 read_repo_version(picolibc picolibc)
 
-file(GLOB llvm_project_patches ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/*.patch)
+set(
+    llvm_project_patches
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-Fix-llvm-test-CodeGen-ARM-build-attributes.ll-test.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0002-libc-Add-check-for-building-with-picolibc.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0003-Run-picolibc-tests-with-qemu.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-xfail-two-remaining-libcxx-with-picolibc-tests.patch)
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
     GIT_TAG "${llvmproject_TAG}"
