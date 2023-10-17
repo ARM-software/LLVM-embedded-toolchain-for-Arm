@@ -760,11 +760,56 @@ function(
     )
 endfunction()
 
-macro(add_libc)
+macro(
+    add_libc
+    directory
+    variant
+    target_triple
+    flags
+    test_executor_params
+    default_boot_flash_addr
+    default_boot_flash_size
+    default_flash_addr
+    default_flash_size
+    default_ram_addr
+    default_ram_size
+    default_stack_size
+)
+    # It would be nice to just pass ${ARGN} to both the underlying functions,
+    # but that has the side effect of expanding any list arguments (e.g.
+    # test_executor_params) into lots of separate words - the same bug that
+    # $* has in POSIX sh. We want the analogue of "$@" here, but I don't know
+    # of one for cmake.
     if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
-        add_picolibc(${ARGN})
+        add_picolibc(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${flags}"
+            "${test_executor_params}"
+            "${default_boot_flash_addr}"
+            "${default_boot_flash_size}"
+            "${default_flash_addr}"
+            "${default_flash_size}"
+            "${default_ram_addr}"
+            "${default_ram_size}"
+            "${default_stack_size}"
+        )
     elseif(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
-        add_newlib(${ARGN})
+        add_newlib(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${flags}"
+            "${test_executor_params}"
+            "${default_boot_flash_addr}"
+            "${default_boot_flash_size}"
+            "${default_flash_addr}"
+            "${default_flash_size}"
+            "${default_ram_addr}"
+            "${default_ram_size}"
+            "${default_stack_size}"
+        )
     endif()
 endmacro()
 
