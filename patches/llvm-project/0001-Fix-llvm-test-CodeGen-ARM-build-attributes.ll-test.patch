@@ -1,16 +1,30 @@
-diff --git a/.gitignore b/.gitignore
-index 20c4f52cd378..eefdedbcb4f4 100644
---- a/.gitignore
-+++ b/.gitignore
-@@ -1,2 +1,2 @@
--#==============================================================================#
-+#==============================================================================#
- # This file specifies intentionally untracked files that git should ignore.
+From 51276c6bbfa92054ec01890d67bb797464d9563c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Tue, 10 Oct 2023 15:43:59 +0200
+Subject: [PATCH 1/3] Fix llvm/test/CodeGen/ARM/build-attributes.ll test.
+
+The test llvm/test/CodeGen/ARM/build-attributes.ll
+needs updating to incorporate the change
+https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/pull/313.
+
+Changing the expected FPU to fp-armv8-fullfp16-d16
+from fpv5-d16.
+---
+ clang/include/clang/Driver/Multilib.h         |  16 ++-
+ clang/lib/Driver/Multilib.cpp                 |  49 ++++++--
+ clang/test/CodeGen/arm-v8.1m-check-fpu.ll     |  55 +++++++++
+ .../Driver/baremetal-multilib-layered.yaml    | 108 +++++++++++++++---
+ .../ARM/MCTargetDesc/ARMELFStreamer.cpp       |   2 +
+ .../ARM/MCTargetDesc/ARMTargetStreamer.cpp    |  16 ++-
+ llvm/test/CodeGen/ARM/build-attributes.ll     |   4 +-
+ 7 files changed, 211 insertions(+), 39 deletions(-)
+ create mode 100644 clang/test/CodeGen/arm-v8.1m-check-fpu.ll
+
 diff --git a/clang/include/clang/Driver/Multilib.h b/clang/include/clang/Driver/Multilib.h
-index 1416559..6a9533e 100644
+index 1416559414f8..6a9533e6dd83 100644
 --- a/clang/include/clang/Driver/Multilib.h
 +++ b/clang/include/clang/Driver/Multilib.h
-@@ -39,13 +39,22 @@
+@@ -39,13 +39,22 @@ private:
    std::string IncludeSuffix;
    flags_list Flags;
  
@@ -35,7 +49,7 @@ index 1416559..6a9533e 100644
  
    /// Get the detected GCC installation path suffix for the multi-arch
    /// target variant. Always starts with a '/', unless empty
-@@ -63,6 +72,9 @@
+@@ -63,6 +72,9 @@ public:
    /// All elements begin with either '-' or '!'
    const flags_list &flags() const { return Flags; }
  
@@ -46,10 +60,10 @@ index 1416559..6a9533e 100644
    /// print summary of the Multilib
    void print(raw_ostream &OS) const;
 diff --git a/clang/lib/Driver/Multilib.cpp b/clang/lib/Driver/Multilib.cpp
-index a37dffc..33b5db7 100644
+index a37dffc8a6f1..33b5db72c0b9 100644
 --- a/clang/lib/Driver/Multilib.cpp
 +++ b/clang/lib/Driver/Multilib.cpp
-@@ -30,9 +30,10 @@
+@@ -30,9 +30,10 @@ using namespace driver;
  using namespace llvm::sys;
  
  Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
@@ -62,7 +76,7 @@ index a37dffc..33b5db7 100644
    assert(GCCSuffix.empty() ||
           (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
    assert(OSSuffix.empty() ||
-@@ -97,13 +98,39 @@
+@@ -97,13 +98,39 @@ bool MultilibSet::select(const Multilib::flags_list &Flags,
                           llvm::SmallVector<Multilib> &Selected) const {
    llvm::StringSet<> FlagSet(expandFlags(Flags));
    Selected.clear();
@@ -109,7 +123,7 @@ index a37dffc..33b5db7 100644
    return !Selected.empty();
  }
  
-@@ -140,6 +167,7 @@
+@@ -140,6 +167,7 @@ static const VersionTuple MultilibVersionCurrent(1, 0);
  struct MultilibSerialization {
    std::string Dir;
    std::vector<std::string> Flags;
@@ -117,7 +131,7 @@ index a37dffc..33b5db7 100644
  };
  
  struct MultilibSetSerialization {
-@@ -154,6 +182,7 @@
+@@ -154,6 +182,7 @@ template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
    static void mapping(llvm::yaml::IO &io, MultilibSerialization &V) {
      io.mapRequired("Dir", V.Dir);
      io.mapRequired("Flags", V.Flags);
@@ -125,7 +139,7 @@ index a37dffc..33b5db7 100644
    }
    static std::string validate(IO &io, MultilibSerialization &V) {
      if (StringRef(V.Dir).starts_with("/"))
-@@ -216,7 +245,7 @@
+@@ -216,7 +245,7 @@ MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
      std::string Dir;
      if (M.Dir != ".")
        Dir = "/" + M.Dir;
@@ -134,11 +148,72 @@ index a37dffc..33b5db7 100644
    }
  
    return MultilibSet(std::move(Multilibs), std::move(MS.FlagMatchers));
+diff --git a/clang/test/CodeGen/arm-v8.1m-check-fpu.ll b/clang/test/CodeGen/arm-v8.1m-check-fpu.ll
+new file mode 100644
+index 000000000000..5cff0457a190
+--- /dev/null
++++ b/clang/test/CodeGen/arm-v8.1m-check-fpu.ll
+@@ -0,0 +1,55 @@
++; REQUIRES: arm-registered-target
++; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m85 -mfloat-abi=hard -save-temps=obj -S -o - %s | FileCheck %s
++; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m55 -mfloat-abi=hard -save-temps=obj -S -o - %s | FileCheck %s
++; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m85 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
++; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m55 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
++; CHECK: .fpu   fp-armv8-fullfp16-d16
++target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
++target triple = "thumbv8.1m.main-none-unknown-eabihf"
++
++%struct.dummy_t = type { float, float, float, float }
++
++define dso_local signext i8 @foo(ptr noundef %handle) #0 {
++entry:
++  %handle.addr = alloca ptr, align 4
++  store ptr %handle, ptr %handle.addr, align 4
++  %0 = load ptr, ptr %handle.addr, align 4
++  %a = getelementptr inbounds %struct.dummy_t, ptr %0, i32 0, i32 0
++  %1 = load float, ptr %a, align 4
++  %sub = fsub float 0x3F5439DE40000000, %1
++  %2 = load ptr, ptr %handle.addr, align 4
++  %a1 = getelementptr inbounds %struct.dummy_t, ptr %2, i32 0, i32 0
++  %3 = load float, ptr %a1, align 4
++  %4 = call float @llvm.fmuladd.f32(float 0x3F847AE140000000, float %sub, float %3)
++  store float %4, ptr %a1, align 4
++  %5 = load ptr, ptr %handle.addr, align 4
++  %b = getelementptr inbounds %struct.dummy_t, ptr %5, i32 0, i32 1
++  %6 = load float, ptr %b, align 4
++  %sub2 = fsub float 0x3F5439DE40000000, %6
++  %7 = load ptr, ptr %handle.addr, align 4
++  %b3 = getelementptr inbounds %struct.dummy_t, ptr %7, i32 0, i32 1
++  %8 = load float, ptr %b3, align 4
++  %9 = call float @llvm.fmuladd.f32(float 0x3F947AE140000000, float %sub2, float %8)
++  store float %9, ptr %b3, align 4
++  %10 = load ptr, ptr %handle.addr, align 4
++  %c = getelementptr inbounds %struct.dummy_t, ptr %10, i32 0, i32 2
++  %11 = load float, ptr %c, align 4
++  %sub4 = fsub float 0x3F5439DE40000000, %11
++  %12 = load ptr, ptr %handle.addr, align 4
++  %c5 = getelementptr inbounds %struct.dummy_t, ptr %12, i32 0, i32 2
++  %13 = load float, ptr %c5, align 4
++  %14 = call float @llvm.fmuladd.f32(float 0x3F9EB851E0000000, float %sub4, float %13)
++  store float %14, ptr %c5, align 4
++  %15 = load ptr, ptr %handle.addr, align 4
++  %d = getelementptr inbounds %struct.dummy_t, ptr %15, i32 0, i32 3
++  %16 = load float, ptr %d, align 4
++  %sub6 = fsub float 0x3F5439DE40000000, %16
++  %17 = load ptr, ptr %handle.addr, align 4
++  %d7 = getelementptr inbounds %struct.dummy_t, ptr %17, i32 0, i32 3
++  %18 = load float, ptr %d7, align 4
++  %19 = call float @llvm.fmuladd.f32(float 0x3FA47AE140000000, float %sub6, float %18)
++  store float %19, ptr %d7, align 4
++  ret i8 0
++}
++
++declare float @llvm.fmuladd.f32(float, float, float) #1
 diff --git a/clang/test/Driver/baremetal-multilib-layered.yaml b/clang/test/Driver/baremetal-multilib-layered.yaml
-index 2f86f8e..9c866db 100644
+index 2f86f8e3ea4f..9c866dbff916 100644
 --- a/clang/test/Driver/baremetal-multilib-layered.yaml
 +++ b/clang/test/Driver/baremetal-multilib-layered.yaml
-@@ -8,30 +8,70 @@
+@@ -8,37 +8,107 @@
  # need to duplicate the C library for every libc++ variant.
  # However -fno-exceptions is not yet supported for multilib selection
  # so we use a more contrived -mfloat-abi example instead.
@@ -225,13 +300,17 @@ index 2f86f8e..9c866db 100644
 +
 +
 +//--- multilib-nogroups.yaml
- ---
- MultilibVersion: 1.0
- Variants:
-@@ -43,3 +83,33 @@
- - Match: -mfloat-abi=softfp
-   Flags: [-mfloat-abi=soft]
- ...
++---
++MultilibVersion: 1.0
++Variants:
++- Dir: soft
++  Flags: [-mfloat-abi=soft]
++- Dir: softfp
++  Flags: [-mfloat-abi=softfp]
++Mappings:
++- Match: -mfloat-abi=softfp
++  Flags: [-mfloat-abi=soft]
++...
 +
 +//--- multilib-diffgroups.yaml
 +---
@@ -249,80 +328,18 @@ index 2f86f8e..9c866db 100644
 +...
 +
 +//--- multilib-samegroup.yaml
-+---
-+MultilibVersion: 1.0
-+Variants:
-+- Dir: soft
-+  Flags: [-mfloat-abi=soft]
+ ---
+ MultilibVersion: 1.0
+ Variants:
+ - Dir: soft
+   Flags: [-mfloat-abi=soft]
 +  ExclusiveGroup: G
-+- Dir: softfp
-+  Flags: [-mfloat-abi=softfp]
+ - Dir: softfp
+   Flags: [-mfloat-abi=softfp]
 +  ExclusiveGroup: G
-+Mappings:
-+- Match: -mfloat-abi=softfp
-+  Flags: [-mfloat-abi=soft]
-+...
-diff --git a/clang/test/CodeGen/arm-v8.1m-check-fpu.ll b/clang/test/CodeGen/arm-v8.1m-check-fpu.ll
-new file mode 100644
-index 000000000000..5cff0457a190
---- /dev/null
-+++ b/clang/test/CodeGen/arm-v8.1m-check-fpu.ll
-@@ -0,0 +1,55 @@
-+; REQUIRES: arm-registered-target
-+; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m85 -mfloat-abi=hard -save-temps=obj -S -o - %s | FileCheck %s
-+; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m55 -mfloat-abi=hard -save-temps=obj -S -o - %s | FileCheck %s
-+; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m85 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
-+; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m55 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
-+; CHECK: .fpu   fp-armv8-fullfp16-d16
-+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-+target triple = "thumbv8.1m.main-none-unknown-eabihf"
-+
-+%struct.dummy_t = type { float, float, float, float }
-+
-+define dso_local signext i8 @foo(ptr noundef %handle) #0 {
-+entry:
-+  %handle.addr = alloca ptr, align 4
-+  store ptr %handle, ptr %handle.addr, align 4
-+  %0 = load ptr, ptr %handle.addr, align 4
-+  %a = getelementptr inbounds %struct.dummy_t, ptr %0, i32 0, i32 0
-+  %1 = load float, ptr %a, align 4
-+  %sub = fsub float 0x3F5439DE40000000, %1
-+  %2 = load ptr, ptr %handle.addr, align 4
-+  %a1 = getelementptr inbounds %struct.dummy_t, ptr %2, i32 0, i32 0
-+  %3 = load float, ptr %a1, align 4
-+  %4 = call float @llvm.fmuladd.f32(float 0x3F847AE140000000, float %sub, float %3)
-+  store float %4, ptr %a1, align 4
-+  %5 = load ptr, ptr %handle.addr, align 4
-+  %b = getelementptr inbounds %struct.dummy_t, ptr %5, i32 0, i32 1
-+  %6 = load float, ptr %b, align 4
-+  %sub2 = fsub float 0x3F5439DE40000000, %6
-+  %7 = load ptr, ptr %handle.addr, align 4
-+  %b3 = getelementptr inbounds %struct.dummy_t, ptr %7, i32 0, i32 1
-+  %8 = load float, ptr %b3, align 4
-+  %9 = call float @llvm.fmuladd.f32(float 0x3F947AE140000000, float %sub2, float %8)
-+  store float %9, ptr %b3, align 4
-+  %10 = load ptr, ptr %handle.addr, align 4
-+  %c = getelementptr inbounds %struct.dummy_t, ptr %10, i32 0, i32 2
-+  %11 = load float, ptr %c, align 4
-+  %sub4 = fsub float 0x3F5439DE40000000, %11
-+  %12 = load ptr, ptr %handle.addr, align 4
-+  %c5 = getelementptr inbounds %struct.dummy_t, ptr %12, i32 0, i32 2
-+  %13 = load float, ptr %c5, align 4
-+  %14 = call float @llvm.fmuladd.f32(float 0x3F9EB851E0000000, float %sub4, float %13)
-+  store float %14, ptr %c5, align 4
-+  %15 = load ptr, ptr %handle.addr, align 4
-+  %d = getelementptr inbounds %struct.dummy_t, ptr %15, i32 0, i32 3
-+  %16 = load float, ptr %d, align 4
-+  %sub6 = fsub float 0x3F5439DE40000000, %16
-+  %17 = load ptr, ptr %handle.addr, align 4
-+  %d7 = getelementptr inbounds %struct.dummy_t, ptr %17, i32 0, i32 3
-+  %18 = load float, ptr %d7, align 4
-+  %19 = call float @llvm.fmuladd.f32(float 0x3FA47AE140000000, float %sub6, float %18)
-+  store float %19, ptr %d7, align 4
-+  ret i8 0
-+}
-+
-+declare float @llvm.fmuladd.f32(float, float, float) #1
+ Mappings:
+ - Match: -mfloat-abi=softfp
+   Flags: [-mfloat-abi=soft]
 diff --git a/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp b/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
 index 9c9af6068079..e7c37767c6ed 100644
 --- a/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
@@ -387,3 +404,6 @@ index e8c83b92f3f9..0abe13aeb4fe 100644
  ; CORTEX-M85: .eabi_attribute 36, 1   @ Tag_FP_HP_extension
  ; CORTEX-M85: .eabi_attribute 48, 2   @ Tag_MVE_arch
  ; CORTEX-M85: .eabi_attribute 46, 1   @ Tag_DSP_extension
+-- 
+2.34.1
+

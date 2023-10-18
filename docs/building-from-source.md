@@ -61,7 +61,7 @@ If you check out repos manually then it is your responsibility to ensure that th
 ```
 mkdir repos
 git -C repos clone https://github.com/llvm/llvm-project.git
-git -C repos/llvm-project apply ../../patches/llvm-project.patch
+git -C repos/llvm-project am ../../patches/llvm-project/*.patch
 git -C repos clone https://github.com/picolibc/picolibc.git
 git -C repos/picolibc apply ../../patches/picolibc.patch
 mkdir build

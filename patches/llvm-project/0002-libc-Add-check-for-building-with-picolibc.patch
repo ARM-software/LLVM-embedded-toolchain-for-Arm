@@ -1,0 +1,1006 @@
+From a269f6727984dfddf1df528014d86b6d006bffab Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Tue, 10 Oct 2023 15:45:15 +0200
+Subject: [PATCH 2/3] [libc++] Add check for building with picolibc
+
+This is intended to identify changes that would fail to build on
+embedded platforms e.g. D152382
+---
+ libcxx/cmake/caches/Armv7M-picolibc.cmake     |  38 ++++++
+ libcxx/docs/index.rst                         |  19 +--
+ libcxx/test/configs/armv7m-libc++.cfg.in      |  48 ++++++++
+ .../test/libcxx/clang_modules_include.gen.py  |   3 +
+ libcxx/test/libcxx/selftest/dsl/dsl.sh.py     |   3 +
+ .../selftest/pass.cpp/run-error.pass.cpp      |   1 +
+ .../libcxx/selftest/pass.mm/run-error.pass.mm |   1 +
+ .../test/libcxx/system_reserved_names.gen.py  |   5 +-
+ .../atomics.types.generic/integral.pass.cpp   |   2 +
+ .../atomic_fetch_add.pass.cpp                 |   2 +
+ .../atomic_fetch_add_explicit.pass.cpp        |   2 +
+ .../atomic_fetch_and.pass.cpp                 |   2 +
+ .../atomic_fetch_and_explicit.pass.cpp        |   2 +
+ .../atomic_fetch_or.pass.cpp                  |   2 +
+ .../atomic_fetch_or_explicit.pass.cpp         |   2 +
+ .../atomic_fetch_sub.pass.cpp                 |   2 +
+ .../atomic_fetch_sub_explicit.pass.cpp        |   2 +
+ .../atomic_fetch_xor.pass.cpp                 |   2 +
+ .../atomic_fetch_xor_explicit.pass.cpp        |   2 +
+ .../ctor.pass.cpp                             |   2 +
+ .../depr.c.headers/fenv_h.compile.pass.cpp    |   3 +
+ .../depr.c.headers/stdio_h.compile.pass.cpp   |   3 +
+ .../depr.c.headers/uchar_h.compile.pass.cpp   |   3 +
+ .../narrow.stream.objects/cerr.sh.cpp         |   2 +
+ .../narrow.stream.objects/clog.sh.cpp         |   2 +
+ .../narrow.stream.objects/cout.sh.cpp         |   2 +
+ .../cxx20_iterator_traits.compile.pass.cpp    |   5 +
+ .../sized_delete_array14.pass.cpp             |   1 +
+ .../new.delete.single/sized_delete14.pass.cpp |   1 +
+ .../ctime.timespec.compile.pass.cpp           |   3 +
+ .../numerics/cfenv/cfenv.syn/cfenv.pass.cpp   |   3 +
+ .../strings/c.strings/cuchar.compile.pass.cpp |   3 +
+ .../time.clock.file/to_from_sys.pass.cpp      |   3 +
+ .../time.clock/time.clock.hires/now.pass.cpp  |   3 +
+ .../time.clock.system/from_time_t.pass.cpp    |   3 +
+ .../time.clock/time.clock.system/now.pass.cpp |   3 +
+ .../time.clock.system/to_time_t.pass.cpp      |   3 +
+ .../op_-duration.pass.cpp                     |   3 +
+ libcxx/utils/ci/BOT_OWNERS.txt                |   2 +-
+ libcxx/utils/ci/build-picolibc.sh             | 109 ++++++++++++++++++
+ libcxx/utils/ci/buildkite-pipeline.yml        |  14 +++
+ libcxx/utils/ci/run-buildbot                  |  35 ++++++
+ libcxx/utils/libcxx/test/features.py          |  14 ++-
+ .../test/configs/armv7m-libc++abi.cfg.in      |  39 +++++++
+ libcxxabi/test/test_demangle.pass.cpp         |   3 +
+ .../test/test_exception_storage.pass.cpp      |   3 +
+ .../test/configs/armv7m-libunwind.cfg.in      |  32 +++++
+ 47 files changed, 430 insertions(+), 12 deletions(-)
+ create mode 100644 libcxx/cmake/caches/Armv7M-picolibc.cmake
+ create mode 100644 libcxx/test/configs/armv7m-libc++.cfg.in
+ create mode 100755 libcxx/utils/ci/build-picolibc.sh
+ create mode 100644 libcxxabi/test/configs/armv7m-libc++abi.cfg.in
+ create mode 100644 libunwind/test/configs/armv7m-libunwind.cfg.in
+
+diff --git a/libcxx/cmake/caches/Armv7M-picolibc.cmake b/libcxx/cmake/caches/Armv7M-picolibc.cmake
+new file mode 100644
+index 000000000000..6ed1866a5084
+--- /dev/null
++++ b/libcxx/cmake/caches/Armv7M-picolibc.cmake
+@@ -0,0 +1,38 @@
++set(CMAKE_ASM_COMPILER_TARGET "armv7m-none-eabi" CACHE STRING "")
++set(CMAKE_CXX_COMPILER_TARGET "armv7m-none-eabi" CACHE STRING "")
++set(CMAKE_CXX_FLAGS "-mfloat-abi=soft" CACHE STRING "")
++set(CMAKE_C_COMPILER_TARGET "armv7m-none-eabi" CACHE STRING "")
++set(CMAKE_C_FLAGS "-mfloat-abi=soft" CACHE STRING "")
++set(CMAKE_SYSTEM_NAME Generic CACHE STRING "")
++set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY CACHE STRING "")
++set(COMPILER_RT_BAREMETAL_BUILD ON CACHE BOOL "")
++set(COMPILER_RT_BUILD_LIBFUZZER OFF CACHE BOOL "")
++set(COMPILER_RT_BUILD_PROFILE OFF CACHE BOOL "")
++set(COMPILER_RT_BUILD_SANITIZERS OFF CACHE BOOL "")
++set(COMPILER_RT_BUILD_XRAY OFF CACHE BOOL "")
++set(COMPILER_RT_DEFAULT_TARGET_ONLY ON CACHE BOOL "")
++set(LIBCXXABI_BAREMETAL ON CACHE BOOL "")
++set(LIBCXXABI_ENABLE_ASSERTIONS OFF CACHE BOOL "")
++set(LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
++set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
++set(LIBCXXABI_ENABLE_STATIC ON CACHE BOOL "")
++set(LIBCXXABI_ENABLE_THREADS OFF CACHE BOOL "")
++set(LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
++set(LIBCXXABI_USE_LLVM_UNWINDER ON CACHE BOOL "")
++set(LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
++set(LIBCXX_ENABLE_FILESYSTEM OFF CACHE STRING "")
++set(LIBCXX_ENABLE_MONOTONIC_CLOCK OFF CACHE BOOL "")
++set(LIBCXX_ENABLE_RANDOM_DEVICE OFF CACHE BOOL "")
++set(LIBCXX_ENABLE_RTTI OFF CACHE BOOL "")
++set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
++set(LIBCXX_ENABLE_STATIC ON CACHE BOOL "")
++set(LIBCXX_ENABLE_THREADS OFF CACHE BOOL "")
++set(LIBCXX_ENABLE_WIDE_CHARACTERS OFF CACHE BOOL "")
++set(LIBCXX_INCLUDE_BENCHMARKS OFF CACHE BOOL "")
++set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
++set(LIBUNWIND_ENABLE_SHARED OFF CACHE BOOL "")
++set(LIBUNWIND_ENABLE_STATIC ON CACHE BOOL "")
++set(LIBUNWIND_ENABLE_THREADS OFF CACHE BOOL "")
++set(LIBUNWIND_IS_BAREMETAL ON CACHE BOOL "")
++set(LIBUNWIND_REMEMBER_HEAP_ALLOC ON CACHE BOOL "")
++set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
+diff --git a/libcxx/docs/index.rst b/libcxx/docs/index.rst
+index 9c2a83bde3c0..4258b423eb93 100644
+--- a/libcxx/docs/index.rst
++++ b/libcxx/docs/index.rst
+@@ -124,15 +124,16 @@ GCC          12              In C++11 or later only     latest stable release pe
+ 
+ Libc++ also supports common platforms and architectures:
+ 
+-=============== ========================= ============================
+-Target platform Target architecture       Notes
+-=============== ========================= ============================
+-macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.13+
+-FreeBSD 12+     i386, x86_64, arm
+-Linux           i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
+-Windows         i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
+-AIX 7.2TL5+     powerpc, powerpc64
+-=============== ========================= ============================
++===================== ========================= ============================
++Target platform       Target architecture       Notes
++===================== ========================= ============================
++macOS 10.9+           i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.13+
++FreeBSD 12+           i386, x86_64, arm
++Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
++Windows               i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
++AIX 7.2TL5+           powerpc, powerpc64
++Embedded (picolibc)   arm                       Support for building with picolibc is currently work-in-progress
++===================== ========================= ============================
+ 
+ Generally speaking, libc++ should work on any platform that provides a fairly complete
+ C Standard Library. It is also possible to turn off parts of the library for use on
+diff --git a/libcxx/test/configs/armv7m-libc++.cfg.in b/libcxx/test/configs/armv7m-libc++.cfg.in
+new file mode 100644
+index 000000000000..cb72e5da4838
+--- /dev/null
++++ b/libcxx/test/configs/armv7m-libc++.cfg.in
+@@ -0,0 +1,48 @@
++lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
++
++config.substitutions.append(('%{libc-linker-script}', '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'))
++
++config.substitutions.append(('%{flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@'))
++
++config.substitutions.append(('%{compile_flags}',
++    '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support'
++
++    # Disable warnings in cxx_atomic_impl.h:
++    # "large atomic operation may incur significant performance penalty; the
++    # access size (4 bytes) exceeds the max lock-free size (0  bytes)"
++    ' -Wno-atomic-alignment'
++
++    # Various libc++ headers check for the definition of _NEWLIB_VERSION
++    # which for picolibc is defined in picolibc.h.
++    ' -include picolibc.h'
++))
++config.substitutions.append(('%{link_flags}',
++    '-nostdlib -nostdlib++ -L %{lib} -lc++ -lc++abi'
++    ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost'
++    ' -T %{libc-linker-script}'
++    ' -Wl,--defsym=__flash=0x0'
++    ' -Wl,--defsym=__flash_size=0x400000'
++    ' -Wl,--defsym=__ram=0x21000000'
++    ' -Wl,--defsym=__ram_size=0x1000000'
++    ' -Wl,--defsym=__stack_size=0x1000'
++))
++config.substitutions.append(('%{exec}',
++    'true' # TODO use qemu-system-arm
++))
++
++# LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
++# initial picolibc failures until they can be properly diagnosed
++# and fixed. This allows easier detection of new test failures
++# and regressions. Note: New failures should not be suppressed
++# using this feature.
++config.available_features.add('LIBCXX-PICOLIBC-FIXME')
++
++import os, site
++site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
++import libcxx.test.params, libcxx.test.config
++libcxx.test.config.configure(
++    libcxx.test.params.DEFAULT_PARAMETERS,
++    libcxx.test.features.DEFAULT_FEATURES,
++    config,
++    lit_config
++)
+diff --git a/libcxx/test/libcxx/clang_modules_include.gen.py b/libcxx/test/libcxx/clang_modules_include.gen.py
+index b4c5c79a47f6..82a114507218 100644
+--- a/libcxx/test/libcxx/clang_modules_include.gen.py
++++ b/libcxx/test/libcxx/clang_modules_include.gen.py
+@@ -39,6 +39,9 @@ for header in public_headers:
+ // TODO: Investigate this failure
+ // UNSUPPORTED{BLOCKLIT}: LIBCXX-FREEBSD-FIXME
+ 
++// TODO: Investigate this failure
++// UNSUPPORTED{BLOCKLIT}: LIBCXX-PICOLIBC-FIXME
++
+ {lit_header_restrictions.get(header, '')}
+ 
+ #include <{header}>
+diff --git a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
+index dfe290b21fbb..c543898c083b 100644
+--- a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
++++ b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
+@@ -6,6 +6,9 @@
+ #
+ # ===----------------------------------------------------------------------===##
+ 
++# Picolibc test executor is `true` at present.
++# XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ # Note: We prepend arguments with 'x' to avoid thinking there are too few
+ #       arguments in case an argument is an empty string.
+ # RUN: %{python} %s x%S x%T x%{substitutions}
+diff --git a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
+index eac7d8846e23..035761530078 100644
+--- a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
++++ b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
+@@ -6,6 +6,7 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+ // XFAIL: *
+ 
+ // Make sure the test DOES NOT pass if it fails at runtime.
+diff --git a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
+index 22e17666eab0..d3889686b69d 100644
+--- a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
++++ b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
+@@ -7,6 +7,7 @@
+ //===----------------------------------------------------------------------===//
+ 
+ // REQUIRES: objective-c++
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+ 
+ // XFAIL: *
+ 
+diff --git a/libcxx/test/libcxx/system_reserved_names.gen.py b/libcxx/test/libcxx/system_reserved_names.gen.py
+index e2aa8fc47348..99ca86cfd830 100644
+--- a/libcxx/test/libcxx/system_reserved_names.gen.py
++++ b/libcxx/test/libcxx/system_reserved_names.gen.py
+@@ -101,7 +101,10 @@ for header in public_headers:
+ # define __pre SYSTEM_RESERVED_NAME
+ #endif
+ 
+-#define __input SYSTEM_RESERVED_NAME
++// Newlib & picolibc use __input as a parameter name of a64l & l64a
++#ifndef _NEWLIB_VERSION
++# define __input SYSTEM_RESERVED_NAME
++#endif
+ #define __output SYSTEM_RESERVED_NAME
+ 
+ #define __acquire SYSTEM_RESERVED_NAME
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp
+index 058db2dc3ab0..a030c63f07fa 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template <>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_add.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_add.pass.cpp
+index 31563789227e..069b64b09784 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_add.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_add.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_add_explicit.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_add_explicit.pass.cpp
+index 747a62ae1829..2b75e915d22b 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_add_explicit.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_add_explicit.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_and.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_and.pass.cpp
+index 04b279ca9d4d..e106e1a38b0b 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_and.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_and.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_and_explicit.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_and_explicit.pass.cpp
+index f6887a28ce14..ed878e222477 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_and_explicit.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_and_explicit.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_or.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_or.pass.cpp
+index 76a66dc6d478..01e73f4503e0 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_or.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_or.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_or_explicit.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_or_explicit.pass.cpp
+index 73161232ae7e..f8ae8fbbd76a 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_or_explicit.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_or_explicit.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_sub.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_sub.pass.cpp
+index 37a9586a0ba1..9212f03b0fd9 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_sub.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_sub.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_sub_explicit.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_sub_explicit.pass.cpp
+index 19240968ee7e..628b81521f19 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_sub_explicit.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_sub_explicit.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_xor.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_xor.pass.cpp
+index 3875f9e2161c..0c648fce5749 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_xor.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_xor.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_xor_explicit.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_xor_explicit.pass.cpp
+index 7521a027755d..4bdad43f19ff 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_xor_explicit.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/atomic_fetch_xor_explicit.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // template<class T>
+diff --git a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/ctor.pass.cpp b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/ctor.pass.cpp
+index 32baca49e307..3ee44a1771b7 100644
+--- a/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/ctor.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.operations/atomics.types.operations.req/ctor.pass.cpp
+@@ -8,6 +8,8 @@
+ 
+ // UNSUPPORTED: c++03
+ 
++// XFAIL: !has-64-bit-atomics
++
+ // <atomic>
+ 
+ // constexpr atomic<T>::atomic(T value)
+diff --git a/libcxx/test/std/depr/depr.c.headers/fenv_h.compile.pass.cpp b/libcxx/test/std/depr/depr.c.headers/fenv_h.compile.pass.cpp
+index fda5e186c036..dcc97573d607 100644
+--- a/libcxx/test/std/depr/depr.c.headers/fenv_h.compile.pass.cpp
++++ b/libcxx/test/std/depr/depr.c.headers/fenv_h.compile.pass.cpp
+@@ -6,6 +6,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// Floating point exceptions are required for the FE_... macros to be defined.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <fenv.h>
+ 
+ #include <fenv.h>
+diff --git a/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp b/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp
+index 27a97627cee3..35be03e41f8f 100644
+--- a/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp
++++ b/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp
+@@ -6,6 +6,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// stderr et al are not macros in picolibc's tinystdio.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // test <stdio.h>
+ 
+ #include <stdio.h>
+diff --git a/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp b/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp
+index 2b6455466681..a1560c8ee585 100644
+--- a/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp
++++ b/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp
+@@ -11,6 +11,9 @@
+ // Apple platforms don't provide <uchar.h> yet, so these tests fail.
+ // XFAIL: target={{.+}}-apple-{{.+}}
+ 
++// mbrtoc16 not defined.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <uchar.h>
+ 
+ #include <uchar.h>
+diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
+index b9e274af7334..9a4b437ab109 100644
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++
+ // <iostream>
+ 
+ // ostream cerr;
+diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
+index 476addba050d..783be3a52e94 100644
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++
+ // <iostream>
+ 
+ // ostream clog;
+diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp
+index b8d319385ca1..1234da38de03 100644
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++
+ // <iostream>
+ 
+ // ostream cout;
+diff --git a/libcxx/test/std/iterators/iterator.primitives/iterator.traits/cxx20_iterator_traits.compile.pass.cpp b/libcxx/test/std/iterators/iterator.primitives/iterator.traits/cxx20_iterator_traits.compile.pass.cpp
+index f6b7f6f9d463..f56750bb495e 100644
+--- a/libcxx/test/std/iterators/iterator.primitives/iterator.traits/cxx20_iterator_traits.compile.pass.cpp
++++ b/libcxx/test/std/iterators/iterator.primitives/iterator.traits/cxx20_iterator_traits.compile.pass.cpp
+@@ -11,6 +11,11 @@
+ // This test uses iterator types from std::filesystem
+ // XFAIL: availability-filesystem-missing
+ 
++// std::same_as<typename Traits::difference_type, DiffType> failed.
++// The former was long and the latter was long long.
++// Possibly related to "using streamoff = long int" in ios.h.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // template<class T>
+ // struct iterator_traits;
+ 
+diff --git a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp
+index 21663cdf956d..901f2cca4ce0 100644
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp
+@@ -9,6 +9,7 @@
+ // test sized operator delete[] replacement.
+ 
+ // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+ 
+ // NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
+ // default. It is only enabled when -fsized-deallocation is given.
+diff --git a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
+index a8701ce7a86c..d0b10b65be28 100644
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
+@@ -9,6 +9,7 @@
+ // test sized operator delete replacement.
+ 
+ // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+ 
+ // NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
+ // default. It is only enabled when -fsized-deallocation is given.
+diff --git a/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp b/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp
+index 9a512f6ccfbd..bbf602188ae4 100644
+--- a/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp
++++ b/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp
+@@ -13,6 +13,9 @@
+ 
+ // XFAIL: LIBCXX-AIX-FIXME
+ 
++// picolibc doesn't define TIME_UTC.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // ::timespec_get is provided by the C library, but it's marked as
+ // unavailable until macOS 10.15
+ // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+diff --git a/libcxx/test/std/numerics/cfenv/cfenv.syn/cfenv.pass.cpp b/libcxx/test/std/numerics/cfenv/cfenv.syn/cfenv.pass.cpp
+index 557a93cdefe0..7b3b490eba27 100644
+--- a/libcxx/test/std/numerics/cfenv/cfenv.syn/cfenv.pass.cpp
++++ b/libcxx/test/std/numerics/cfenv/cfenv.syn/cfenv.pass.cpp
+@@ -6,6 +6,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// Floating point exceptions are required for the FE_... macros to be defined.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <cfenv>
+ 
+ #include <cfenv>
+diff --git a/libcxx/test/std/strings/c.strings/cuchar.compile.pass.cpp b/libcxx/test/std/strings/c.strings/cuchar.compile.pass.cpp
+index db00cbde3336..2076384deb2b 100644
+--- a/libcxx/test/std/strings/c.strings/cuchar.compile.pass.cpp
++++ b/libcxx/test/std/strings/c.strings/cuchar.compile.pass.cpp
+@@ -11,6 +11,9 @@
+ // Apple platforms don't provide <uchar.h> yet, so these tests fail.
+ // XFAIL: target={{.+}}-apple-{{.+}}
+ 
++// mbrtoc16 not defined.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <cuchar>
+ 
+ #include <cuchar>
+diff --git a/libcxx/test/std/time/time.clock/time.clock.file/to_from_sys.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.file/to_from_sys.pass.cpp
+index 5b1f46599111..b1031c815610 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.file/to_from_sys.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.file/to_from_sys.pass.cpp
+@@ -10,6 +10,9 @@
+ 
+ // UNSUPPORTED: availability-filesystem-missing
+ 
++// "unable to find library from dependent library specifier: rt"
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <chrono>
+ //
+ // file_clock
+diff --git a/libcxx/test/std/time/time.clock/time.clock.hires/now.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.hires/now.pass.cpp
+index db1fb55df907..8625ac58bde5 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.hires/now.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.hires/now.pass.cpp
+@@ -6,6 +6,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// "unable to find library from dependent library specifier: rt"
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <chrono>
+ 
+ // high_resolution_clock
+diff --git a/libcxx/test/std/time/time.clock/time.clock.system/from_time_t.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.system/from_time_t.pass.cpp
+index 70dd8117e6ce..5ff667445b1a 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.system/from_time_t.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.system/from_time_t.pass.cpp
+@@ -6,6 +6,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// "unable to find library from dependent library specifier: rt"
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <chrono>
+ 
+ // system_clock
+diff --git a/libcxx/test/std/time/time.clock/time.clock.system/now.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.system/now.pass.cpp
+index dade6bafa471..70fbe98d8dfd 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.system/now.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.system/now.pass.cpp
+@@ -6,6 +6,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// "unable to find library from dependent library specifier: rt"
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <chrono>
+ 
+ // system_clock
+diff --git a/libcxx/test/std/time/time.clock/time.clock.system/to_time_t.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.system/to_time_t.pass.cpp
+index bf4339c32d1c..f3238f7bb1bb 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.system/to_time_t.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.system/to_time_t.pass.cpp
+@@ -6,6 +6,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// "unable to find library from dependent library specifier: rt"
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <chrono>
+ 
+ // system_clock
+diff --git a/libcxx/test/std/time/time.point/time.point.nonmember/op_-duration.pass.cpp b/libcxx/test/std/time/time.point/time.point.nonmember/op_-duration.pass.cpp
+index 80e9d04a769f..199bdec66878 100644
+--- a/libcxx/test/std/time/time.point/time.point.nonmember/op_-duration.pass.cpp
++++ b/libcxx/test/std/time/time.point/time.point.nonmember/op_-duration.pass.cpp
+@@ -6,6 +6,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// "unable to find library from dependent library specifier: rt"
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <chrono>
+ 
+ // time_point
+diff --git a/libcxx/utils/ci/BOT_OWNERS.txt b/libcxx/utils/ci/BOT_OWNERS.txt
+index f6eb91cdac4b..4adb45ca02e2 100644
+--- a/libcxx/utils/ci/BOT_OWNERS.txt
++++ b/libcxx/utils/ci/BOT_OWNERS.txt
+@@ -10,7 +10,7 @@ least the (N), (E) and (D) fields.
+ 
+ N: Linaro Toolchain Working Group
+ E: linaro-toolchain@lists.linaro.org
+-D: Armv7, Armv8, AArch64
++D: Arm platforms
+ 
+ N: LLVM on Power
+ E: powerllvm@ca.ibm.com
+diff --git a/libcxx/utils/ci/build-picolibc.sh b/libcxx/utils/ci/build-picolibc.sh
+new file mode 100755
+index 000000000000..acdcabe96e96
+--- /dev/null
++++ b/libcxx/utils/ci/build-picolibc.sh
+@@ -0,0 +1,109 @@
++#!/usr/bin/env bash
++#===----------------------------------------------------------------------===##
++#
++# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++# See https://llvm.org/LICENSE.txt for license information.
++# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++#
++#===----------------------------------------------------------------------===##
++
++#
++# This script builds picolibc (https://github.com/picolibc/picolibc) from
++# source to facilitate building libc++ against it.
++#
++
++set -e
++
++PROGNAME="$(basename "${0}")"
++
++function error() { printf "error: %s\n" "$*" >&2; exit 1; }
++
++function usage() {
++cat <<EOF
++Usage:
++${PROGNAME} [options]
++
++[-h|--help]                  Display this help and exit.
++
++--build-dir <DIR>            Path to the directory to use for building.
++
++--install-dir <DIR>          Path to the directory to install the library to.
++EOF
++}
++
++while [[ $# -gt 0 ]]; do
++    case ${1} in
++        -h|--help)
++            usage
++            exit 0
++            ;;
++        --build-dir)
++            build_dir="${2}"
++            shift; shift
++            ;;
++        --install-dir)
++            install_dir="${2}"
++            shift; shift
++            ;;
++        --target)
++            target="${2}"
++            shift; shift
++            ;;
++        *)
++            error "Unknown argument '${1}'"
++            ;;
++    esac
++done
++
++for arg in build_dir install_dir target; do
++    if [ -z ${!arg+x} ]; then
++        error "Missing required argument '--${arg//_/-}'"
++    elif [ "${!arg}" == "" ]; then
++        error "Argument to --${arg//_/-} must not be empty"
++    fi
++done
++
++
++echo "--- Downloading picolibc"
++picolibc_source_dir="${build_dir}/picolibc-source"
++picolibc_build_dir="${build_dir}/picolibc-build"
++mkdir -p "${picolibc_source_dir}"
++mkdir -p "${picolibc_build_dir}"
++# Download the version of picolibc that was the latest at the time this script was written.
++# The picolibc linker script was changed after version 1.8.2 to work with ld.lld so a
++# more recent version is required, which at the time of writing is not yet released.
++picolibc_commit="8dd225aa1469c03805617106020d494912c6d265"
++curl -L "https://github.com/picolibc/picolibc/archive/${picolibc_commit}.zip" --output "${picolibc_source_dir}/picolibc.zip"
++unzip -q "${picolibc_source_dir}/picolibc.zip" -d "${picolibc_source_dir}"
++mv "${picolibc_source_dir}/picolibc-${picolibc_commit}"/* "${picolibc_source_dir}"
++rm -rf "${picolibc_source_dir}/picolibc-${picolibc_commit}"
++
++cat <<EOF > "${picolibc_build_dir}/meson-cross-build.txt"
++[binaries]
++c = ['${CC:-cc}', '--target=${target}', '-mfloat-abi=soft', '-nostdlib']
++ar = 'llvm-ar'
++as = 'llvm-as'
++ld = 'lld'
++strip = 'llvm-strip'
++[host_machine]
++system = 'none'
++cpu_family = 'arm'
++cpu = 'arm'
++endian = 'little'
++[properties]
++skip_sanity_check = true
++EOF
++
++venv_dir="${build_dir}/meson-venv"
++python3 -m venv "${venv_dir}"
++# Install the version of meson that was the latest at the time this script was written.
++"${venv_dir}/bin/pip" install "meson==1.1.1"
++
++"${venv_dir}/bin/meson" setup \
++  -Dincludedir=include -Dlibdir=lib -Dspecsdir=none -Dmultilib=false -Dpicoexit=false \
++  --prefix "${install_dir}" \
++  --cross-file "${picolibc_build_dir}/meson-cross-build.txt" \
++  "${picolibc_build_dir}" \
++  "${picolibc_source_dir}"
++
++"${venv_dir}/bin/meson" install -C "${picolibc_build_dir}"
+diff --git a/libcxx/utils/ci/buildkite-pipeline.yml b/libcxx/utils/ci/buildkite-pipeline.yml
+index ebfb35eee91e..01ed5f4b78d2 100644
+--- a/libcxx/utils/ci/buildkite-pipeline.yml
++++ b/libcxx/utils/ci/buildkite-pipeline.yml
+@@ -1078,6 +1078,20 @@ steps:
+             limit: 2
+       timeout_in_minutes: 120
+ 
++    - label: "Armv7-M picolibc"
++      command: "libcxx/utils/ci/run-buildbot armv7m-picolibc"
++      artifact_paths:
++        - "**/test-results.xml"
++        - "**/*.abilist"
++      agents:
++        queue: "libcxx-builders-linaro-arm"
++        arch: "aarch64"
++      retry:
++        automatic:
++          - exit_status: -1  # Agent was lost
++            limit: 2
++      timeout_in_minutes: 120
++
+   - group: "AIX"
+     steps:
+     - label: "AIX (32-bit)"
+diff --git a/libcxx/utils/ci/run-buildbot b/libcxx/utils/ci/run-buildbot
+index a71318123db3..a95911cd9d29 100755
+--- a/libcxx/utils/ci/run-buildbot
++++ b/libcxx/utils/ci/run-buildbot
+@@ -616,6 +616,41 @@ armv7-no-exceptions)
+     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
+     check-runtimes
+ ;;
++armv7m-picolibc)
++    clean
++
++    # To make it easier to get this builder up and running, build picolibc
++    # from scratch. Anecdotally, the build-picolibc script takes about 16 seconds.
++    # This could be optimised by building picolibc into the Docker container.
++    ${MONOREPO_ROOT}/libcxx/utils/ci/build-picolibc.sh \
++        --build-dir "${BUILD_DIR}" \
++        --install-dir "${INSTALL_DIR}" \
++        --target armv7m-none-eabi
++
++    echo "--- Generating CMake"
++    flags="--sysroot=${INSTALL_DIR}"
++    ${CMAKE} \
++        -S "${MONOREPO_ROOT}/compiler-rt" \
++        -B "${BUILD_DIR}/compiler-rt" \
++        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
++        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
++        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
++        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
++        -DCMAKE_C_FLAGS="${flags}" \
++        -DCMAKE_CXX_FLAGS="${flags}" \
++        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
++    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
++        -DLIBCXX_TEST_CONFIG="armv7m-libc++.cfg.in" \
++        -DLIBCXXABI_TEST_CONFIG="armv7m-libc++abi.cfg.in" \
++        -DLIBUNWIND_TEST_CONFIG="armv7m-libunwind.cfg.in" \
++        -DCMAKE_C_FLAGS="${flags}" \
++        -DCMAKE_CXX_FLAGS="${flags}"
++
++    ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
++    mv "${BUILD_DIR}/install/lib/armv7m-none-eabi"/* "${BUILD_DIR}/install/lib"
++
++    check-runtimes
++;;
+ clang-cl-dll)
+     clean
+     # TODO: Currently, building with the experimental library breaks running
+diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
+index 3779af1094d5..f6ac01c8468d 100644
+--- a/libcxx/utils/libcxx/test/features.py
++++ b/libcxx/utils/libcxx/test/features.py
+@@ -94,6 +94,17 @@ DEFAULT_FEATURES = [
+         name="verify-support",
+         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
+     ),
++    Feature(
++        name="has-64-bit-atomics",
++        when=lambda cfg: sourceBuilds(
++            cfg,
++            """
++            #include <atomic>
++            std::atomic_uint64_t x;
++            int main(int, char**) { (void)x.load(); return 0; }
++          """,
++        ),
++    ),
+     Feature(
+         name="non-lockfree-atomics",
+         when=lambda cfg: sourceBuilds(
+@@ -199,7 +210,8 @@ DEFAULT_FEATURES = [
+             #include <unistd.h>
+             #include <sys/wait.h>
+             int main(int, char**) {
+-              return 0;
++              int fd[2];
++              return pipe(fd);
+             }
+           """,
+         ),
+diff --git a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
+new file mode 100644
+index 000000000000..d022e84fb19e
+--- /dev/null
++++ b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
+@@ -0,0 +1,39 @@
++lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
++
++config.substitutions.append(('%{libc-linker-script}', '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'))
++
++config.substitutions.append(('%{flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@'))
++
++config.substitutions.append(('%{compile_flags}',
++    '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
++))
++config.substitutions.append(('%{link_flags}',
++    '-nostdlib -nostdlib++ -L %{lib} -lc++ -lc++abi'
++    ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost'
++    ' -T %{libc-linker-script}'
++    ' -Wl,--defsym=__flash=0x0'
++    ' -Wl,--defsym=__flash_size=0x400000'
++    ' -Wl,--defsym=__ram=0x21000000'
++    ' -Wl,--defsym=__ram_size=0x1000000'
++    ' -Wl,--defsym=__stack_size=0x1000'
++))
++config.substitutions.append(('%{exec}',
++    'true' # TODO use qemu-system-arm
++))
++
++# LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
++# initial picolibc failures until they can be properly diagnosed
++# and fixed. This allows easier detection of new test failures
++# and regressions. Note: New failures should not be suppressed
++# using this feature.
++config.available_features.add('LIBCXX-PICOLIBC-FIXME')
++
++import os, site
++site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
++import libcxx.test.params, libcxx.test.config
++libcxx.test.config.configure(
++    libcxx.test.params.DEFAULT_PARAMETERS,
++    libcxx.test.features.DEFAULT_FEATURES,
++    config,
++    lit_config
++)
+diff --git a/libcxxabi/test/test_demangle.pass.cpp b/libcxxabi/test/test_demangle.pass.cpp
+index df7bedc73c28..ee35a4171ef0 100644
+--- a/libcxxabi/test/test_demangle.pass.cpp
++++ b/libcxxabi/test/test_demangle.pass.cpp
+@@ -9,6 +9,9 @@
+ // The demangler does not pass all these tests with the system dylibs on macOS.
+ // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+ 
++// This test is too big for most embedded devices.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // https://llvm.org/PR51407 was not fixed in some previously-released
+ // demanglers, which causes them to run into the infinite loop.
+ // UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+diff --git a/libcxxabi/test/test_exception_storage.pass.cpp b/libcxxabi/test/test_exception_storage.pass.cpp
+index 03393c402cd4..9dca5aa23360 100644
+--- a/libcxxabi/test/test_exception_storage.pass.cpp
++++ b/libcxxabi/test/test_exception_storage.pass.cpp
+@@ -8,6 +8,9 @@
+ 
+ // UNSUPPORTED: c++03
+ 
++// This test fails with picolibc since 42d55676833bacfdc6ec66785b74a7a51e6de474
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ #include "assert_macros.h"
+ #include "concat_macros.h"
+ #include "../src/cxa_exception.h"
+diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
+new file mode 100644
+index 000000000000..5f15ccd3613c
+--- /dev/null
++++ b/libunwind/test/configs/armv7m-libunwind.cfg.in
+@@ -0,0 +1,32 @@
++lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
++
++config.substitutions.append(('%{libc-linker-script}', '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'))
++
++config.substitutions.append(('%{flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@'))
++
++config.substitutions.append(('%{compile_flags}',
++    '-nostdinc++ -I %{include}'
++))
++config.substitutions.append(('%{link_flags}',
++    '-nostdlib -nostdlib++ -L %{lib} -lunwind'
++    ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost'
++    ' -T %{libc-linker-script}'
++    ' -Wl,--defsym=__flash=0x0'
++    ' -Wl,--defsym=__flash_size=0x400000'
++    ' -Wl,--defsym=__ram=0x21000000'
++    ' -Wl,--defsym=__ram_size=0x1000000'
++    ' -Wl,--defsym=__stack_size=0x1000'
++))
++config.substitutions.append(('%{exec}',
++    'true' # TODO use qemu-system-arm
++))
++
++import os, site
++site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
++import libcxx.test.params, libcxx.test.config
++libcxx.test.config.configure(
++    libcxx.test.params.DEFAULT_PARAMETERS,
++    libcxx.test.features.DEFAULT_FEATURES,
++    config,
++    lit_config
++)
+-- 
+2.34.1
+

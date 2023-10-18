@@ -13,6 +13,15 @@ config.substitutions.append(('%{flags}', '@RUNTIME_TEST_ARCH_FLAGS@'))
 config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support'
     ' -isystem %{libc-include}'
+
+    # Disable warnings in cxx_atomic_impl.h:
+    # "large atomic operation may incur significant performance penalty; the
+    # access size (4 bytes) exceeds the max lock-free size (0  bytes)"
+    ' -Wno-atomic-alignment'
+
+    # Various libc++ headers check for the definition of _NEWLIB_VERSION
+    # which for picolibc is defined in picolibc.h.
+    ' -include picolibc.h'
 ))
 config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -nostdlib -L %{lib} -lc++ -lc++abi'
@@ -24,6 +33,16 @@ config.substitutions.append(('%{link_flags}',
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T -- '
 ))
+
+# Long tests are prohibitively slow when run via emulation.
+config.long_tests = False
+
+# LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
+# initial picolibc failures until they can be properly diagnosed
+# and fixed. This allows easier detection of new test failures
+# and regressions. Note: New failures should not be suppressed
+# using this feature.
+config.available_features.add('LIBCXX-PICOLIBC-FIXME')
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))

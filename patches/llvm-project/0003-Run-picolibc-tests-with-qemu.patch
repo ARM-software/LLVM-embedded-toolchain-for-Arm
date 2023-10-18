@@ -1,0 +1,366 @@
+From ed4600a83ab1ad56673706299f6a28dad8bf1d24 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Tue, 10 Oct 2023 15:45:54 +0200
+Subject: [PATCH 3/3] Run picolibc tests with qemu
+
+---
+ libcxx/cmake/caches/Armv7M-picolibc.cmake     |  1 +
+ libcxx/docs/index.rst                         |  2 +-
+ libcxx/test/configs/armv7m-libc++.cfg.in      | 10 ++++++-
+ libcxx/test/libcxx/selftest/dsl/dsl.sh.py     |  3 ++-
+ .../selftest/pass.cpp/run-error.pass.cpp      |  1 -
+ .../libcxx/selftest/pass.mm/run-error.pass.mm |  1 -
+ .../libcxx/selftest/stdin-is-piped.sh.cpp     |  2 ++
+ .../alg.sorting/alg.sort/sort/sort.pass.cpp   |  3 +++
+ .../generic_category.pass.cpp                 |  1 +
+ .../system_category.pass.cpp                  |  1 +
+ .../narrow.stream.objects/cerr.sh.cpp         |  2 +-
+ .../narrow.stream.objects/cin.sh.cpp          |  1 +
+ .../narrow.stream.objects/clog.sh.cpp         |  2 +-
+ .../narrow.stream.objects/cout.sh.cpp         |  2 --
+ .../sized_delete_array14.pass.cpp             |  1 -
+ .../new.delete.single/sized_delete14.pass.cpp |  1 -
+ .../classic_table.pass.cpp                    |  2 ++
+ .../put_long_double.pass.cpp                  |  1 +
+ .../rand.dist.bern.bin/eval.PR44847.pass.cpp  |  3 +++
+ .../time.clock/time.clock.file/now.pass.cpp   |  3 +++
+ libcxx/utils/run-qemu.sh                      | 27 +++++++++++++++++++
+ .../test/configs/armv7m-libc++abi.cfg.in      |  7 ++++-
+ .../test/configs/armv7m-libunwind.cfg.in      |  7 ++++-
+ 23 files changed, 71 insertions(+), 13 deletions(-)
+ create mode 100755 libcxx/utils/run-qemu.sh
+
+diff --git a/libcxx/cmake/caches/Armv7M-picolibc.cmake b/libcxx/cmake/caches/Armv7M-picolibc.cmake
+index 6ed1866a5084..e308ac31d1d1 100644
+--- a/libcxx/cmake/caches/Armv7M-picolibc.cmake
++++ b/libcxx/cmake/caches/Armv7M-picolibc.cmake
+@@ -36,3 +36,4 @@ set(LIBUNWIND_ENABLE_THREADS OFF CACHE BOOL "")
+ set(LIBUNWIND_IS_BAREMETAL ON CACHE BOOL "")
+ set(LIBUNWIND_REMEMBER_HEAP_ALLOC ON CACHE BOOL "")
+ set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
++find_program(QEMU_SYSTEM_ARM qemu-system-arm)
+diff --git a/libcxx/docs/index.rst b/libcxx/docs/index.rst
+index 4258b423eb93..2e91265655a4 100644
+--- a/libcxx/docs/index.rst
++++ b/libcxx/docs/index.rst
+@@ -132,7 +132,7 @@ FreeBSD 12+           i386, x86_64, arm
+ Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
+ Windows               i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
+ AIX 7.2TL5+           powerpc, powerpc64
+-Embedded (picolibc)   arm                       Support for building with picolibc is currently work-in-progress
++Embedded (picolibc)   arm
+ ===================== ========================= ============================
+ 
+ Generally speaking, libc++ should work on any platform that provides a fairly complete
+diff --git a/libcxx/test/configs/armv7m-libc++.cfg.in b/libcxx/test/configs/armv7m-libc++.cfg.in
+index cb72e5da4838..88241fa06ded 100644
+--- a/libcxx/test/configs/armv7m-libc++.cfg.in
++++ b/libcxx/test/configs/armv7m-libc++.cfg.in
+@@ -27,9 +27,17 @@ config.substitutions.append(('%{link_flags}',
+     ' -Wl,--defsym=__stack_size=0x1000'
+ ))
+ config.substitutions.append(('%{exec}',
+-    'true' # TODO use qemu-system-arm
++    '%{executor}'
++    ' --execdir %T'
++    ' @LIBCXX_SOURCE_DIR@/utils/run-qemu.sh'
++    ' @QEMU_SYSTEM_ARM@'
++    ' mps2-an385'
++    ' cortex-m3'
+ ))
+ 
++# Long tests are prohibitively slow when run via emulation.
++config.long_tests = False
++
+ # LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
+ # initial picolibc failures until they can be properly diagnosed
+ # and fixed. This allows easier detection of new test failures
+diff --git a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
+index c543898c083b..012759436d89 100644
+--- a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
++++ b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
+@@ -6,7 +6,8 @@
+ #
+ # ===----------------------------------------------------------------------===##
+ 
+-# Picolibc test executor is `true` at present.
++# With picolibc, test_program_stderr_is_not_conflated_with_stdout fails
++# because stdout & stderr are treated as the same.
+ # XFAIL: LIBCXX-PICOLIBC-FIXME
+ 
+ # Note: We prepend arguments with 'x' to avoid thinking there are too few
+diff --git a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
+index 035761530078..eac7d8846e23 100644
+--- a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
++++ b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
+@@ -6,7 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+ // XFAIL: *
+ 
+ // Make sure the test DOES NOT pass if it fails at runtime.
+diff --git a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
+index d3889686b69d..22e17666eab0 100644
+--- a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
++++ b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
+@@ -7,7 +7,6 @@
+ //===----------------------------------------------------------------------===//
+ 
+ // REQUIRES: objective-c++
+-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+ 
+ // XFAIL: *
+ 
+diff --git a/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp b/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp
+index ffd10631c6a6..897e10e94783 100644
+--- a/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp
++++ b/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp
+@@ -8,6 +8,8 @@
+ 
+ // Make sure that the executor pipes standard input to the test-executable being run.
+ 
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // RUN: %{build}
+ // RUN: echo "abc" | %{exec} %t.exe
+ 
+diff --git a/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp b/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
+index ed26c5b861f5..56c0964c8750 100644
+--- a/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
++++ b/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
+@@ -6,6 +6,9 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// This test appears to hang with picolibc & qemu.
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++
+ // <algorithm>
+ 
+ // template<RandomAccessIterator Iter>
+diff --git a/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/generic_category.pass.cpp b/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/generic_category.pass.cpp
+index 90e5bd39e5b0..49ec48c7bc95 100644
+--- a/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/generic_category.pass.cpp
++++ b/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/generic_category.pass.cpp
+@@ -8,6 +8,7 @@
+ 
+ // XFAIL: suse-linux-enterprise-server-11
+ // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
++// XFAIL: LIBCXX-PICOLIBC-FIXME
+ 
+ // <system_error>
+ 
+diff --git a/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/system_category.pass.cpp b/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/system_category.pass.cpp
+index 1de1b59e5c6c..5ebc7a056b71 100644
+--- a/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/system_category.pass.cpp
++++ b/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/system_category.pass.cpp
+@@ -14,6 +14,7 @@
+ 
+ // XFAIL: suse-linux-enterprise-server-11
+ // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
++// XFAIL: LIBCXX-PICOLIBC-FIXME
+ 
+ #include <system_error>
+ #include <cassert>
+diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
+index 9a4b437ab109..da5563f87df4 100644
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
+@@ -6,7 +6,7 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++// XFAIL: LIBCXX-PICOLIBC-FIXME
+ 
+ // <iostream>
+ 
+diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp
+index b39cd57ab212..65c21658f91d 100644
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp
+@@ -8,6 +8,7 @@
+ 
+ // TODO: Investigate
+ // UNSUPPORTED: LIBCXX-AIX-FIXME
++// XFAIL: LIBCXX-PICOLIBC-FIXME
+ 
+ // <iostream>
+ 
+diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
+index 783be3a52e94..9bedd67e816e 100644
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
+@@ -6,7 +6,7 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++// XFAIL: LIBCXX-PICOLIBC-FIXME
+ 
+ // <iostream>
+ 
+diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp
+index 1234da38de03..b8d319385ca1 100644
+--- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp
++++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cout.sh.cpp
+@@ -6,8 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+-
+ // <iostream>
+ 
+ // ostream cout;
+diff --git a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp
+index 901f2cca4ce0..21663cdf956d 100644
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.array/sized_delete_array14.pass.cpp
+@@ -9,7 +9,6 @@
+ // test sized operator delete[] replacement.
+ 
+ // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
+-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+ 
+ // NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
+ // default. It is only enabled when -fsized-deallocation is given.
+diff --git a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
+index d0b10b65be28..a8701ce7a86c 100644
+--- a/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
++++ b/libcxx/test/std/language.support/support.dynamic/new.delete/new.delete.single/sized_delete14.pass.cpp
+@@ -9,7 +9,6 @@
+ // test sized operator delete replacement.
+ 
+ // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
+-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+ 
+ // NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
+ // default. It is only enabled when -fsized-deallocation is given.
+diff --git a/libcxx/test/std/localization/locale.categories/category.ctype/facet.ctype.special/facet.ctype.char.statics/classic_table.pass.cpp b/libcxx/test/std/localization/locale.categories/category.ctype/facet.ctype.special/facet.ctype.char.statics/classic_table.pass.cpp
+index 8fe8080bde98..50c60180ce0d 100644
+--- a/libcxx/test/std/localization/locale.categories/category.ctype/facet.ctype.special/facet.ctype.char.statics/classic_table.pass.cpp
++++ b/libcxx/test/std/localization/locale.categories/category.ctype/facet.ctype.special/facet.ctype.char.statics/classic_table.pass.cpp
+@@ -6,6 +6,8 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // <locale>
+ 
+ // template <> class ctype<char>
+diff --git a/libcxx/test/std/localization/locale.categories/category.numeric/locale.nm.put/facet.num.put.members/put_long_double.pass.cpp b/libcxx/test/std/localization/locale.categories/category.numeric/locale.nm.put/facet.num.put.members/put_long_double.pass.cpp
+index 3327a35a6045..2a0c2a49ec51 100644
+--- a/libcxx/test/std/localization/locale.categories/category.numeric/locale.nm.put/facet.num.put.members/put_long_double.pass.cpp
++++ b/libcxx/test/std/localization/locale.categories/category.numeric/locale.nm.put/facet.num.put.members/put_long_double.pass.cpp
+@@ -13,6 +13,7 @@
+ // iter_type put(iter_type s, ios_base& iob, char_type fill, long double v) const;
+ 
+ // XFAIL: win32-broken-printf-g-precision
++// XFAIL: LIBCXX-PICOLIBC-FIXME
+ 
+ #include <locale>
+ #include <ios>
+diff --git a/libcxx/test/std/numerics/rand/rand.dist/rand.dist.bern/rand.dist.bern.bin/eval.PR44847.pass.cpp b/libcxx/test/std/numerics/rand/rand.dist/rand.dist.bern/rand.dist.bern.bin/eval.PR44847.pass.cpp
+index 9213d2bac5a6..572a59b7a192 100644
+--- a/libcxx/test/std/numerics/rand/rand.dist/rand.dist.bern/rand.dist.bern.bin/eval.PR44847.pass.cpp
++++ b/libcxx/test/std/numerics/rand/rand.dist/rand.dist.bern/rand.dist.bern.bin/eval.PR44847.pass.cpp
+@@ -18,6 +18,9 @@
+ // Serializing/deserializing the state of the RNG requires iostreams
+ // UNSUPPORTED: no-localization
+ 
++// This test appears to hang with picolibc & qemu.
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++
+ #include <random>
+ #include <numeric>
+ #include <vector>
+diff --git a/libcxx/test/std/time/time.clock/time.clock.file/now.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.file/now.pass.cpp
+index 0852483a8b39..4ba17a48988b 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.file/now.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.file/now.pass.cpp
+@@ -10,6 +10,9 @@
+ 
+ // UNSUPPORTED: availability-filesystem-missing
+ 
++// qemu: Unsupported SemiHosting SWI 0x30
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++
+ // <chrono>
+ 
+ // file_clock
+diff --git a/libcxx/utils/run-qemu.sh b/libcxx/utils/run-qemu.sh
+new file mode 100755
+index 000000000000..7a9a8acb95ad
+--- /dev/null
++++ b/libcxx/utils/run-qemu.sh
+@@ -0,0 +1,27 @@
++#!/bin/sh
++
++# This script makes it easy to pass an image and arguments to qemu.
++
++# Usage:
++# run-qemu.sh QEMU_EXECUTABLE MACHINE CPU IMAGE ARGS...
++
++QEMU_EXECUTABLE=$1; shift
++MACHINE=$1; shift
++CPU=$1; shift
++IMAGE=$1; shift
++
++semihosting_config="enable=on,chardev=stdio0"
++for arg in "$@"
++do
++    semihosting_config="${semihosting_config},arg=${arg}"
++done
++
++"${QEMU_EXECUTABLE}" \
++    -chardev stdio,mux=on,id=stdio0 \
++    -semihosting-config "${semihosting_config}" \
++    -monitor none \
++    -serial none \
++    -machine "${MACHINE},accel=tcg" \
++    -cpu "${CPU}" \
++    -device loader,file="${IMAGE}",cpu-num=0 \
++    -nographic
+diff --git a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
+index d022e84fb19e..9962541426a1 100644
+--- a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
++++ b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
+@@ -18,7 +18,12 @@ config.substitutions.append(('%{link_flags}',
+     ' -Wl,--defsym=__stack_size=0x1000'
+ ))
+ config.substitutions.append(('%{exec}',
+-    'true' # TODO use qemu-system-arm
++    '%{executor}'
++    ' --execdir %T'
++    ' @LIBCXXABI_LIBCXX_PATH@/utils/run-qemu.sh'
++    ' @QEMU_SYSTEM_ARM@'
++    ' mps2-an385'
++    ' cortex-m3'
+ ))
+ 
+ # LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
+diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
+index 5f15ccd3613c..2004c8010883 100644
+--- a/libunwind/test/configs/armv7m-libunwind.cfg.in
++++ b/libunwind/test/configs/armv7m-libunwind.cfg.in
+@@ -18,7 +18,12 @@ config.substitutions.append(('%{link_flags}',
+     ' -Wl,--defsym=__stack_size=0x1000'
+ ))
+ config.substitutions.append(('%{exec}',
+-    'true' # TODO use qemu-system-arm
++    '%{executor}'
++    ' --execdir %T'
++    ' @LIBUNWIND_LIBCXX_PATH@/utils/run-qemu.sh'
++    ' @QEMU_SYSTEM_ARM@'
++    ' mps2-an385'
++    ' cortex-m3'
+ ))
+ 
+ import os, site
+-- 
+2.34.1
+
