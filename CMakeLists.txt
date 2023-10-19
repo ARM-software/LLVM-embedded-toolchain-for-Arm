@@ -359,7 +359,14 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL TRUE)
 # Don't create a separate archive for each component.
 set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
 # When extracting the files put them in an ArmCompiler-.../ directory.
-set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY TRUE)
+# Exception: the newlib overlay package does not do this, because it has
+# to be able to unpack over the top of an existing installation on all
+# platforms, and each platform has a different top-level directory name.
+if(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+    set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY FALSE)
+else()
+    set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY TRUE)
+endif()
 # Compress package in parallel.
 set(CPACK_THREADS 0 CACHE STRING "")
 
@@ -399,6 +406,10 @@ endif()
 add_subdirectory(
     ${llvmproject_SOURCE_DIR}/llvm llvm
 )
+
+if(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+    set(CPACK_PACKAGE_FILE_NAME ${CMAKE_PROJECT_NAME}-newlib-overlay-${CMAKE_PROJECT_VERSION})
+endif()
 
 # Including CPack again after llvm CMakeLists.txt included it
 # resets CPACK_PACKAGE_VERSION to the default MAJOR.MINOR.PATCH format.
