@@ -1,7 +1,7 @@
-From 51276c6bbfa92054ec01890d67bb797464d9563c Mon Sep 17 00:00:00 2001
+From 19e5432873cbd524ec878c369429ed1893b39ff8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Tue, 10 Oct 2023 15:43:59 +0200
-Subject: [PATCH 1/3] Fix llvm/test/CodeGen/ARM/build-attributes.ll test.
+Subject: [PATCH 1/4] Fix llvm/test/CodeGen/ARM/build-attributes.ll test.
 
 The test llvm/test/CodeGen/ARM/build-attributes.ll
 needs updating to incorporate the change
@@ -60,10 +60,10 @@ index 1416559414f8..6a9533e6dd83 100644
    /// print summary of the Multilib
    void print(raw_ostream &OS) const;
 diff --git a/clang/lib/Driver/Multilib.cpp b/clang/lib/Driver/Multilib.cpp
-index a37dffc8a6f1..33b5db72c0b9 100644
+index 48a494d9fa38..085ccee7b257 100644
 --- a/clang/lib/Driver/Multilib.cpp
 +++ b/clang/lib/Driver/Multilib.cpp
-@@ -30,9 +30,10 @@ using namespace driver;
+@@ -29,9 +29,10 @@ using namespace driver;
  using namespace llvm::sys;
  
  Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
@@ -76,7 +76,7 @@ index a37dffc8a6f1..33b5db72c0b9 100644
    assert(GCCSuffix.empty() ||
           (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
    assert(OSSuffix.empty() ||
-@@ -97,13 +98,39 @@ bool MultilibSet::select(const Multilib::flags_list &Flags,
+@@ -96,13 +97,39 @@ bool MultilibSet::select(const Multilib::flags_list &Flags,
                           llvm::SmallVector<Multilib> &Selected) const {
    llvm::StringSet<> FlagSet(expandFlags(Flags));
    Selected.clear();
@@ -123,7 +123,7 @@ index a37dffc8a6f1..33b5db72c0b9 100644
    return !Selected.empty();
  }
  
-@@ -140,6 +167,7 @@ static const VersionTuple MultilibVersionCurrent(1, 0);
+@@ -138,6 +165,7 @@ static const VersionTuple MultilibVersionCurrent(1, 0);
  struct MultilibSerialization {
    std::string Dir;
    std::vector<std::string> Flags;
@@ -131,7 +131,7 @@ index a37dffc8a6f1..33b5db72c0b9 100644
  };
  
  struct MultilibSetSerialization {
-@@ -154,6 +182,7 @@ template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
+@@ -152,6 +180,7 @@ template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
    static void mapping(llvm::yaml::IO &io, MultilibSerialization &V) {
      io.mapRequired("Dir", V.Dir);
      io.mapRequired("Flags", V.Flags);
@@ -139,7 +139,7 @@ index a37dffc8a6f1..33b5db72c0b9 100644
    }
    static std::string validate(IO &io, MultilibSerialization &V) {
      if (StringRef(V.Dir).starts_with("/"))
-@@ -216,7 +245,7 @@ MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
+@@ -214,7 +243,7 @@ MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
      std::string Dir;
      if (M.Dir != ".")
        Dir = "/" + M.Dir;

@@ -1,7 +1,7 @@
-From a269f6727984dfddf1df528014d86b6d006bffab Mon Sep 17 00:00:00 2001
+From 3824a987c3718fc1098138ae631c7ee399314ddf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Tue, 10 Oct 2023 15:45:15 +0200
-Subject: [PATCH 2/3] [libc++] Add check for building with picolibc
+Subject: [PATCH 2/4] Add check for building with picolibc
 
 This is intended to identify changes that would fail to build on
 embedded platforms e.g. D152382
@@ -189,7 +189,7 @@ index 000000000000..cb72e5da4838
 +    lit_config
 +)
 diff --git a/libcxx/test/libcxx/clang_modules_include.gen.py b/libcxx/test/libcxx/clang_modules_include.gen.py
-index b4c5c79a47f6..82a114507218 100644
+index 04c8e03affee..26ef2077449b 100644
 --- a/libcxx/test/libcxx/clang_modules_include.gen.py
 +++ b/libcxx/test/libcxx/clang_modules_include.gen.py
 @@ -39,6 +39,9 @@ for header in public_headers:
@@ -257,7 +257,7 @@ index e2aa8fc47348..99ca86cfd830 100644
  
  #define __acquire SYSTEM_RESERVED_NAME
 diff --git a/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp
-index 058db2dc3ab0..a030c63f07fa 100644
+index 2695ff94da30..bb88f551bd06 100644
 --- a/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp
 +++ b/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp
 @@ -6,6 +6,8 @@
@@ -660,7 +660,7 @@ index 80e9d04a769f..199bdec66878 100644
  
  // time_point
 diff --git a/libcxx/utils/ci/BOT_OWNERS.txt b/libcxx/utils/ci/BOT_OWNERS.txt
-index f6eb91cdac4b..4adb45ca02e2 100644
+index 721b19e52d8b..de575c591383 100644
 --- a/libcxx/utils/ci/BOT_OWNERS.txt
 +++ b/libcxx/utils/ci/BOT_OWNERS.txt
 @@ -10,7 +10,7 @@ least the (N), (E) and (D) fields.
@@ -788,10 +788,10 @@ index 000000000000..acdcabe96e96
 +
 +"${venv_dir}/bin/meson" install -C "${picolibc_build_dir}"
 diff --git a/libcxx/utils/ci/buildkite-pipeline.yml b/libcxx/utils/ci/buildkite-pipeline.yml
-index ebfb35eee91e..01ed5f4b78d2 100644
+index 460c5a8c4301..a0d40e0a5683 100644
 --- a/libcxx/utils/ci/buildkite-pipeline.yml
 +++ b/libcxx/utils/ci/buildkite-pipeline.yml
-@@ -1078,6 +1078,20 @@ steps:
+@@ -1059,6 +1059,20 @@ steps:
              limit: 2
        timeout_in_minutes: 120
  
@@ -813,10 +813,10 @@ index ebfb35eee91e..01ed5f4b78d2 100644
      steps:
      - label: "AIX (32-bit)"
 diff --git a/libcxx/utils/ci/run-buildbot b/libcxx/utils/ci/run-buildbot
-index a71318123db3..a95911cd9d29 100755
+index 69ad58ed079e..ea23b9272053 100755
 --- a/libcxx/utils/ci/run-buildbot
 +++ b/libcxx/utils/ci/run-buildbot
-@@ -616,6 +616,41 @@ armv7-no-exceptions)
+@@ -628,6 +628,41 @@ armv7-no-exceptions)
      generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
      check-runtimes
  ;;
@@ -859,10 +859,10 @@ index a71318123db3..a95911cd9d29 100755
      clean
      # TODO: Currently, building with the experimental library breaks running
 diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
-index 3779af1094d5..f6ac01c8468d 100644
+index 11f60a962054..fe1b6b63174d 100644
 --- a/libcxx/utils/libcxx/test/features.py
 +++ b/libcxx/utils/libcxx/test/features.py
-@@ -94,6 +94,17 @@ DEFAULT_FEATURES = [
+@@ -110,6 +110,17 @@ DEFAULT_FEATURES = [
          name="verify-support",
          when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
      ),
@@ -880,7 +880,7 @@ index 3779af1094d5..f6ac01c8468d 100644
      Feature(
          name="non-lockfree-atomics",
          when=lambda cfg: sourceBuilds(
-@@ -199,7 +210,8 @@ DEFAULT_FEATURES = [
+@@ -215,7 +226,8 @@ DEFAULT_FEATURES = [
              #include <unistd.h>
              #include <sys/wait.h>
              int main(int, char**) {
@@ -936,7 +936,7 @@ index 000000000000..d022e84fb19e
 +    lit_config
 +)
 diff --git a/libcxxabi/test/test_demangle.pass.cpp b/libcxxabi/test/test_demangle.pass.cpp
-index df7bedc73c28..ee35a4171ef0 100644
+index 77741a952850..0bc7d0db3db2 100644
 --- a/libcxxabi/test/test_demangle.pass.cpp
 +++ b/libcxxabi/test/test_demangle.pass.cpp
 @@ -9,6 +9,9 @@
