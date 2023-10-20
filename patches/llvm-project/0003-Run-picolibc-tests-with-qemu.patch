@@ -1,7 +1,7 @@
-From ed4600a83ab1ad56673706299f6a28dad8bf1d24 Mon Sep 17 00:00:00 2001
+From 23a295663be0eb21264dafe501164347e7f746ed Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Tue, 10 Oct 2023 15:45:54 +0200
-Subject: [PATCH 3/3] Run picolibc tests with qemu
+Subject: [PATCH 3/4] Run picolibc tests with qemu
 
 ---
  libcxx/cmake/caches/Armv7M-picolibc.cmake     |  1 +
@@ -178,7 +178,7 @@ index 9a4b437ab109..da5563f87df4 100644
  // <iostream>
  
 diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp
-index b39cd57ab212..65c21658f91d 100644
+index 28ea650e58b1..ad6cc192e2f4 100644
 --- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp
 +++ b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cin.sh.cpp
 @@ -8,6 +8,7 @@
@@ -187,8 +187,8 @@ index b39cd57ab212..65c21658f91d 100644
  // UNSUPPORTED: LIBCXX-AIX-FIXME
 +// XFAIL: LIBCXX-PICOLIBC-FIXME
  
- // <iostream>
- 
+ // This test hangs on Android devices that lack shell_v2, which was added in
+ // Android N (API 24).
 diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
 index 783be3a52e94..9bedd67e816e 100644
 --- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/clog.sh.cpp
@@ -253,7 +253,7 @@ index 8fe8080bde98..50c60180ce0d 100644
  
  // template <> class ctype<char>
 diff --git a/libcxx/test/std/localization/locale.categories/category.numeric/locale.nm.put/facet.num.put.members/put_long_double.pass.cpp b/libcxx/test/std/localization/locale.categories/category.numeric/locale.nm.put/facet.num.put.members/put_long_double.pass.cpp
-index 3327a35a6045..2a0c2a49ec51 100644
+index 8bb9ff1c202a..8637a933008f 100644
 --- a/libcxx/test/std/localization/locale.categories/category.numeric/locale.nm.put/facet.num.put.members/put_long_double.pass.cpp
 +++ b/libcxx/test/std/localization/locale.categories/category.numeric/locale.nm.put/facet.num.put.members/put_long_double.pass.cpp
 @@ -13,6 +13,7 @@
@@ -262,8 +262,8 @@ index 3327a35a6045..2a0c2a49ec51 100644
  // XFAIL: win32-broken-printf-g-precision
 +// XFAIL: LIBCXX-PICOLIBC-FIXME
  
- #include <locale>
- #include <ios>
+ // Needs more investigation, but this is probably failing on Android M (API 23)
+ // and up because the printf formatting of NAN changed.
 diff --git a/libcxx/test/std/numerics/rand/rand.dist/rand.dist.bern/rand.dist.bern.bin/eval.PR44847.pass.cpp b/libcxx/test/std/numerics/rand/rand.dist/rand.dist.bern/rand.dist.bern.bin/eval.PR44847.pass.cpp
 index 9213d2bac5a6..572a59b7a192 100644
 --- a/libcxx/test/std/numerics/rand/rand.dist/rand.dist.bern/rand.dist.bern.bin/eval.PR44847.pass.cpp
