@@ -1,0 +1,80 @@
+From 601ac4ef364acddad7f4a041cc89506faf1c2e37 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Tue, 24 Oct 2023 12:12:27 +0200
+Subject: [libc++] tests with picolibc: add has-compolete-fenv feature
+
+---
+ .../depr.c.headers/fenv_h.compile.pass.cpp    |  2 +-
+ .../numerics/cfenv/cfenv.syn/cfenv.pass.cpp   |  2 +-
+ libcxx/utils/libcxx/test/features.py          | 29 +++++++++++++++++++
+ 3 files changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/libcxx/test/std/depr/depr.c.headers/fenv_h.compile.pass.cpp b/libcxx/test/std/depr/depr.c.headers/fenv_h.compile.pass.cpp
+index dcc97573d607..a896f5e03c3a 100644
+--- a/libcxx/test/std/depr/depr.c.headers/fenv_h.compile.pass.cpp
++++ b/libcxx/test/std/depr/depr.c.headers/fenv_h.compile.pass.cpp
+@@ -7,7 +7,7 @@
+ //===----------------------------------------------------------------------===//
+ 
+ // Floating point exceptions are required for the FE_... macros to be defined.
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
++// REQUIRES: has-compolete-fenv
+ 
+ // <fenv.h>
+ 
+diff --git a/libcxx/test/std/numerics/cfenv/cfenv.syn/cfenv.pass.cpp b/libcxx/test/std/numerics/cfenv/cfenv.syn/cfenv.pass.cpp
+index 7b3b490eba27..5a39003d00d0 100644
+--- a/libcxx/test/std/numerics/cfenv/cfenv.syn/cfenv.pass.cpp
++++ b/libcxx/test/std/numerics/cfenv/cfenv.syn/cfenv.pass.cpp
+@@ -7,7 +7,7 @@
+ //===----------------------------------------------------------------------===//
+ 
+ // Floating point exceptions are required for the FE_... macros to be defined.
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
++// REQUIRES: has-compolete-fenv
+ 
+ // <cfenv>
+ 
+diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
+index 17ee5839d08c..9426e49351c8 100644
+--- a/libcxx/utils/libcxx/test/features.py
++++ b/libcxx/utils/libcxx/test/features.py
+@@ -146,6 +146,35 @@ DEFAULT_FEATURES = [
+           """,
+         ),
+     ),
++    # Some platform do not provide complete floating point environment.
++    Feature(
++        name="has-compolete-fenv",
++        when=lambda cfg: sourceBuilds(
++            cfg,
++            """
++            #include <fenv.h>
++
++            #if !( \
++                defined FE_DIVBYZERO \
++                && defined FE_INEXACT \
++                && defined FE_INVALID \
++                && defined FE_INEXACT \
++                && defined FE_OVERFLOW \
++                && defined FE_UNDERFLOW \
++                && defined FE_ALL_EXCEPT \
++                && defined FE_DOWNWARD \
++                && defined FE_TONEAREST \
++                && defined FE_TOWARDZERO \
++                && defined FE_UPWARD \
++                && defined FE_DFL_ENV \
++                && defined FE_INEXACT)
++            #error Floating point environment not complete
++            #endif
++
++            int main(int, char**) { return 0; }
++          """,
++        ),
++    ),
+     # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.20348.0):
+     # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
+     Feature(
+-- 
+2.34.1
+

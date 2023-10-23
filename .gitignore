@@ -10,3 +10,4 @@ __pycache__
 
 # IDEs
 .vscode
+compile_commands.json

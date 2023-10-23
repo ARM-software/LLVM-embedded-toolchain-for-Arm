@@ -36,6 +36,7 @@ config.substitutions.append(('%{exec}',
 
 # Long tests are prohibitively slow when run via emulation.
 config.long_tests = False
+config.large_tests = False
 
 # LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
 # initial picolibc failures until they can be properly diagnosed

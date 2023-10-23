@@ -1,7 +1,7 @@
-From 002792f42b87722f26aca0377e2cd80fca39cc0e Mon Sep 17 00:00:00 2001
+From 4abb77f295cedbf19aca0874c54be29961c0a2de Mon Sep 17 00:00:00 2001
 From: Simi Pallipurath <simi.pallipurath@arm.com>
 Date: Tue, 21 Nov 2023 16:20:43 +0000
-Subject: [PATCH 1/5] Add ExclusiveGroup feature to multilib.yaml.
+Subject: Add ExclusiveGroup feature to multilib.yaml.
 
 ---
  clang/include/clang/Driver/Multilib.h         |  16 ++-

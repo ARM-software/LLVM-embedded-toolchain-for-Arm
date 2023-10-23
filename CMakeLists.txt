@@ -45,7 +45,7 @@
 # If you prefer you can check out and patch the repos manually and use those:
 #   mkdir repos
 #   git -C repos clone https://github.com/llvm/llvm-project.git
-#   git -C repos/llvm-project am ../../patches/llvm-project/*.patch
+#   git -C repos/llvm-project am -k ../../patches/llvm-project/*.patch
 #   git -C repos clone https://github.com/picolibc/picolibc.git
 #   git -C repos/picolibc apply ../../patches/picolibc.patch
 #   mkdir build
@@ -254,20 +254,31 @@ endfunction()
 read_repo_version(llvmproject llvm-project)
 read_repo_version(${LLVM_TOOLCHAIN_C_LIBRARY} ${LLVM_TOOLCHAIN_C_LIBRARY})
 
+# The patches are generated from custom branch, with followin command:
+#   git format-patch -k origin/main
 set(
     llvm_project_patches
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-Add-ExclusiveGroup-feature-to-multilib.yam.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-Add-ExclusiveGroup-feature-to-multilib.yaml.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0002-Add-check-for-building-with-picolibc.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0003-Run-picolibc-tests-with-qemu.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-xfail-two-remaining-libcxx-with-picolibc-tests.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-disable-large-tests.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0006-Disable-failing-compiler-rt-test.patch)
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0006-Disable-failing-compiler-rt-test.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0007-libc-tests-with-picolibc-handle-stdin.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0008-libc-tests-with-picolibc-add-has-compolete-fenv-feat.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0009-libc-tests-with-picolibc-Fix-expected-error-message.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0010-libc-tests-with-picolibc-Fix-iterator-diff_type-to-s.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0011-libc-tests-with-picolibc-mark-sort-test-as-long-one.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0012-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0013-libc-tests-with-picolibc-mark-two-more-large-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0014-libc-tests-with-picolibc-xfail-test-missing-rt-libra.patch
+)
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
     GIT_TAG "${llvmproject_TAG}"
     GIT_SHALLOW "${llvmproject_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git am --ignore-whitespace --3way ${llvm_project_patches}
+    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git am -k --ignore-whitespace --3way ${llvm_project_patches}
     # Add the llvm subdirectory later to ensure that
     # LLVMEmbeddedToolchainForArm is the first project declared.
     # Otherwise CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT

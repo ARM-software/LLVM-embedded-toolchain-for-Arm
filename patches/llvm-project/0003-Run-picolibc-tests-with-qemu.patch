@@ -1,7 +1,7 @@
-From e007ef8e327bc72e379d8d2d529e492e3d018747 Mon Sep 17 00:00:00 2001
+From 864ff32efb746704641fb1a7066fa1f00c512804 Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 12:23:37 +0100
-Subject: [PATCH 3/5] Run picolibc tests with qemu
+Subject: Run picolibc tests with qemu
 
 Differential Revision: https://reviews.llvm.org/D155521
 ---
