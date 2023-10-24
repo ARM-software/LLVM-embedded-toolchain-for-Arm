@@ -1,4 +1,4 @@
-From 3824a987c3718fc1098138ae631c7ee399314ddf Mon Sep 17 00:00:00 2001
+From 6b1eee4461f4769b67afa17cb261cc69d0073eb5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Tue, 10 Oct 2023 15:45:15 +0200
 Subject: [PATCH 2/4] Add check for building with picolibc
@@ -7,7 +7,7 @@ This is intended to identify changes that would fail to build on
 embedded platforms e.g. D152382
 ---
  libcxx/cmake/caches/Armv7M-picolibc.cmake     |  38 ++++++
- libcxx/docs/index.rst                         |  19 +--
+ libcxx/docs/index.rst                         |  21 ++--
  libcxx/test/configs/armv7m-libc++.cfg.in      |  48 ++++++++
  .../test/libcxx/clang_modules_include.gen.py  |   3 +
  libcxx/test/libcxx/selftest/dsl/dsl.sh.py     |   3 +
@@ -53,7 +53,7 @@ embedded platforms e.g. D152382
  libcxxabi/test/test_demangle.pass.cpp         |   3 +
  .../test/test_exception_storage.pass.cpp      |   3 +
  .../test/configs/armv7m-libunwind.cfg.in      |  32 +++++
- 47 files changed, 430 insertions(+), 12 deletions(-)
+ 47 files changed, 431 insertions(+), 13 deletions(-)
  create mode 100644 libcxx/cmake/caches/Armv7M-picolibc.cmake
  create mode 100644 libcxx/test/configs/armv7m-libc++.cfg.in
  create mode 100755 libcxx/utils/ci/build-picolibc.sh
@@ -105,10 +105,10 @@ index 000000000000..6ed1866a5084
 +set(LIBUNWIND_REMEMBER_HEAP_ALLOC ON CACHE BOOL "")
 +set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
 diff --git a/libcxx/docs/index.rst b/libcxx/docs/index.rst
-index 9c2a83bde3c0..4258b423eb93 100644
+index 72c80d7dc954..4a7ca6d17274 100644
 --- a/libcxx/docs/index.rst
 +++ b/libcxx/docs/index.rst
-@@ -124,15 +124,16 @@ GCC          12              In C++11 or later only     latest stable release pe
+@@ -124,16 +124,17 @@ GCC          12              In C++11 or later only     latest stable release pe
  
  Libc++ also supports common platforms and architectures:
  
@@ -118,6 +118,7 @@ index 9c2a83bde3c0..4258b423eb93 100644
 -macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.13+
 -FreeBSD 12+     i386, x86_64, arm
 -Linux           i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
+-Android 5.0+    i386, x86_64, arm, arm64
 -Windows         i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
 -AIX 7.2TL5+     powerpc, powerpc64
 -=============== ========================= ============================
@@ -127,6 +128,7 @@ index 9c2a83bde3c0..4258b423eb93 100644
 +macOS 10.9+           i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.13+
 +FreeBSD 12+           i386, x86_64, arm
 +Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
++Android 5.0+          i386, x86_64, arm, arm64
 +Windows               i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
 +AIX 7.2TL5+           powerpc, powerpc64
 +Embedded (picolibc)   arm                       Support for building with picolibc is currently work-in-progress
@@ -788,7 +790,7 @@ index 000000000000..acdcabe96e96
 +
 +"${venv_dir}/bin/meson" install -C "${picolibc_build_dir}"
 diff --git a/libcxx/utils/ci/buildkite-pipeline.yml b/libcxx/utils/ci/buildkite-pipeline.yml
-index 460c5a8c4301..a0d40e0a5683 100644
+index f195331eac24..134fd5005f72 100644
 --- a/libcxx/utils/ci/buildkite-pipeline.yml
 +++ b/libcxx/utils/ci/buildkite-pipeline.yml
 @@ -1059,6 +1059,20 @@ steps:
@@ -813,7 +815,7 @@ index 460c5a8c4301..a0d40e0a5683 100644
      steps:
      - label: "AIX (32-bit)"
 diff --git a/libcxx/utils/ci/run-buildbot b/libcxx/utils/ci/run-buildbot
-index 69ad58ed079e..ea23b9272053 100755
+index be96bb65ef94..0a34081db705 100755
 --- a/libcxx/utils/ci/run-buildbot
 +++ b/libcxx/utils/ci/run-buildbot
 @@ -628,6 +628,41 @@ armv7-no-exceptions)

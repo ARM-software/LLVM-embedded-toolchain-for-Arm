@@ -1,4 +1,4 @@
-From 23a295663be0eb21264dafe501164347e7f746ed Mon Sep 17 00:00:00 2001
+From 0590b87b645ebb153c244c26428a4d4b50f62e7c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Tue, 10 Oct 2023 15:45:54 +0200
 Subject: [PATCH 3/4] Run picolibc tests with qemu
@@ -40,11 +40,11 @@ index 6ed1866a5084..e308ac31d1d1 100644
  set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
 +find_program(QEMU_SYSTEM_ARM qemu-system-arm)
 diff --git a/libcxx/docs/index.rst b/libcxx/docs/index.rst
-index 4258b423eb93..2e91265655a4 100644
+index 4a7ca6d17274..0604878ec3f8 100644
 --- a/libcxx/docs/index.rst
 +++ b/libcxx/docs/index.rst
-@@ -132,7 +132,7 @@ FreeBSD 12+           i386, x86_64, arm
- Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
+@@ -133,7 +133,7 @@ Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no
+ Android 5.0+          i386, x86_64, arm, arm64
  Windows               i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
  AIX 7.2TL5+           powerpc, powerpc64
 -Embedded (picolibc)   arm                       Support for building with picolibc is currently work-in-progress
