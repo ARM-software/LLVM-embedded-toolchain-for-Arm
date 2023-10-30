@@ -38,6 +38,34 @@ index 5a70ea5bd570..92dfbe8eb1ab 100644
  #include <cstdlib>
  
  void f() {}
+diff --git a/libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp b/libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp
+index 2493f6a643a6..dae7d8640622 100644
+--- a/libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp
++++ b/libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp
+@@ -10,6 +10,9 @@
+ // UNSUPPORTED: no-exceptions
+ // UNSUPPORTED: c++03
+
++// "xfail" due to bad_alloc exception
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // template <class BidirectionalIterator, class Allocator, class charT, class traits>
+ //     bool
+ //     regex_match(BidirectionalIterator first, BidirectionalIterator last,
+diff --git a/libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp b/libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp
+index 64a6a135adda..db73d36a2891 100644
+--- a/libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp
++++ b/libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp
+@@ -10,6 +10,9 @@
+ // UNSUPPORTED: no-exceptions
+ // UNSUPPORTED: c++03
+
++// "xfail" due to bad_alloc exception
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // template <class BidirectionalIterator, class Allocator, class charT, class traits>
+ //     bool
+ //     regex_search(BidirectionalIterator first, BidirectionalIterator last,
 -- 
 2.34.1
 

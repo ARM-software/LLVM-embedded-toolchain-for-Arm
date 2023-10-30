@@ -933,6 +933,18 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
 endfunction()
 
 function(
+    extend_with_exception_and_rtti
+    extended_name
+    base_name
+    enable_exceptions_and_rtti
+)
+    if(${enable_exceptions_and_rtti})
+        set(base_name ${base_name}_exceptions_rtti)
+    endif()
+    set(${extended_name} ${base_name} PARENT_SCOPE)
+endfunction()
+
+function(
     add_libcxx_libcxxabi_libunwind
     directory
     variant
@@ -941,14 +953,20 @@ function(
     test_executor
     libc_target
     extra_cmake_options
+    enable_exceptions_and_rtti
 )
     get_runtimes_flags("${directory}" "${flags}")
+    extend_with_exception_and_rtti(target_name "libcxx_libcxxabi_libunwind_${variant}" ${enable_exceptions_and_rtti})
+    extend_with_exception_and_rtti(prefix "libcxx_libcxxabi_libunwind/${variant}" ${enable_exceptions_and_rtti})
+    if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
+        list(APPEND extra_cmake_options -DLIBCXXABI_ENABLE_EXCEPTIONS=${enable_exceptions_and_rtti} -DLIBCXX_ENABLE_EXCEPTIONS=${enable_exceptions_and_rtti} -DLIBCXX_ENABLE_RTTI=${enable_exceptions_and_rtti} -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${enable_exceptions_and_rtti})
+    endif()
 
     ExternalProject_Add(
-        libcxx_libcxxabi_libunwind_${variant}
+        ${target_name}
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/runtimes
         INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
-        PREFIX libcxx_libcxxabi_libunwind/${variant}
+        PREFIX ${prefix}
         DEPENDS ${lib_tool_dependencies} compiler_rt_${variant} ${libc_target}
         CMAKE_ARGS
         -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
@@ -1007,7 +1025,7 @@ function(
 
     add_dependencies(
         llvm-toolchain-runtimes
-        libcxx_libcxxabi_libunwind_${variant}
+        ${target_name}
     )
 endfunction()
 
@@ -1032,26 +1050,28 @@ function(add_compiler_rt_tests variant)
     add_dependencies(check-llvm-toolchain-runtimes-${variant} check-compiler-rt-${variant})
 endfunction()
 
-function(add_libcxx_libcxxabi_libunwind_tests variant)
+function(add_libcxx_libcxxabi_libunwind_tests variant enable_exceptions_and_rtti)
+    extend_with_exception_and_rtti(target_name "libcxx_libcxxabi_libunwind_${variant}" ${enable_exceptions_and_rtti})
+    extend_with_exception_and_rtti(variant_with_extensions "${variant}" ${enable_exceptions_and_rtti})
     foreach(check_target check-cxxabi check-unwind check-cxx)
         ExternalProject_Add_Step(
-            libcxx_libcxxabi_libunwind_${variant}
+            ${target_name}
             ${check_target}
             COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target ${check_target}
             USES_TERMINAL TRUE
             EXCLUDE_FROM_MAIN TRUE
             ALWAYS TRUE
         )
-        ExternalProject_Add_StepTargets(libcxx_libcxxabi_libunwind_${variant} ${check_target})
+        ExternalProject_Add_StepTargets(${target_name} ${check_target})
         ExternalProject_Add_StepDependencies(
-            libcxx_libcxxabi_libunwind_${variant}
+            ${target_name}
             ${check_target}
-            libcxx_libcxxabi_libunwind_${variant}-build
+            ${target_name}-build
         )
-        add_custom_target(${check_target}-${variant})
-        add_dependencies(${check_target}-${variant} libcxx_libcxxabi_libunwind_${variant}-${check_target})
-        add_dependencies(${check_target} libcxx_libcxxabi_libunwind_${variant}-${check_target})
-        add_dependencies(check-llvm-toolchain-runtimes-${variant} ${check_target}-${variant})
+        add_custom_target(${check_target}-${variant_with_extensions})
+        add_dependencies(${check_target}-${variant_with_extensions} ${target_name}-${check_target})
+        add_dependencies(${check_target} ${target_name}-${check_target})
+        add_dependencies(check-llvm-toolchain-runtimes-${variant} ${check_target}-${variant_with_extensions})
     endforeach()
 endfunction()
 
@@ -1169,14 +1189,30 @@ function(add_library_variant target_arch)
             "${lit_test_executor}"
             "${LLVM_TOOLCHAIN_C_LIBRARY}_${variant}-install"
             "${${LLVM_TOOLCHAIN_C_LIBRARY}_specific_runtimes_options}"
+            OFF
         )
+        if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
+            add_libcxx_libcxxabi_libunwind(
+                "${directory}"
+                "${variant}"
+                "${target_triple}"
+                "${VARIANT_COMPILE_FLAGS}"
+                "${lit_test_executor}"
+                "${LLVM_TOOLCHAIN_C_LIBRARY}_${variant}-install"
+                "${${LLVM_TOOLCHAIN_C_LIBRARY}_specific_runtimes_options}"
+                ON
+            )
+        endif()
         if(VARIANT_COMPILE_FLAGS MATCHES "-march=armv8")
             message("C++ runtime libraries tests disabled for ${variant}")
         else()
             add_custom_target(check-llvm-toolchain-runtimes-${variant})
             add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
             add_compiler_rt_tests("${variant}")
-            add_libcxx_libcxxabi_libunwind_tests("${variant}")
+            add_libcxx_libcxxabi_libunwind_tests("${variant}" OFF)
+            if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
+                add_libcxx_libcxxabi_libunwind_tests("${variant}" ON)
+            endif()
         endif()
     endif()
 
