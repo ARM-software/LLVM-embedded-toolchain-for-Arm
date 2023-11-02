@@ -1,8 +1,9 @@
-From 0590b87b645ebb153c244c26428a4d4b50f62e7c Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
-Date: Tue, 10 Oct 2023 15:45:54 +0200
+From 30242238136c5ebb590846dcd7fb0078adec17a2 Mon Sep 17 00:00:00 2001
+From: Michael Platings <michael.platings@arm.com>
+Date: Fri, 29 Sep 2023 12:23:37 +0100
 Subject: [PATCH 3/4] Run picolibc tests with qemu
 
+Differential Revision: https://reviews.llvm.org/D155521
 ---
  libcxx/cmake/caches/Armv7M-picolibc.cmake     |  1 +
  libcxx/docs/index.rst                         |  2 +-
@@ -40,7 +41,7 @@ index 6ed1866a5084..e308ac31d1d1 100644
  set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
 +find_program(QEMU_SYSTEM_ARM qemu-system-arm)
 diff --git a/libcxx/docs/index.rst b/libcxx/docs/index.rst
-index 4a7ca6d17274..0604878ec3f8 100644
+index 7bb5512beb1f..e8b4a95dbcff 100644
 --- a/libcxx/docs/index.rst
 +++ b/libcxx/docs/index.rst
 @@ -133,7 +133,7 @@ Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no
@@ -53,7 +54,7 @@ index 4a7ca6d17274..0604878ec3f8 100644
  
  Generally speaking, libc++ should work on any platform that provides a fairly complete
 diff --git a/libcxx/test/configs/armv7m-libc++.cfg.in b/libcxx/test/configs/armv7m-libc++.cfg.in
-index cb72e5da4838..88241fa06ded 100644
+index 424d473ac7ca..d4555ab58fa0 100644
 --- a/libcxx/test/configs/armv7m-libc++.cfg.in
 +++ b/libcxx/test/configs/armv7m-libc++.cfg.in
 @@ -27,9 +27,17 @@ config.substitutions.append(('%{link_flags}',
@@ -72,9 +73,9 @@ index cb72e5da4838..88241fa06ded 100644
 +# Long tests are prohibitively slow when run via emulation.
 +config.long_tests = False
 +
- # LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
- # initial picolibc failures until they can be properly diagnosed
- # and fixed. This allows easier detection of new test failures
+ import os, site
+ site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+ import libcxx.test.params, libcxx.test.config
 diff --git a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
 index c543898c083b..012759436d89 100644
 --- a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py

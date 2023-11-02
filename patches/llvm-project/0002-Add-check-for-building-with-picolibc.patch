@@ -1,14 +1,18 @@
-From 6b1eee4461f4769b67afa17cb261cc69d0073eb5 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
-Date: Tue, 10 Oct 2023 15:45:15 +0200
+From 05ba37d8fe0119759eb0d1c72fe82e3641037bc4 Mon Sep 17 00:00:00 2001
+From: Michael Platings <michael.platings@arm.com>
+Date: Fri, 29 Sep 2023 09:35:52 +0100
 Subject: [PATCH 2/4] Add check for building with picolibc
 
 This is intended to identify changes that would fail to build on
 embedded platforms e.g. D152382
+
+Reviewed By: philnik
+
+Differential Revision: https://reviews.llvm.org/D154246
 ---
  libcxx/cmake/caches/Armv7M-picolibc.cmake     |  38 ++++++
  libcxx/docs/index.rst                         |  21 ++--
- libcxx/test/configs/armv7m-libc++.cfg.in      |  48 ++++++++
+ libcxx/test/configs/armv7m-libc++.cfg.in      |  41 +++++++
  .../test/libcxx/clang_modules_include.gen.py  |   3 +
  libcxx/test/libcxx/selftest/dsl/dsl.sh.py     |   3 +
  .../selftest/pass.cpp/run-error.pass.cpp      |   1 +
@@ -29,6 +33,7 @@ embedded platforms e.g. D152382
  .../depr.c.headers/fenv_h.compile.pass.cpp    |   3 +
  .../depr.c.headers/stdio_h.compile.pass.cpp   |   3 +
  .../depr.c.headers/uchar_h.compile.pass.cpp   |   3 +
+ .../reference_assignment.pass.cpp             |   3 +
  .../narrow.stream.objects/cerr.sh.cpp         |   2 +
  .../narrow.stream.objects/clog.sh.cpp         |   2 +
  .../narrow.stream.objects/cout.sh.cpp         |   2 +
@@ -48,12 +53,11 @@ embedded platforms e.g. D152382
  libcxx/utils/ci/build-picolibc.sh             | 109 ++++++++++++++++++
  libcxx/utils/ci/buildkite-pipeline.yml        |  14 +++
  libcxx/utils/ci/run-buildbot                  |  35 ++++++
- libcxx/utils/libcxx/test/features.py          |  14 ++-
+ libcxx/utils/libcxx/test/features.py          |  27 ++++-
  .../test/configs/armv7m-libc++abi.cfg.in      |  39 +++++++
  libcxxabi/test/test_demangle.pass.cpp         |   3 +
- .../test/test_exception_storage.pass.cpp      |   3 +
  .../test/configs/armv7m-libunwind.cfg.in      |  32 +++++
- 47 files changed, 431 insertions(+), 13 deletions(-)
+ 47 files changed, 437 insertions(+), 13 deletions(-)
  create mode 100644 libcxx/cmake/caches/Armv7M-picolibc.cmake
  create mode 100644 libcxx/test/configs/armv7m-libc++.cfg.in
  create mode 100755 libcxx/utils/ci/build-picolibc.sh
@@ -105,7 +109,7 @@ index 000000000000..6ed1866a5084
 +set(LIBUNWIND_REMEMBER_HEAP_ALLOC ON CACHE BOOL "")
 +set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
 diff --git a/libcxx/docs/index.rst b/libcxx/docs/index.rst
-index 72c80d7dc954..4a7ca6d17274 100644
+index c4199dc69d7c..7bb5512beb1f 100644
 --- a/libcxx/docs/index.rst
 +++ b/libcxx/docs/index.rst
 @@ -124,16 +124,17 @@ GCC          12              In C++11 or later only     latest stable release pe
@@ -115,7 +119,7 @@ index 72c80d7dc954..4a7ca6d17274 100644
 -=============== ========================= ============================
 -Target platform Target architecture       Notes
 -=============== ========================= ============================
--macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.13+
+-macOS 10.13+    i386, x86_64, arm64
 -FreeBSD 12+     i386, x86_64, arm
 -Linux           i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
 -Android 5.0+    i386, x86_64, arm, arm64
@@ -125,7 +129,7 @@ index 72c80d7dc954..4a7ca6d17274 100644
 +===================== ========================= ============================
 +Target platform       Target architecture       Notes
 +===================== ========================= ============================
-+macOS 10.9+           i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.13+
++macOS 10.13+          i386, x86_64, arm64
 +FreeBSD 12+           i386, x86_64, arm
 +Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
 +Android 5.0+          i386, x86_64, arm, arm64
@@ -138,10 +142,10 @@ index 72c80d7dc954..4a7ca6d17274 100644
  C Standard Library. It is also possible to turn off parts of the library for use on
 diff --git a/libcxx/test/configs/armv7m-libc++.cfg.in b/libcxx/test/configs/armv7m-libc++.cfg.in
 new file mode 100644
-index 000000000000..cb72e5da4838
+index 000000000000..424d473ac7ca
 --- /dev/null
 +++ b/libcxx/test/configs/armv7m-libc++.cfg.in
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,41 @@
 +lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 +
 +config.substitutions.append(('%{libc-linker-script}', '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'))
@@ -173,13 +177,6 @@ index 000000000000..cb72e5da4838
 +config.substitutions.append(('%{exec}',
 +    'true' # TODO use qemu-system-arm
 +))
-+
-+# LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
-+# initial picolibc failures until they can be properly diagnosed
-+# and fixed. This allows easier detection of new test failures
-+# and regressions. Note: New failures should not be suppressed
-+# using this feature.
-+config.available_features.add('LIBCXX-PICOLIBC-FIXME')
 +
 +import os, site
 +site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
@@ -456,6 +453,20 @@ index 2b6455466681..a1560c8ee585 100644
  // <uchar.h>
  
  #include <uchar.h>
+diff --git a/libcxx/test/std/experimental/simd/simd.reference/reference_assignment.pass.cpp b/libcxx/test/std/experimental/simd/simd.reference/reference_assignment.pass.cpp
+index bf84cc4b04e3..23409efc531a 100644
+--- a/libcxx/test/std/experimental/simd/simd.reference/reference_assignment.pass.cpp
++++ b/libcxx/test/std/experimental/simd/simd.reference/reference_assignment.pass.cpp
+@@ -11,6 +11,9 @@
+ // FIXME: Timeouts.
+ // UNSUPPORTED: sanitizer-new-delete
+ 
++// The machine emulated in tests does not have enough memory for code.
++// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++
+ // <experimental/simd>
+ //
+ // [simd.reference]
 diff --git a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp b/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
 index b9e274af7334..9a4b437ab109 100644
 --- a/libcxx/test/std/input.output/iostream.objects/narrow.stream.objects/cerr.sh.cpp
@@ -790,10 +801,10 @@ index 000000000000..acdcabe96e96
 +
 +"${venv_dir}/bin/meson" install -C "${picolibc_build_dir}"
 diff --git a/libcxx/utils/ci/buildkite-pipeline.yml b/libcxx/utils/ci/buildkite-pipeline.yml
-index f195331eac24..134fd5005f72 100644
+index 5a5bc39c5797..674167e2e0f7 100644
 --- a/libcxx/utils/ci/buildkite-pipeline.yml
 +++ b/libcxx/utils/ci/buildkite-pipeline.yml
-@@ -1059,6 +1059,20 @@ steps:
+@@ -1038,6 +1038,20 @@ steps:
              limit: 2
        timeout_in_minutes: 120
  
@@ -815,10 +826,10 @@ index f195331eac24..134fd5005f72 100644
      steps:
      - label: "AIX (32-bit)"
 diff --git a/libcxx/utils/ci/run-buildbot b/libcxx/utils/ci/run-buildbot
-index be96bb65ef94..0a34081db705 100755
+index ebb255243ba9..8d08435e8971 100755
 --- a/libcxx/utils/ci/run-buildbot
 +++ b/libcxx/utils/ci/run-buildbot
-@@ -628,6 +628,41 @@ armv7-no-exceptions)
+@@ -621,6 +621,41 @@ armv7-no-exceptions)
      generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
      check-runtimes
  ;;
@@ -861,7 +872,7 @@ index be96bb65ef94..0a34081db705 100755
      clean
      # TODO: Currently, building with the experimental library breaks running
 diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
-index 11f60a962054..fe1b6b63174d 100644
+index de7d3e140dd0..bf399bb5d8cb 100644
 --- a/libcxx/utils/libcxx/test/features.py
 +++ b/libcxx/utils/libcxx/test/features.py
 @@ -110,6 +110,17 @@ DEFAULT_FEATURES = [
@@ -892,6 +903,26 @@ index 11f60a962054..fe1b6b63174d 100644
              }
            """,
          ),
+@@ -418,6 +430,19 @@ DEFAULT_FEATURES += [
+         name="LIBCXX-FREEBSD-FIXME",
+         when=lambda cfg: "__FreeBSD__" in compilerMacros(cfg),
+     ),
++    Feature(
++        name="LIBCXX-PICOLIBC-FIXME",
++        when=lambda cfg: sourceBuilds(
++            cfg,
++            """
++            #include <string.h>
++            #ifndef __PICOLIBC__
++            #error not picolibc
++            #endif
++            int main(int, char**) { return 0; }
++          """,
++        ),
++    ),
+ ]
+ 
+ # Add features representing the build host platform name.
 diff --git a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
 new file mode 100644
 index 000000000000..d022e84fb19e
@@ -951,20 +982,6 @@ index 77741a952850..0bc7d0db3db2 100644
  // https://llvm.org/PR51407 was not fixed in some previously-released
  // demanglers, which causes them to run into the infinite loop.
  // UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-diff --git a/libcxxabi/test/test_exception_storage.pass.cpp b/libcxxabi/test/test_exception_storage.pass.cpp
-index 03393c402cd4..9dca5aa23360 100644
---- a/libcxxabi/test/test_exception_storage.pass.cpp
-+++ b/libcxxabi/test/test_exception_storage.pass.cpp
-@@ -8,6 +8,9 @@
- 
- // UNSUPPORTED: c++03
- 
-+// This test fails with picolibc since 42d55676833bacfdc6ec66785b74a7a51e6de474
-+// XFAIL: LIBCXX-PICOLIBC-FIXME
-+
- #include "assert_macros.h"
- #include "concat_macros.h"
- #include "../src/cxa_exception.h"
 diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
 new file mode 100644
 index 000000000000..5f15ccd3613c
