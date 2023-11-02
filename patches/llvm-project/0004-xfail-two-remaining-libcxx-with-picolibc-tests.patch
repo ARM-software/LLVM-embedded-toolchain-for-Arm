@@ -45,7 +45,7 @@ index 2493f6a643a6..dae7d8640622 100644
 @@ -10,6 +10,9 @@
  // UNSUPPORTED: no-exceptions
  // UNSUPPORTED: c++03
-
+ 
 +// "xfail" due to bad_alloc exception
 +// XFAIL: LIBCXX-PICOLIBC-FIXME
 +
@@ -59,7 +59,7 @@ index 64a6a135adda..db73d36a2891 100644
 @@ -10,6 +10,9 @@
  // UNSUPPORTED: no-exceptions
  // UNSUPPORTED: c++03
-
+ 
 +// "xfail" due to bad_alloc exception
 +// XFAIL: LIBCXX-PICOLIBC-FIXME
 +
