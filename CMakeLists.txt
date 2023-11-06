@@ -265,7 +265,7 @@ FetchContent_Declare(llvmproject
     GIT_TAG "${llvmproject_TAG}"
     GIT_SHALLOW "${llvmproject_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git am --3way ${llvm_project_patches}
+    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git am --ignore-whitespace --3way ${llvm_project_patches}
     # Add the llvm subdirectory later to ensure that
     # LLVMEmbeddedToolchainForArm is the first project declared.
     # Otherwise CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT
