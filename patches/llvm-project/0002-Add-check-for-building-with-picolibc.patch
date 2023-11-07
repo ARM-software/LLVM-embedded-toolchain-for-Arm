@@ -1,4 +1,4 @@
-From 05ba37d8fe0119759eb0d1c72fe82e3641037bc4 Mon Sep 17 00:00:00 2001
+From fb9f8352904429054104cd7670034858e06b84a7 Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 09:35:52 +0100
 Subject: [PATCH 2/4] Add check for building with picolibc
@@ -55,9 +55,8 @@ Differential Revision: https://reviews.llvm.org/D154246
  libcxx/utils/ci/run-buildbot                  |  35 ++++++
  libcxx/utils/libcxx/test/features.py          |  27 ++++-
  .../test/configs/armv7m-libc++abi.cfg.in      |  39 +++++++
- libcxxabi/test/test_demangle.pass.cpp         |   3 +
  .../test/configs/armv7m-libunwind.cfg.in      |  32 +++++
- 47 files changed, 437 insertions(+), 13 deletions(-)
+ 46 files changed, 434 insertions(+), 13 deletions(-)
  create mode 100644 libcxx/cmake/caches/Armv7M-picolibc.cmake
  create mode 100644 libcxx/test/configs/armv7m-libc++.cfg.in
  create mode 100755 libcxx/utils/ci/build-picolibc.sh
@@ -801,10 +800,10 @@ index 000000000000..acdcabe96e96
 +
 +"${venv_dir}/bin/meson" install -C "${picolibc_build_dir}"
 diff --git a/libcxx/utils/ci/buildkite-pipeline.yml b/libcxx/utils/ci/buildkite-pipeline.yml
-index 5a5bc39c5797..674167e2e0f7 100644
+index 41b3d27d48f7..bf244206a02b 100644
 --- a/libcxx/utils/ci/buildkite-pipeline.yml
 +++ b/libcxx/utils/ci/buildkite-pipeline.yml
-@@ -1038,6 +1038,20 @@ steps:
+@@ -1056,6 +1056,20 @@ steps:
              limit: 2
        timeout_in_minutes: 120
  
@@ -826,10 +825,10 @@ index 5a5bc39c5797..674167e2e0f7 100644
      steps:
      - label: "AIX (32-bit)"
 diff --git a/libcxx/utils/ci/run-buildbot b/libcxx/utils/ci/run-buildbot
-index ebb255243ba9..8d08435e8971 100755
+index c4834330d7e3..1bed14d3908a 100755
 --- a/libcxx/utils/ci/run-buildbot
 +++ b/libcxx/utils/ci/run-buildbot
-@@ -621,6 +621,41 @@ armv7-no-exceptions)
+@@ -627,6 +627,41 @@ armv7-no-exceptions)
      generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
      check-runtimes
  ;;
@@ -872,7 +871,7 @@ index ebb255243ba9..8d08435e8971 100755
      clean
      # TODO: Currently, building with the experimental library breaks running
 diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
-index de7d3e140dd0..bf399bb5d8cb 100644
+index 29822f555213..d2f4859e367f 100644
 --- a/libcxx/utils/libcxx/test/features.py
 +++ b/libcxx/utils/libcxx/test/features.py
 @@ -110,6 +110,17 @@ DEFAULT_FEATURES = [
@@ -893,7 +892,7 @@ index de7d3e140dd0..bf399bb5d8cb 100644
      Feature(
          name="non-lockfree-atomics",
          when=lambda cfg: sourceBuilds(
-@@ -215,7 +226,8 @@ DEFAULT_FEATURES = [
+@@ -197,7 +208,8 @@ DEFAULT_FEATURES = [
              #include <unistd.h>
              #include <sys/wait.h>
              int main(int, char**) {
@@ -903,7 +902,7 @@ index de7d3e140dd0..bf399bb5d8cb 100644
              }
            """,
          ),
-@@ -418,6 +430,19 @@ DEFAULT_FEATURES += [
+@@ -401,6 +413,19 @@ DEFAULT_FEATURES += [
          name="LIBCXX-FREEBSD-FIXME",
          when=lambda cfg: "__FreeBSD__" in compilerMacros(cfg),
      ),
@@ -968,20 +967,6 @@ index 000000000000..d022e84fb19e
 +    config,
 +    lit_config
 +)
-diff --git a/libcxxabi/test/test_demangle.pass.cpp b/libcxxabi/test/test_demangle.pass.cpp
-index 77741a952850..0bc7d0db3db2 100644
---- a/libcxxabi/test/test_demangle.pass.cpp
-+++ b/libcxxabi/test/test_demangle.pass.cpp
-@@ -9,6 +9,9 @@
- // The demangler does not pass all these tests with the system dylibs on macOS.
- // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
- 
-+// This test is too big for most embedded devices.
-+// XFAIL: LIBCXX-PICOLIBC-FIXME
-+
- // https://llvm.org/PR51407 was not fixed in some previously-released
- // demanglers, which causes them to run into the infinite loop.
- // UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
 diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
 new file mode 100644
 index 000000000000..5f15ccd3613c
