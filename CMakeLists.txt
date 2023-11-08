@@ -958,6 +958,7 @@ function(
     get_runtimes_flags("${directory}" "${flags}")
     extend_with_exception_and_rtti(target_name "libcxx_libcxxabi_libunwind_${variant}" ${enable_exceptions_and_rtti})
     extend_with_exception_and_rtti(prefix "libcxx_libcxxabi_libunwind/${variant}" ${enable_exceptions_and_rtti})
+    extend_with_exception_and_rtti(instal_dir "${LLVM_BINARY_DIR}/${directory}" ${enable_exceptions_and_rtti})
     if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
         list(APPEND extra_cmake_options -DLIBCXXABI_ENABLE_EXCEPTIONS=${enable_exceptions_and_rtti} -DLIBCXX_ENABLE_EXCEPTIONS=${enable_exceptions_and_rtti} -DLIBCXX_ENABLE_RTTI=${enable_exceptions_and_rtti} -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${enable_exceptions_and_rtti})
     endif()
@@ -965,7 +966,7 @@ function(
     ExternalProject_Add(
         ${target_name}
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/runtimes
-        INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
+        INSTALL_DIR ${instal_dir}
         PREFIX ${prefix}
         DEPENDS ${lib_tool_dependencies} compiler_rt_${variant} ${libc_target}
         CMAKE_ARGS
@@ -979,7 +980,7 @@ function(
         -DCMAKE_C_COMPILER_TARGET=${target_triple}
         -DCMAKE_C_FLAGS=${runtimes_flags}
         -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
-        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_INSTALL_PREFIX=${instal_dir}
         -DCMAKE_NM=${LLVM_BINARY_DIR}/bin/llvm-nm${CMAKE_EXECUTABLE_SUFFIX}
         -DCMAKE_RANLIB=${LLVM_BINARY_DIR}/bin/llvm-ranlib${CMAKE_EXECUTABLE_SUFFIX}
         # Let CMake know we're cross-compiling
@@ -1230,6 +1231,21 @@ function(add_library_variant target_arch)
         DESTINATION "${directory}"
         COMPONENT llvm-toolchain-libs
     )
+    if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
+        string(APPEND multilib_yaml_content "- Dir: ${parent_dir_name}/${variant}_exceptions_rtti\n")
+        string(APPEND multilib_yaml_content "  Flags:\n")
+        string(REPLACE " " ";" multilib_flags_list ${VARIANT_MULTILIB_FLAGS})
+        foreach(flag ${multilib_flags_list})
+            string(APPEND multilib_yaml_content "  - ${flag}\n")
+        endforeach()
+        string(APPEND multilib_yaml_content "  ExclusiveGroup: stdlibs\n")
+
+        install(
+        DIRECTORY "${LLVM_BINARY_DIR}/${directory}_exceptions_rtti/"
+        DESTINATION "${directory}_exceptions_rtti/"
+        COMPONENT llvm-toolchain-libs
+        )
+    endif()
     set(multilib_yaml_content "${multilib_yaml_content}" PARENT_SCOPE)
 endfunction()
 
