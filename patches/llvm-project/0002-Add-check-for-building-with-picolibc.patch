@@ -1,4 +1,4 @@
-From fb9f8352904429054104cd7670034858e06b84a7 Mon Sep 17 00:00:00 2001
+From b0046797acd5c5fd5e61c493d502dbc64bf9ef56 Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 09:35:52 +0100
 Subject: [PATCH 2/4] Add check for building with picolibc
@@ -546,12 +546,12 @@ index a8701ce7a86c..d0b10b65be28 100644
  // NOTE: Clang does not enable sized-deallocation in C++14 and beyond by
  // default. It is only enabled when -fsized-deallocation is given.
 diff --git a/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp b/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp
-index 9a512f6ccfbd..bbf602188ae4 100644
+index 04c4c77edd5e..12b1c3888132 100644
 --- a/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp
 +++ b/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp
-@@ -13,6 +13,9 @@
+@@ -11,6 +11,9 @@
  
- // XFAIL: LIBCXX-AIX-FIXME
+ // UNSUPPORTED: c++03, c++11, c++14
  
 +// picolibc doesn't define TIME_UTC.
 +// XFAIL: LIBCXX-PICOLIBC-FIXME
@@ -800,7 +800,7 @@ index 000000000000..acdcabe96e96
 +
 +"${venv_dir}/bin/meson" install -C "${picolibc_build_dir}"
 diff --git a/libcxx/utils/ci/buildkite-pipeline.yml b/libcxx/utils/ci/buildkite-pipeline.yml
-index 41b3d27d48f7..bf244206a02b 100644
+index c2537618c56b..bb734eb5ef18 100644
 --- a/libcxx/utils/ci/buildkite-pipeline.yml
 +++ b/libcxx/utils/ci/buildkite-pipeline.yml
 @@ -1056,6 +1056,20 @@ steps:
@@ -825,7 +825,7 @@ index 41b3d27d48f7..bf244206a02b 100644
      steps:
      - label: "AIX (32-bit)"
 diff --git a/libcxx/utils/ci/run-buildbot b/libcxx/utils/ci/run-buildbot
-index c4834330d7e3..1bed14d3908a 100755
+index fe99388a799b..8263d335b45a 100755
 --- a/libcxx/utils/ci/run-buildbot
 +++ b/libcxx/utils/ci/run-buildbot
 @@ -627,6 +627,41 @@ armv7-no-exceptions)
