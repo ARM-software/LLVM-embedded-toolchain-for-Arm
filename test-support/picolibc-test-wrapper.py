@@ -19,9 +19,15 @@ disabled_tests = [
     "picolibc_armv7m_soft_fpv4_sp_d16-build/test/math_errhandling",
     "picolibc_armv7em_hard_fpv4_sp_d16-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_fp_nomve-build/test/math_errhandling",
+    "picolibc_armv7m_soft_fpv4_sp_d16_exceptions_rtti-build/test/math_errhandling",
+    "picolibc_armv7em_hard_fpv4_sp_d16_exceptions_rtti-build/test/math_errhandling",
+    "picolibc_armv8.1m.main_hard_fp_nomve_exceptions_rtti-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_nofp_mve-build/test/fenv",
     "picolibc_armv8.1m.main_hard_nofp_mve-build/test/math_errhandling",
     "picolibc_armv8m.main_hard_fp-build/test/math_errhandling",
+    "picolibc_armv8.1m.main_hard_nofp_mve_exceptions_rtti-build/test/fenv",
+    "picolibc_armv8.1m.main_hard_nofp_mve_exceptions_rtti-build/test/math_errhandling",
+    "picolibc_armv8m.main_hard_fp_exceptions_rtti-build/test/math_errhandling",
 ]
 
 
