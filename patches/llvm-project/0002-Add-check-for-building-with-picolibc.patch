@@ -1,4 +1,4 @@
-From b0046797acd5c5fd5e61c493d502dbc64bf9ef56 Mon Sep 17 00:00:00 2001
+From 47f113bfa3cfa5c6b8c37636cedb4cf4d12d65aa Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 09:35:52 +0100
 Subject: [PATCH 2/4] Add check for building with picolibc
@@ -12,12 +12,12 @@ Differential Revision: https://reviews.llvm.org/D154246
 ---
  libcxx/cmake/caches/Armv7M-picolibc.cmake     |  38 ++++++
  libcxx/docs/index.rst                         |  21 ++--
- libcxx/test/configs/armv7m-libc++.cfg.in      |  41 +++++++
+ libcxx/test/configs/armv7m-libc++.cfg.in      |  42 +++++++
  .../test/libcxx/clang_modules_include.gen.py  |   3 +
- libcxx/test/libcxx/selftest/dsl/dsl.sh.py     |   3 +
+ libcxx/test/libcxx/selftest/dsl/dsl.sh.py     |   2 +
  .../selftest/pass.cpp/run-error.pass.cpp      |   1 +
  .../libcxx/selftest/pass.mm/run-error.pass.mm |   1 +
- .../test/libcxx/system_reserved_names.gen.py  |   5 +-
+ .../test/libcxx/system_reserved_names.gen.py  |  11 +-
  .../atomics.types.generic/integral.pass.cpp   |   2 +
  .../atomic_fetch_add.pass.cpp                 |   2 +
  .../atomic_fetch_add_explicit.pass.cpp        |   2 +
@@ -51,12 +51,13 @@ Differential Revision: https://reviews.llvm.org/D154246
  .../op_-duration.pass.cpp                     |   3 +
  libcxx/utils/ci/BOT_OWNERS.txt                |   2 +-
  libcxx/utils/ci/build-picolibc.sh             | 109 ++++++++++++++++++
- libcxx/utils/ci/buildkite-pipeline.yml        |  14 +++
+ libcxx/utils/ci/buildkite-pipeline.yml        |   5 +
  libcxx/utils/ci/run-buildbot                  |  35 ++++++
- libcxx/utils/libcxx/test/features.py          |  27 ++++-
- .../test/configs/armv7m-libc++abi.cfg.in      |  39 +++++++
- .../test/configs/armv7m-libunwind.cfg.in      |  32 +++++
- 46 files changed, 434 insertions(+), 13 deletions(-)
+ libcxx/utils/libcxx/test/features.py          |  29 ++++-
+ .../test/configs/armv7m-libc++abi.cfg.in      |  33 ++++++
+ libcxxabi/test/test_demangle.pass.cpp         |   3 +
+ .../test/configs/armv7m-libunwind.cfg.in      |  33 ++++++
+ 47 files changed, 430 insertions(+), 14 deletions(-)
  create mode 100644 libcxx/cmake/caches/Armv7M-picolibc.cmake
  create mode 100644 libcxx/test/configs/armv7m-libc++.cfg.in
  create mode 100755 libcxx/utils/ci/build-picolibc.sh
@@ -141,10 +142,10 @@ index c4199dc69d7c..7bb5512beb1f 100644
  C Standard Library. It is also possible to turn off parts of the library for use on
 diff --git a/libcxx/test/configs/armv7m-libc++.cfg.in b/libcxx/test/configs/armv7m-libc++.cfg.in
 new file mode 100644
-index 000000000000..424d473ac7ca
+index 000000000000..688c791b2028
 --- /dev/null
 +++ b/libcxx/test/configs/armv7m-libc++.cfg.in
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,42 @@
 +lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 +
 +config.substitutions.append(('%{libc-linker-script}', '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'))
@@ -176,6 +177,7 @@ index 000000000000..424d473ac7ca
 +config.substitutions.append(('%{exec}',
 +    'true' # TODO use qemu-system-arm
 +))
++config.available_features.add('libcxx-fake-executor')
 +
 +import os, site
 +site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
@@ -201,48 +203,67 @@ index 04c8e03affee..26ef2077449b 100644
  
  #include <{header}>
 diff --git a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
-index dfe290b21fbb..c543898c083b 100644
+index dfe290b21fbb..6c695a0d672e 100644
 --- a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
 +++ b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
-@@ -6,6 +6,9 @@
+@@ -6,6 +6,8 @@
  #
  # ===----------------------------------------------------------------------===##
  
-+# Picolibc test executor is `true` at present.
-+# XFAIL: LIBCXX-PICOLIBC-FIXME
++# XFAIL: libcxx-fake-executor
 +
  # Note: We prepend arguments with 'x' to avoid thinking there are too few
  #       arguments in case an argument is an empty string.
  # RUN: %{python} %s x%S x%T x%{substitutions}
 diff --git a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
-index eac7d8846e23..035761530078 100644
+index eac7d8846e23..1df98ef11191 100644
 --- a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
 +++ b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
 @@ -6,6 +6,7 @@
  //
  //===----------------------------------------------------------------------===//
  
-+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++// UNSUPPORTED: libcxx-fake-executor
  // XFAIL: *
  
  // Make sure the test DOES NOT pass if it fails at runtime.
 diff --git a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
-index 22e17666eab0..d3889686b69d 100644
+index 22e17666eab0..02e8321c96b2 100644
 --- a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
 +++ b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
 @@ -7,6 +7,7 @@
  //===----------------------------------------------------------------------===//
  
  // REQUIRES: objective-c++
-+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++// UNSUPPORTED: libcxx-fake-executor
  
  // XFAIL: *
  
 diff --git a/libcxx/test/libcxx/system_reserved_names.gen.py b/libcxx/test/libcxx/system_reserved_names.gen.py
-index e2aa8fc47348..99ca86cfd830 100644
+index e2aa8fc47348..29c1ce0d4faf 100644
 --- a/libcxx/test/libcxx/system_reserved_names.gen.py
 +++ b/libcxx/test/libcxx/system_reserved_names.gen.py
-@@ -101,7 +101,10 @@ for header in public_headers:
+@@ -20,6 +20,9 @@ for header in public_headers:
+ //--- {header}.compile.pass.cpp
+ {lit_header_restrictions.get(header, '')}
+ 
++// for "_NEWLIB_VERSION" macro
++#include <string.h>
++
+ #define SYSTEM_RESERVED_NAME This name should not be used in libc++
+ 
+ // libc++ does not use single-letter names as a matter of principle.
+@@ -63,7 +66,8 @@ for header in public_headers:
+ #endif
+ 
+ // Test that libc++ doesn't use names that collide with FreeBSD system macros.
+-#ifndef __FreeBSD__
++// newlib and picolibc also define these macros
++#if !defined(__FreeBSD__) && !defined(_NEWLIB_VERSION)
+ #  define __null_sentinel SYSTEM_RESERVED_NAME
+ #  define __generic SYSTEM_RESERVED_NAME
+ #endif
+@@ -101,7 +105,10 @@ for header in public_headers:
  # define __pre SYSTEM_RESERVED_NAME
  #endif
  
@@ -425,7 +446,7 @@ index fda5e186c036..dcc97573d607 100644
  
  #include <fenv.h>
 diff --git a/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp b/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp
-index 27a97627cee3..35be03e41f8f 100644
+index 55731c857ecf..af97ef2fddfb 100644
 --- a/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp
 +++ b/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp
 @@ -6,6 +6,9 @@
@@ -800,30 +821,21 @@ index 000000000000..acdcabe96e96
 +
 +"${venv_dir}/bin/meson" install -C "${picolibc_build_dir}"
 diff --git a/libcxx/utils/ci/buildkite-pipeline.yml b/libcxx/utils/ci/buildkite-pipeline.yml
-index c2537618c56b..bb734eb5ef18 100644
+index 7482938f65dc..018d6a4c9195 100644
 --- a/libcxx/utils/ci/buildkite-pipeline.yml
 +++ b/libcxx/utils/ci/buildkite-pipeline.yml
-@@ -1056,6 +1056,20 @@ steps:
-             limit: 2
-       timeout_in_minutes: 120
+@@ -505,6 +505,11 @@ steps:
+     <<: *arm_agent_armv8l
+     <<: *common
  
-+    - label: "Armv7-M picolibc"
-+      command: "libcxx/utils/ci/run-buildbot armv7m-picolibc"
-+      artifact_paths:
-+        - "**/test-results.xml"
-+        - "**/*.abilist"
-+      agents:
-+        queue: "libcxx-builders-linaro-arm"
-+        arch: "aarch64"
-+      retry:
-+        automatic:
-+          - exit_status: -1  # Agent was lost
-+            limit: 2
-+      timeout_in_minutes: 120
++  - label: Armv7-M picolibc
++    command: libcxx/utils/ci/run-buildbot armv7m-picolibc
++    <<: *arm_agent_aarch64
++    <<: *common
 +
-   - group: "AIX"
-     steps:
-     - label: "AIX (32-bit)"
+ - group: AIX
+   steps:
+   - label: AIX (32-bit)
 diff --git a/libcxx/utils/ci/run-buildbot b/libcxx/utils/ci/run-buildbot
 index fe99388a799b..8263d335b45a 100755
 --- a/libcxx/utils/ci/run-buildbot
@@ -871,13 +883,25 @@ index fe99388a799b..8263d335b45a 100755
      clean
      # TODO: Currently, building with the experimental library breaks running
 diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
-index 29822f555213..d2f4859e367f 100644
+index 29822f555213..124d05769de0 100644
 --- a/libcxx/utils/libcxx/test/features.py
 +++ b/libcxx/utils/libcxx/test/features.py
-@@ -110,6 +110,17 @@ DEFAULT_FEATURES = [
-         name="verify-support",
-         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
-     ),
+@@ -197,7 +197,8 @@ DEFAULT_FEATURES = [
+             #include <unistd.h>
+             #include <sys/wait.h>
+             int main(int, char**) {
+-              return 0;
++              int fd[2];
++              return pipe(fd);
+             }
+           """,
+         ),
+@@ -277,6 +278,19 @@ DEFAULT_FEATURES = [
+     Feature(name="msvc", when=_isMSVC),
+     Feature(name=lambda cfg: "msvc-{}".format(*_msvcVersion(cfg)), when=_isMSVC),
+     Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
++    # this feature has to be checked after the "gcc" feature, so that the
++    # "-D_LIBCPP_DISABLE_DEPRECATION_WARNINGS" flag is already in place
 +    Feature(
 +        name="has-64-bit-atomics",
 +        when=lambda cfg: sourceBuilds(
@@ -889,20 +913,10 @@ index 29822f555213..d2f4859e367f 100644
 +          """,
 +        ),
 +    ),
-     Feature(
-         name="non-lockfree-atomics",
-         when=lambda cfg: sourceBuilds(
-@@ -197,7 +208,8 @@ DEFAULT_FEATURES = [
-             #include <unistd.h>
-             #include <sys/wait.h>
-             int main(int, char**) {
--              return 0;
-+              int fd[2];
-+              return pipe(fd);
-             }
-           """,
-         ),
-@@ -401,6 +413,19 @@ DEFAULT_FEATURES += [
+ ]
+ 
+ # Deduce and add the test features that that are implied by the #defines in
+@@ -401,6 +415,19 @@ DEFAULT_FEATURES += [
          name="LIBCXX-FREEBSD-FIXME",
          when=lambda cfg: "__FreeBSD__" in compilerMacros(cfg),
      ),
@@ -924,10 +938,10 @@ index 29822f555213..d2f4859e367f 100644
  # Add features representing the build host platform name.
 diff --git a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
 new file mode 100644
-index 000000000000..d022e84fb19e
+index 000000000000..876f43e44bbb
 --- /dev/null
 +++ b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,33 @@
 +lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 +
 +config.substitutions.append(('%{libc-linker-script}', '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'))
@@ -950,13 +964,7 @@ index 000000000000..d022e84fb19e
 +config.substitutions.append(('%{exec}',
 +    'true' # TODO use qemu-system-arm
 +))
-+
-+# LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
-+# initial picolibc failures until they can be properly diagnosed
-+# and fixed. This allows easier detection of new test failures
-+# and regressions. Note: New failures should not be suppressed
-+# using this feature.
-+config.available_features.add('LIBCXX-PICOLIBC-FIXME')
++config.available_features.add('libcxx-fake-executor')
 +
 +import os, site
 +site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
@@ -967,12 +975,26 @@ index 000000000000..d022e84fb19e
 +    config,
 +    lit_config
 +)
+diff --git a/libcxxabi/test/test_demangle.pass.cpp b/libcxxabi/test/test_demangle.pass.cpp
+index 77741a952850..0bc7d0db3db2 100644
+--- a/libcxxabi/test/test_demangle.pass.cpp
++++ b/libcxxabi/test/test_demangle.pass.cpp
+@@ -9,6 +9,9 @@
+ // The demangler does not pass all these tests with the system dylibs on macOS.
+ // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+ 
++// This test is too big for most embedded devices.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // https://llvm.org/PR51407 was not fixed in some previously-released
+ // demanglers, which causes them to run into the infinite loop.
+ // UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
 diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
 new file mode 100644
-index 000000000000..5f15ccd3613c
+index 000000000000..6ddb6138c402
 --- /dev/null
 +++ b/libunwind/test/configs/armv7m-libunwind.cfg.in
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,33 @@
 +lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 +
 +config.substitutions.append(('%{libc-linker-script}', '@CMAKE_INSTALL_PREFIX@/lib/picolibcpp.ld'))
@@ -995,6 +1017,7 @@ index 000000000000..5f15ccd3613c
 +config.substitutions.append(('%{exec}',
 +    'true' # TODO use qemu-system-arm
 +))
++config.available_features.add('libcxx-fake-executor')
 +
 +import os, site
 +site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
