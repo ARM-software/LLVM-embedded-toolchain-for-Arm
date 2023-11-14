@@ -1,35 +1,31 @@
-From 30242238136c5ebb590846dcd7fb0078adec17a2 Mon Sep 17 00:00:00 2001
+From 07b092ce872453a787435f08bf3dd01bd54320d4 Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 12:23:37 +0100
 Subject: [PATCH 3/4] Run picolibc tests with qemu
 
 Differential Revision: https://reviews.llvm.org/D155521
 ---
- libcxx/cmake/caches/Armv7M-picolibc.cmake     |  1 +
- libcxx/docs/index.rst                         |  2 +-
- libcxx/test/configs/armv7m-libc++.cfg.in      | 10 ++++++-
- libcxx/test/libcxx/selftest/dsl/dsl.sh.py     |  3 ++-
- .../selftest/pass.cpp/run-error.pass.cpp      |  1 -
- .../libcxx/selftest/pass.mm/run-error.pass.mm |  1 -
- .../libcxx/selftest/stdin-is-piped.sh.cpp     |  2 ++
- .../alg.sorting/alg.sort/sort/sort.pass.cpp   |  3 +++
- .../generic_category.pass.cpp                 |  1 +
- .../system_category.pass.cpp                  |  1 +
- .../narrow.stream.objects/cerr.sh.cpp         |  2 +-
- .../narrow.stream.objects/cin.sh.cpp          |  1 +
- .../narrow.stream.objects/clog.sh.cpp         |  2 +-
- .../narrow.stream.objects/cout.sh.cpp         |  2 --
- .../sized_delete_array14.pass.cpp             |  1 -
- .../new.delete.single/sized_delete14.pass.cpp |  1 -
- .../classic_table.pass.cpp                    |  2 ++
- .../put_long_double.pass.cpp                  |  1 +
- .../rand.dist.bern.bin/eval.PR44847.pass.cpp  |  3 +++
- .../time.clock/time.clock.file/now.pass.cpp   |  3 +++
- libcxx/utils/run-qemu.sh                      | 27 +++++++++++++++++++
- .../test/configs/armv7m-libc++abi.cfg.in      |  7 ++++-
- .../test/configs/armv7m-libunwind.cfg.in      |  7 ++++-
- 23 files changed, 71 insertions(+), 13 deletions(-)
- create mode 100755 libcxx/utils/run-qemu.sh
+ libcxx/cmake/caches/Armv7M-picolibc.cmake           |  1 +
+ libcxx/docs/index.rst                               |  2 +-
+ libcxx/test/configs/armv7m-libc++.cfg.in            | 13 +++++++++++--
+ libcxx/test/libcxx/selftest/dsl/dsl.sh.py           |  4 ++++
+ libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp   |  2 ++
+ .../alg.sorting/alg.sort/sort/sort.pass.cpp         |  3 +++
+ .../syserr.errcat.objects/generic_category.pass.cpp |  1 +
+ .../syserr.errcat.objects/system_category.pass.cpp  |  1 +
+ .../narrow.stream.objects/cerr.sh.cpp               |  2 +-
+ .../narrow.stream.objects/cin.sh.cpp                |  1 +
+ .../narrow.stream.objects/clog.sh.cpp               |  2 +-
+ .../narrow.stream.objects/cout.sh.cpp               |  2 --
+ .../new.delete.array/sized_delete_array14.pass.cpp  |  1 -
+ .../new.delete.single/sized_delete14.pass.cpp       |  1 -
+ .../facet.ctype.char.statics/classic_table.pass.cpp |  2 ++
+ .../facet.num.put.members/put_long_double.pass.cpp  |  1 +
+ .../rand.dist.bern.bin/eval.PR44847.pass.cpp        |  3 +++
+ .../time/time.clock/time.clock.file/now.pass.cpp    |  3 +++
+ libcxxabi/test/configs/armv7m-libc++abi.cfg.in      | 10 ++++++++--
+ libunwind/test/configs/armv7m-libunwind.cfg.in      | 10 ++++++++--
+ 20 files changed, 52 insertions(+), 13 deletions(-)
 
 diff --git a/libcxx/cmake/caches/Armv7M-picolibc.cmake b/libcxx/cmake/caches/Armv7M-picolibc.cmake
 index 6ed1866a5084..e308ac31d1d1 100644
@@ -54,66 +50,46 @@ index 7bb5512beb1f..e8b4a95dbcff 100644
  
  Generally speaking, libc++ should work on any platform that provides a fairly complete
 diff --git a/libcxx/test/configs/armv7m-libc++.cfg.in b/libcxx/test/configs/armv7m-libc++.cfg.in
-index 424d473ac7ca..d4555ab58fa0 100644
+index 688c791b2028..9d8d567d7766 100644
 --- a/libcxx/test/configs/armv7m-libc++.cfg.in
 +++ b/libcxx/test/configs/armv7m-libc++.cfg.in
-@@ -27,9 +27,17 @@ config.substitutions.append(('%{link_flags}',
+@@ -26,10 +26,19 @@ config.substitutions.append(('%{link_flags}',
+     ' -Wl,--defsym=__ram_size=0x1000000'
      ' -Wl,--defsym=__stack_size=0x1000'
  ))
++
++config.executor = (
++    '@LIBCXX_SOURCE_DIR@/utils/qemu_baremetal.py'
++    ' --qemu @QEMU_SYSTEM_ARM@'
++    ' --machine mps2-an385'
++    ' --cpu cortex-m3')
  config.substitutions.append(('%{exec}',
 -    'true' # TODO use qemu-system-arm
 +    '%{executor}'
 +    ' --execdir %T'
-+    ' @LIBCXX_SOURCE_DIR@/utils/run-qemu.sh'
-+    ' @QEMU_SYSTEM_ARM@'
-+    ' mps2-an385'
-+    ' cortex-m3'
  ))
- 
+-config.available_features.add('libcxx-fake-executor')
++
 +# Long tests are prohibitively slow when run via emulation.
 +config.long_tests = False
-+
+ 
  import os, site
  site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
- import libcxx.test.params, libcxx.test.config
 diff --git a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
-index c543898c083b..012759436d89 100644
+index 6c695a0d672e..6cb79d98228c 100644
 --- a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
 +++ b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
-@@ -6,7 +6,8 @@
- #
- # ===----------------------------------------------------------------------===##
+@@ -8,6 +8,10 @@
  
--# Picolibc test executor is `true` at present.
+ # XFAIL: libcxx-fake-executor
+ 
 +# With picolibc, test_program_stderr_is_not_conflated_with_stdout fails
 +# because stdout & stderr are treated as the same.
- # XFAIL: LIBCXX-PICOLIBC-FIXME
- 
++# XFAIL: LIBCXX-PICOLIBC-FIXME
++
  # Note: We prepend arguments with 'x' to avoid thinking there are too few
-diff --git a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
-index 035761530078..eac7d8846e23 100644
---- a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
-+++ b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
-@@ -6,7 +6,6 @@
- //
- //===----------------------------------------------------------------------===//
- 
--// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
- // XFAIL: *
- 
- // Make sure the test DOES NOT pass if it fails at runtime.
-diff --git a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
-index d3889686b69d..22e17666eab0 100644
---- a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
-+++ b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
-@@ -7,7 +7,6 @@
- //===----------------------------------------------------------------------===//
- 
- // REQUIRES: objective-c++
--// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
- 
- // XFAIL: *
- 
+ #       arguments in case an argument is an empty string.
+ # RUN: %{python} %s x%S x%T x%{substitutions}
 diff --git a/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp b/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp
 index ffd10631c6a6..897e10e94783 100644
 --- a/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp
@@ -142,24 +118,24 @@ index ed26c5b861f5..56c0964c8750 100644
  
  // template<RandomAccessIterator Iter>
 diff --git a/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/generic_category.pass.cpp b/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/generic_category.pass.cpp
-index 90e5bd39e5b0..49ec48c7bc95 100644
+index 5b63272a3a1a..3f49c36f8ba2 100644
 --- a/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/generic_category.pass.cpp
 +++ b/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/generic_category.pass.cpp
-@@ -8,6 +8,7 @@
+@@ -7,6 +7,7 @@
+ //===----------------------------------------------------------------------===//
  
- // XFAIL: suse-linux-enterprise-server-11
  // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 +// XFAIL: LIBCXX-PICOLIBC-FIXME
  
  // <system_error>
  
 diff --git a/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/system_category.pass.cpp b/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/system_category.pass.cpp
-index 1de1b59e5c6c..5ebc7a056b71 100644
+index 1caf5cb2ccf7..4a29e1baa808 100644
 --- a/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/system_category.pass.cpp
 +++ b/libcxx/test/std/diagnostics/syserr/syserr.errcat/syserr.errcat.objects/system_category.pass.cpp
-@@ -14,6 +14,7 @@
+@@ -13,6 +13,7 @@
+ // const error_category& system_category();
  
- // XFAIL: suse-linux-enterprise-server-11
  // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 +// XFAIL: LIBCXX-PICOLIBC-FIXME
  
@@ -293,75 +269,52 @@ index 0852483a8b39..4ba17a48988b 100644
  // <chrono>
  
  // file_clock
-diff --git a/libcxx/utils/run-qemu.sh b/libcxx/utils/run-qemu.sh
-new file mode 100755
-index 000000000000..7a9a8acb95ad
---- /dev/null
-+++ b/libcxx/utils/run-qemu.sh
-@@ -0,0 +1,27 @@
-+#!/bin/sh
-+
-+# This script makes it easy to pass an image and arguments to qemu.
-+
-+# Usage:
-+# run-qemu.sh QEMU_EXECUTABLE MACHINE CPU IMAGE ARGS...
-+
-+QEMU_EXECUTABLE=$1; shift
-+MACHINE=$1; shift
-+CPU=$1; shift
-+IMAGE=$1; shift
-+
-+semihosting_config="enable=on,chardev=stdio0"
-+for arg in "$@"
-+do
-+    semihosting_config="${semihosting_config},arg=${arg}"
-+done
-+
-+"${QEMU_EXECUTABLE}" \
-+    -chardev stdio,mux=on,id=stdio0 \
-+    -semihosting-config "${semihosting_config}" \
-+    -monitor none \
-+    -serial none \
-+    -machine "${MACHINE},accel=tcg" \
-+    -cpu "${CPU}" \
-+    -device loader,file="${IMAGE}",cpu-num=0 \
-+    -nographic
 diff --git a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
-index d022e84fb19e..9962541426a1 100644
+index 876f43e44bbb..91821cfd95c7 100644
 --- a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
 +++ b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
-@@ -18,7 +18,12 @@ config.substitutions.append(('%{link_flags}',
+@@ -17,10 +17,16 @@ config.substitutions.append(('%{link_flags}',
+     ' -Wl,--defsym=__ram_size=0x1000000'
      ' -Wl,--defsym=__stack_size=0x1000'
  ))
++
++config.executor = (
++    '@LIBCXX_SOURCE_DIR@/utils/qemu_baremetal.py'
++    ' --qemu @QEMU_SYSTEM_ARM@'
++    ' --machine mps2-an385'
++    ' --cpu cortex-m3')
  config.substitutions.append(('%{exec}',
 -    'true' # TODO use qemu-system-arm
 +    '%{executor}'
 +    ' --execdir %T'
-+    ' @LIBCXXABI_LIBCXX_PATH@/utils/run-qemu.sh'
-+    ' @QEMU_SYSTEM_ARM@'
-+    ' mps2-an385'
-+    ' cortex-m3'
  ))
- 
- # LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
-diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
-index 5f15ccd3613c..2004c8010883 100644
---- a/libunwind/test/configs/armv7m-libunwind.cfg.in
-+++ b/libunwind/test/configs/armv7m-libunwind.cfg.in
-@@ -18,7 +18,12 @@ config.substitutions.append(('%{link_flags}',
-     ' -Wl,--defsym=__stack_size=0x1000'
- ))
- config.substitutions.append(('%{exec}',
--    'true' # TODO use qemu-system-arm
-+    '%{executor}'
-+    ' --execdir %T'
-+    ' @LIBUNWIND_LIBCXX_PATH@/utils/run-qemu.sh'
-+    ' @QEMU_SYSTEM_ARM@'
-+    ' mps2-an385'
-+    ' cortex-m3'
- ))
+-config.available_features.add('libcxx-fake-executor')
  
  import os, site
+ site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
+diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
+index 6ddb6138c402..2c4467cdadc8 100644
+--- a/libunwind/test/configs/armv7m-libunwind.cfg.in
++++ b/libunwind/test/configs/armv7m-libunwind.cfg.in
+@@ -17,10 +17,16 @@ config.substitutions.append(('%{link_flags}',
+     ' -Wl,--defsym=__ram_size=0x1000000'
+     ' -Wl,--defsym=__stack_size=0x1000'
+ ))
++
++config.executor = (
++    '@LIBCXX_SOURCE_DIR@/utils/qemu_baremetal.py'
++    ' --qemu @QEMU_SYSTEM_ARM@'
++    ' --machine mps2-an385'
++    ' --cpu cortex-m3')
+ config.substitutions.append(('%{exec}',
+-    'true' # TODO use qemu-system-arm
++    '%{executor}'
++    ' --execdir %T'
+ ))
+-config.available_features.add('libcxx-fake-executor')
+ 
+ import os, site
+ site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
 -- 
 2.34.1
 
