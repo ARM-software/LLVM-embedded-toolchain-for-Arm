@@ -259,7 +259,8 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-Fix-llvm-test-CodeGen-ARM-build-attributes.ll-test.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0002-Add-check-for-building-with-picolibc.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0003-Run-picolibc-tests-with-qemu.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-xfail-two-remaining-libcxx-with-picolibc-tests.patch)
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-xfail-two-remaining-libcxx-with-picolibc-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-disable-large-tests.patch)
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
     GIT_TAG "${llvmproject_TAG}"

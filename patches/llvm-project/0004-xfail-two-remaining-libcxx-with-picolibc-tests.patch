@@ -1,12 +1,14 @@
-From e7c019953cb3680b69872eaae5a0de930f091ff8 Mon Sep 17 00:00:00 2001
+From cf8e60c8ef9adefe24587ddcfad499d758126c11 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Mon, 16 Oct 2023 11:35:48 +0200
-Subject: [PATCH 4/4] xfail two remaining libcxx with picolibc tests
+Subject: [PATCH 4/5] xfail two remaining libcxx with picolibc tests
 
 ---
  .../cmp/cmp.alg/strong_order_long_double.verify.cpp          | 5 +++++
  .../language.support/support.start.term/quick_exit.pass.cpp  | 3 +++
- 2 files changed, 8 insertions(+)
+ libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp  | 3 +++
+ libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp | 3 +++
+ 4 files changed, 14 insertions(+)
 
 diff --git a/libcxx/test/std/language.support/cmp/cmp.alg/strong_order_long_double.verify.cpp b/libcxx/test/std/language.support/cmp/cmp.alg/strong_order_long_double.verify.cpp
 index fd16afeefb03..004ebc0a6bcd 100644
