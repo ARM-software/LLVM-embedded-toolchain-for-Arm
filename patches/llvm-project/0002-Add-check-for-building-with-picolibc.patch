@@ -1,7 +1,7 @@
-From 47f113bfa3cfa5c6b8c37636cedb4cf4d12d65aa Mon Sep 17 00:00:00 2001
+From acb9eb72087a5ca9e408c8642c316f663f91cd9f Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 09:35:52 +0100
-Subject: [PATCH 2/4] Add check for building with picolibc
+Subject: [PATCH 2/5] Add check for building with picolibc
 
 This is intended to identify changes that would fail to build on
 embedded platforms e.g. D152382
@@ -31,7 +31,6 @@ Differential Revision: https://reviews.llvm.org/D154246
  .../atomic_fetch_xor_explicit.pass.cpp        |   2 +
  .../ctor.pass.cpp                             |   2 +
  .../depr.c.headers/fenv_h.compile.pass.cpp    |   3 +
- .../depr.c.headers/stdio_h.compile.pass.cpp   |   3 +
  .../depr.c.headers/uchar_h.compile.pass.cpp   |   3 +
  .../reference_assignment.pass.cpp             |   3 +
  .../narrow.stream.objects/cerr.sh.cpp         |   2 +
@@ -50,14 +49,14 @@ Differential Revision: https://reviews.llvm.org/D154246
  .../time.clock.system/to_time_t.pass.cpp      |   3 +
  .../op_-duration.pass.cpp                     |   3 +
  libcxx/utils/ci/BOT_OWNERS.txt                |   2 +-
- libcxx/utils/ci/build-picolibc.sh             | 109 ++++++++++++++++++
+ libcxx/utils/ci/build-picolibc.sh             | 111 ++++++++++++++++++
  libcxx/utils/ci/buildkite-pipeline.yml        |   5 +
  libcxx/utils/ci/run-buildbot                  |  35 ++++++
  libcxx/utils/libcxx/test/features.py          |  29 ++++-
  .../test/configs/armv7m-libc++abi.cfg.in      |  33 ++++++
  libcxxabi/test/test_demangle.pass.cpp         |   3 +
  .../test/configs/armv7m-libunwind.cfg.in      |  33 ++++++
- 47 files changed, 430 insertions(+), 14 deletions(-)
+ 46 files changed, 429 insertions(+), 14 deletions(-)
  create mode 100644 libcxx/cmake/caches/Armv7M-picolibc.cmake
  create mode 100644 libcxx/test/configs/armv7m-libc++.cfg.in
  create mode 100755 libcxx/utils/ci/build-picolibc.sh
@@ -445,20 +444,6 @@ index fda5e186c036..dcc97573d607 100644
  // <fenv.h>
  
  #include <fenv.h>
-diff --git a/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp b/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp
-index 55731c857ecf..af97ef2fddfb 100644
---- a/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp
-+++ b/libcxx/test/std/depr/depr.c.headers/stdio_h.compile.pass.cpp
-@@ -6,6 +6,9 @@
- //
- //===----------------------------------------------------------------------===//
- 
-+// stderr et al are not macros in picolibc's tinystdio.
-+// XFAIL: LIBCXX-PICOLIBC-FIXME
-+
- // test <stdio.h>
- 
- #include <stdio.h>
 diff --git a/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp b/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp
 index 2b6455466681..a1560c8ee585 100644
 --- a/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp
@@ -707,10 +692,10 @@ index 721b19e52d8b..de575c591383 100644
  E: powerllvm@ca.ibm.com
 diff --git a/libcxx/utils/ci/build-picolibc.sh b/libcxx/utils/ci/build-picolibc.sh
 new file mode 100755
-index 000000000000..acdcabe96e96
+index 000000000000..078c2bdf5ebc
 --- /dev/null
 +++ b/libcxx/utils/ci/build-picolibc.sh
-@@ -0,0 +1,109 @@
+@@ -0,0 +1,111 @@
 +#!/usr/bin/env bash
 +#===----------------------------------------------------------------------===##
 +#
@@ -783,9 +768,11 @@ index 000000000000..acdcabe96e96
 +mkdir -p "${picolibc_source_dir}"
 +mkdir -p "${picolibc_build_dir}"
 +# Download the version of picolibc that was the latest at the time this script was written.
-+# The picolibc linker script was changed after version 1.8.2 to work with ld.lld so a
-+# more recent version is required, which at the time of writing is not yet released.
-+picolibc_commit="8dd225aa1469c03805617106020d494912c6d265"
++# Following changes are required and were introduced after version 1.8.5:
++# - updated semihost arguments handling,
++# - added missing macros in stdio.h
++# Version following 1.8.5, was not released by the time of writing.
++picolibc_commit="4b9b8ef01d18cf0563348ad4af4ae89a7277e7ca"
 +curl -L "https://github.com/picolibc/picolibc/archive/${picolibc_commit}.zip" --output "${picolibc_source_dir}/picolibc.zip"
 +unzip -q "${picolibc_source_dir}/picolibc.zip" -d "${picolibc_source_dir}"
 +mv "${picolibc_source_dir}/picolibc-${picolibc_commit}"/* "${picolibc_source_dir}"

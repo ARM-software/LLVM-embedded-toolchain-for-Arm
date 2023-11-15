@@ -1,0 +1,69 @@
+From 8789ad306129822ae49eb69bd05731fe366ee372 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Wed, 15 Nov 2023 12:18:35 +0100
+Subject: [PATCH 5/5] disable large tests
+
+---
+ libcxx/test/configs/armv7m-libc++.cfg.in       | 2 ++
+ libcxxabi/test/configs/armv7m-libc++abi.cfg.in | 3 +++
+ libcxxabi/test/test_demangle.pass.cpp          | 2 +-
+ libunwind/test/configs/armv7m-libunwind.cfg.in | 3 +++
+ 4 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/libcxx/test/configs/armv7m-libc++.cfg.in b/libcxx/test/configs/armv7m-libc++.cfg.in
+index 9d8d567d7766..93c14c726bf7 100644
+--- a/libcxx/test/configs/armv7m-libc++.cfg.in
++++ b/libcxx/test/configs/armv7m-libc++.cfg.in
+@@ -39,6 +39,8 @@ config.substitutions.append(('%{exec}',
+ 
+ # Long tests are prohibitively slow when run via emulation.
+ config.long_tests = False
++# The emulated target has limited memory.
++config.large_tests = False
+ 
+ import os, site
+ site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+diff --git a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
+index c244e44bbe71..dc6a48ce9b55 100644
+--- a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
++++ b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
+@@ -28,6 +28,9 @@ config.substitutions.append(('%{exec}',
+     ' --execdir %T'
+ ))
+ 
++# The emulated target has limited memory.
++config.large_tests = False
++
+ import os, site
+ site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
+ import libcxx.test.params, libcxx.test.config
+diff --git a/libcxxabi/test/test_demangle.pass.cpp b/libcxxabi/test/test_demangle.pass.cpp
+index 0bc7d0db3db2..735f2b3d18bc 100644
+--- a/libcxxabi/test/test_demangle.pass.cpp
++++ b/libcxxabi/test/test_demangle.pass.cpp
+@@ -10,7 +10,7 @@
+ // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+ 
+ // This test is too big for most embedded devices.
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
++// REQUIRES: large_tests
+ 
+ // https://llvm.org/PR51407 was not fixed in some previously-released
+ // demanglers, which causes them to run into the infinite loop.
+diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
+index 48c02add6e49..5d66de215f83 100644
+--- a/libunwind/test/configs/armv7m-libunwind.cfg.in
++++ b/libunwind/test/configs/armv7m-libunwind.cfg.in
+@@ -28,6 +28,9 @@ config.substitutions.append(('%{exec}',
+     ' --execdir %T'
+ ))
+ 
++# The emulated target has limited memory.
++config.large_tests = False
++
+ import os, site
+ site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
+ import libcxx.test.params, libcxx.test.config
+-- 
+2.34.1
+

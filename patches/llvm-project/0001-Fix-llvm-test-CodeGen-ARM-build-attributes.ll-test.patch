@@ -1,7 +1,7 @@
-From ec470a25055bec9d33cffe3183a6f70c4cedf69c Mon Sep 17 00:00:00 2001
+From 9efc154d6fa0a7b079cc2cdf488e58a2d3a3065b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Tue, 10 Oct 2023 15:43:59 +0200
-Subject: [PATCH 1/4] Fix llvm/test/CodeGen/ARM/build-attributes.ll test.
+Subject: [PATCH 1/5] Fix llvm/test/CodeGen/ARM/build-attributes.ll test.
 
 The test llvm/test/CodeGen/ARM/build-attributes.ll
 needs updating to incorporate the change

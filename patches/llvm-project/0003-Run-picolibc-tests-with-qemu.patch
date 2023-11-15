@@ -1,7 +1,7 @@
-From 07b092ce872453a787435f08bf3dd01bd54320d4 Mon Sep 17 00:00:00 2001
+From e007ef8e327bc72e379d8d2d529e492e3d018747 Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 12:23:37 +0100
-Subject: [PATCH 3/4] Run picolibc tests with qemu
+Subject: [PATCH 3/5] Run picolibc tests with qemu
 
 Differential Revision: https://reviews.llvm.org/D155521
 ---
@@ -270,7 +270,7 @@ index 0852483a8b39..4ba17a48988b 100644
  
  // file_clock
 diff --git a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
-index 876f43e44bbb..91821cfd95c7 100644
+index 876f43e44bbb..c244e44bbe71 100644
 --- a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
 +++ b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
 @@ -17,10 +17,16 @@ config.substitutions.append(('%{link_flags}',
@@ -279,7 +279,7 @@ index 876f43e44bbb..91821cfd95c7 100644
  ))
 +
 +config.executor = (
-+    '@LIBCXX_SOURCE_DIR@/utils/qemu_baremetal.py'
++    '@LIBCXXABI_LIBCXX_PATH@/utils/qemu_baremetal.py'
 +    ' --qemu @QEMU_SYSTEM_ARM@'
 +    ' --machine mps2-an385'
 +    ' --cpu cortex-m3')
@@ -293,7 +293,7 @@ index 876f43e44bbb..91821cfd95c7 100644
  import os, site
  site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
 diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
-index 6ddb6138c402..2c4467cdadc8 100644
+index 6ddb6138c402..48c02add6e49 100644
 --- a/libunwind/test/configs/armv7m-libunwind.cfg.in
 +++ b/libunwind/test/configs/armv7m-libunwind.cfg.in
 @@ -17,10 +17,16 @@ config.substitutions.append(('%{link_flags}',
@@ -302,7 +302,7 @@ index 6ddb6138c402..2c4467cdadc8 100644
  ))
 +
 +config.executor = (
-+    '@LIBCXX_SOURCE_DIR@/utils/qemu_baremetal.py'
++    '@LIBUNWIND_LIBCXX_PATH@/utils/qemu_baremetal.py'
 +    ' --qemu @QEMU_SYSTEM_ARM@'
 +    ' --machine mps2-an385'
 +    ' --cpu cortex-m3')
