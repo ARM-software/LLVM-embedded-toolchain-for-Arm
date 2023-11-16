@@ -1,0 +1,22 @@
+From 67a194ba20d6a4d1ef409f8af3a7d30c0414695e Mon Sep 17 00:00:00 2001
+From: Piotr Przybyla <piotr.przybyla@arm.com>
+Date: Wed, 15 Nov 2023 16:04:24 +0000
+Subject: [PATCH] Disable failing compiler-rt test
+
+---
+ compiler-rt/test/builtins/Unit/arm/aeabi_uldivmod_test.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/compiler-rt/test/builtins/Unit/arm/aeabi_uldivmod_test.c b/compiler-rt/test/builtins/Unit/arm/aeabi_uldivmod_test.c
+index 2ff65a8b9ec3..98611a75e85f 100644
+--- a/compiler-rt/test/builtins/Unit/arm/aeabi_uldivmod_test.c
++++ b/compiler-rt/test/builtins/Unit/arm/aeabi_uldivmod_test.c
+@@ -1,3 +1,5 @@
++// This fails when libcxx is built with exceptions
++// UNSUPPORTED: armv6m-target-arch
+ // REQUIRES: arm-target-arch || armv6m-target-arch
+ // RUN: %clang_builtins %s %librt -o %t && %run %t
+ 
+-- 
+2.25.1
+
