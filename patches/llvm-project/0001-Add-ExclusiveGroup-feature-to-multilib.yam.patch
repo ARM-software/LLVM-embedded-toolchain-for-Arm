@@ -1,24 +1,13 @@
-From 9efc154d6fa0a7b079cc2cdf488e58a2d3a3065b Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
-Date: Tue, 10 Oct 2023 15:43:59 +0200
-Subject: [PATCH 1/5] Fix llvm/test/CodeGen/ARM/build-attributes.ll test.
+From 002792f42b87722f26aca0377e2cd80fca39cc0e Mon Sep 17 00:00:00 2001
+From: Simi Pallipurath <simi.pallipurath@arm.com>
+Date: Tue, 21 Nov 2023 16:20:43 +0000
+Subject: [PATCH 1/5] Add ExclusiveGroup feature to multilib.yaml.
 
-The test llvm/test/CodeGen/ARM/build-attributes.ll
-needs updating to incorporate the change
-https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/pull/313.
-
-Changing the expected FPU to fp-armv8-fullfp16-d16
-from fpv5-d16.
 ---
  clang/include/clang/Driver/Multilib.h         |  16 ++-
  clang/lib/Driver/Multilib.cpp                 |  49 ++++++--
- clang/test/CodeGen/arm-v8.1m-check-fpu.ll     |  55 +++++++++
  .../Driver/baremetal-multilib-layered.yaml    | 108 +++++++++++++++---
- .../ARM/MCTargetDesc/ARMELFStreamer.cpp       |   2 +
- .../ARM/MCTargetDesc/ARMTargetStreamer.cpp    |  16 ++-
- llvm/test/CodeGen/ARM/build-attributes.ll     |   4 +-
- 7 files changed, 211 insertions(+), 39 deletions(-)
- create mode 100644 clang/test/CodeGen/arm-v8.1m-check-fpu.ll
+ 3 files changed, 142 insertions(+), 31 deletions(-)
 
 diff --git a/clang/include/clang/Driver/Multilib.h b/clang/include/clang/Driver/Multilib.h
 index 1416559414f8..6a9533e6dd83 100644
@@ -148,67 +137,6 @@ index 48a494d9fa38..085ccee7b257 100644
    }
  
    return MultilibSet(std::move(Multilibs), std::move(MS.FlagMatchers));
-diff --git a/clang/test/CodeGen/arm-v8.1m-check-fpu.ll b/clang/test/CodeGen/arm-v8.1m-check-fpu.ll
-new file mode 100644
-index 000000000000..5cff0457a190
---- /dev/null
-+++ b/clang/test/CodeGen/arm-v8.1m-check-fpu.ll
-@@ -0,0 +1,55 @@
-+; REQUIRES: arm-registered-target
-+; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m85 -mfloat-abi=hard -save-temps=obj -S -o - %s | FileCheck %s
-+; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m55 -mfloat-abi=hard -save-temps=obj -S -o - %s | FileCheck %s
-+; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m85 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
-+; RUN: %clang --target=arm-none-eabi -mcpu=cortex-m55 -mfloat-abi=hard -O2 -c -mthumb -save-temps=obj %s
-+; CHECK: .fpu   fp-armv8-fullfp16-d16
-+target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-+target triple = "thumbv8.1m.main-none-unknown-eabihf"
-+
-+%struct.dummy_t = type { float, float, float, float }
-+
-+define dso_local signext i8 @foo(ptr noundef %handle) #0 {
-+entry:
-+  %handle.addr = alloca ptr, align 4
-+  store ptr %handle, ptr %handle.addr, align 4
-+  %0 = load ptr, ptr %handle.addr, align 4
-+  %a = getelementptr inbounds %struct.dummy_t, ptr %0, i32 0, i32 0
-+  %1 = load float, ptr %a, align 4
-+  %sub = fsub float 0x3F5439DE40000000, %1
-+  %2 = load ptr, ptr %handle.addr, align 4
-+  %a1 = getelementptr inbounds %struct.dummy_t, ptr %2, i32 0, i32 0
-+  %3 = load float, ptr %a1, align 4
-+  %4 = call float @llvm.fmuladd.f32(float 0x3F847AE140000000, float %sub, float %3)
-+  store float %4, ptr %a1, align 4
-+  %5 = load ptr, ptr %handle.addr, align 4
-+  %b = getelementptr inbounds %struct.dummy_t, ptr %5, i32 0, i32 1
-+  %6 = load float, ptr %b, align 4
-+  %sub2 = fsub float 0x3F5439DE40000000, %6
-+  %7 = load ptr, ptr %handle.addr, align 4
-+  %b3 = getelementptr inbounds %struct.dummy_t, ptr %7, i32 0, i32 1
-+  %8 = load float, ptr %b3, align 4
-+  %9 = call float @llvm.fmuladd.f32(float 0x3F947AE140000000, float %sub2, float %8)
-+  store float %9, ptr %b3, align 4
-+  %10 = load ptr, ptr %handle.addr, align 4
-+  %c = getelementptr inbounds %struct.dummy_t, ptr %10, i32 0, i32 2
-+  %11 = load float, ptr %c, align 4
-+  %sub4 = fsub float 0x3F5439DE40000000, %11
-+  %12 = load ptr, ptr %handle.addr, align 4
-+  %c5 = getelementptr inbounds %struct.dummy_t, ptr %12, i32 0, i32 2
-+  %13 = load float, ptr %c5, align 4
-+  %14 = call float @llvm.fmuladd.f32(float 0x3F9EB851E0000000, float %sub4, float %13)
-+  store float %14, ptr %c5, align 4
-+  %15 = load ptr, ptr %handle.addr, align 4
-+  %d = getelementptr inbounds %struct.dummy_t, ptr %15, i32 0, i32 3
-+  %16 = load float, ptr %d, align 4
-+  %sub6 = fsub float 0x3F5439DE40000000, %16
-+  %17 = load ptr, ptr %handle.addr, align 4
-+  %d7 = getelementptr inbounds %struct.dummy_t, ptr %17, i32 0, i32 3
-+  %18 = load float, ptr %d7, align 4
-+  %19 = call float @llvm.fmuladd.f32(float 0x3FA47AE140000000, float %sub6, float %18)
-+  store float %19, ptr %d7, align 4
-+  ret i8 0
-+}
-+
-+declare float @llvm.fmuladd.f32(float, float, float) #1
 diff --git a/clang/test/Driver/baremetal-multilib-layered.yaml b/clang/test/Driver/baremetal-multilib-layered.yaml
 index 2f86f8e3ea4f..9c866dbff916 100644
 --- a/clang/test/Driver/baremetal-multilib-layered.yaml
@@ -340,70 +268,6 @@ index 2f86f8e3ea4f..9c866dbff916 100644
  Mappings:
  - Match: -mfloat-abi=softfp
    Flags: [-mfloat-abi=soft]
-diff --git a/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp b/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
-index 9c9af6068079..e7c37767c6ed 100644
---- a/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
-+++ b/llvm/lib/Target/ARM/MCTargetDesc/ARMELFStreamer.cpp
-@@ -996,6 +996,8 @@ void ARMTargetELFStreamer::emitFPUDefaultAttributes() {
- 
-   // FPV5_D16 is identical to FP_ARMV8 except for the number of D registers, so
-   // uses the FP_ARMV8_D16 build attribute.
-+  case ARM::FK_FP_ARMV8_FULLFP16_SP_D16:
-+  case ARM::FK_FP_ARMV8_FULLFP16_D16:
-   case ARM::FK_FPV5_SP_D16:
-   case ARM::FK_FPV5_D16:
-     S.setAttributeItem(ARMBuildAttrs::FP_arch, ARMBuildAttrs::AllowFPARMv8B,
-diff --git a/llvm/lib/Target/ARM/MCTargetDesc/ARMTargetStreamer.cpp b/llvm/lib/Target/ARM/MCTargetDesc/ARMTargetStreamer.cpp
-index b65d1b24e63d..3b2c737664f3 100644
---- a/llvm/lib/Target/ARM/MCTargetDesc/ARMTargetStreamer.cpp
-+++ b/llvm/lib/Target/ARM/MCTargetDesc/ARMTargetStreamer.cpp
-@@ -238,14 +238,18 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
-                         ? ARMBuildAttrs::AllowNeonARMv8_1a
-                         : ARMBuildAttrs::AllowNeonARMv8);
-   } else {
--    if (STI.hasFeature(ARM::FeatureFPARMv8_D16_SP))
-+    if (STI.hasFeature(ARM::FeatureFPARMv8_D16_SP)) {
-       // FPv5 and FP-ARMv8 have the same instructions, so are modeled as one
-       // FPU, but there are two different names for it depending on the CPU.
--      emitFPU(STI.hasFeature(ARM::FeatureD32)
--                  ? ARM::FK_FP_ARMV8
--                  : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_FPV5_D16
--                                                      : ARM::FK_FPV5_SP_D16));
--    else if (STI.hasFeature(ARM::FeatureVFP4_D16_SP))
-+      if (STI.hasFeature(ARM::FeatureD32))
-+        emitFPU(ARM::FK_FP_ARMV8);
-+      else if (STI.hasFeature(ARM::FeatureFP64))
-+        emitFPU(STI.hasFeature(ARM::FeatureFullFP16)
-+                    ? ARM::FK_FP_ARMV8_FULLFP16_D16
-+                    : ARM::FK_FPV5_D16);
-+      else
-+        emitFPU(ARM::FK_FPV5_SP_D16);
-+    } else if (STI.hasFeature(ARM::FeatureVFP4_D16_SP))
-       emitFPU(STI.hasFeature(ARM::FeatureD32)
-                   ? ARM::FK_VFPV4
-                   : (STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_VFPV4_D16
-diff --git a/llvm/test/CodeGen/ARM/build-attributes.ll b/llvm/test/CodeGen/ARM/build-attributes.ll
-index e8c83b92f3f9..0abe13aeb4fe 100644
---- a/llvm/test/CodeGen/ARM/build-attributes.ll
-+++ b/llvm/test/CodeGen/ARM/build-attributes.ll
-@@ -1734,7 +1734,7 @@
- ; CORTEX-M55: .eabi_attribute 7, 77
- ; CORTEX-M55: .eabi_attribute 8, 0
- ; CORTEX-M55: .eabi_attribute 9, 3
--; CORTEX-M55: .fpu fpv5-d16
-+; CORTEX-M55: .fpu fp-armv8-fullfp16-d16
- ; CORTEX-M55: .eabi_attribute 36, 1
- ; CORTEX-M55-NOT: .eabi_attribute 44
- ; CORTEX-M55: .eabi_attribute 46, 1
-@@ -1755,7 +1755,7 @@
- ; CORTEX-M85: .eabi_attribute 7, 77   @ Tag_CPU_arch_profile
- ; CORTEX-M85: .eabi_attribute 8, 0    @ Tag_ARM_ISA_use
- ; CORTEX-M85: .eabi_attribute 9, 3    @ Tag_THUMB_ISA_use
--; CORTEX-M85: .fpu    fpv5-d16
-+; CORTEX-M85: .fpu fp-armv8-fullfp16-d16
- ; CORTEX-M85: .eabi_attribute 36, 1   @ Tag_FP_HP_extension
- ; CORTEX-M85: .eabi_attribute 48, 2   @ Tag_MVE_arch
- ; CORTEX-M85: .eabi_attribute 46, 1   @ Tag_DSP_extension
 -- 
 2.34.1
 
