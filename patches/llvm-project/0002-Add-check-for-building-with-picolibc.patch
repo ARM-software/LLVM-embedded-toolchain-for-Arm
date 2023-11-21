@@ -1,7 +1,7 @@
-From acb9eb72087a5ca9e408c8642c316f663f91cd9f Mon Sep 17 00:00:00 2001
+From 7fe484bf6b73fcd0a933ac58b1abf0d79c156a75 Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 09:35:52 +0100
-Subject: [PATCH 2/5] Add check for building with picolibc
+Subject: [PATCH 02/12] Add check for building with picolibc
 
 This is intended to identify changes that would fail to build on
 embedded platforms e.g. D152382
@@ -459,12 +459,12 @@ index 2b6455466681..a1560c8ee585 100644
  
  #include <uchar.h>
 diff --git a/libcxx/test/std/experimental/simd/simd.reference/reference_assignment.pass.cpp b/libcxx/test/std/experimental/simd/simd.reference/reference_assignment.pass.cpp
-index bf84cc4b04e3..23409efc531a 100644
+index 048625075353..d37b4af563cc 100644
 --- a/libcxx/test/std/experimental/simd/simd.reference/reference_assignment.pass.cpp
 +++ b/libcxx/test/std/experimental/simd/simd.reference/reference_assignment.pass.cpp
-@@ -11,6 +11,9 @@
- // FIXME: Timeouts.
- // UNSUPPORTED: sanitizer-new-delete
+@@ -8,6 +8,9 @@
+ 
+ // UNSUPPORTED: c++03, c++11, c++14
  
 +// The machine emulated in tests does not have enough memory for code.
 +// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
@@ -808,10 +808,10 @@ index 000000000000..078c2bdf5ebc
 +
 +"${venv_dir}/bin/meson" install -C "${picolibc_build_dir}"
 diff --git a/libcxx/utils/ci/buildkite-pipeline.yml b/libcxx/utils/ci/buildkite-pipeline.yml
-index 7482938f65dc..018d6a4c9195 100644
+index 39db2bfc4738..fee0f0525105 100644
 --- a/libcxx/utils/ci/buildkite-pipeline.yml
 +++ b/libcxx/utils/ci/buildkite-pipeline.yml
-@@ -505,6 +505,11 @@ steps:
+@@ -227,6 +227,11 @@ steps:
      <<: *arm_agent_armv8l
      <<: *common
  
@@ -824,10 +824,10 @@ index 7482938f65dc..018d6a4c9195 100644
    steps:
    - label: AIX (32-bit)
 diff --git a/libcxx/utils/ci/run-buildbot b/libcxx/utils/ci/run-buildbot
-index fe99388a799b..8263d335b45a 100755
+index 65d0cd6ee6b2..310adc3e2478 100755
 --- a/libcxx/utils/ci/run-buildbot
 +++ b/libcxx/utils/ci/run-buildbot
-@@ -627,6 +627,41 @@ armv7-no-exceptions)
+@@ -624,6 +624,41 @@ armv7-no-exceptions)
      generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
      check-runtimes
  ;;
