@@ -1,0 +1,41 @@
+From f989c15770faf3d97a5d0a7a18b7f7fd2c9239e0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Wed, 22 Nov 2023 16:12:39 +0100
+Subject: [libc++] tests with picolibc: mark two more large tests
+
+---
+ libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp  | 3 +++
+ libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp | 3 +++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp b/libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp
+index 2493f6a643a6..f4f1bb642eaf 100644
+--- a/libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp
++++ b/libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp
+@@ -10,6 +10,9 @@
+ // UNSUPPORTED: no-exceptions
+ // UNSUPPORTED: c++03
+ 
++// fails with bad_alloc exception
++// REQUIRES: large_tests
++
+ // template <class BidirectionalIterator, class Allocator, class charT, class traits>
+ //     bool
+ //     regex_match(BidirectionalIterator first, BidirectionalIterator last,
+diff --git a/libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp b/libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp
+index 64a6a135adda..057301e6f868 100644
+--- a/libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp
++++ b/libcxx/test/std/re/re.alg/re.alg.search/exponential.pass.cpp
+@@ -10,6 +10,9 @@
+ // UNSUPPORTED: no-exceptions
+ // UNSUPPORTED: c++03
+ 
++// fails with bad_alloc exception
++// REQUIRES: large_tests
++
+ // template <class BidirectionalIterator, class Allocator, class charT, class traits>
+ //     bool
+ //     regex_search(BidirectionalIterator first, BidirectionalIterator last,
+-- 
+2.34.1
+

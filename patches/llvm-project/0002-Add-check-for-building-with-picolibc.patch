@@ -1,7 +1,7 @@
-From 7fe484bf6b73fcd0a933ac58b1abf0d79c156a75 Mon Sep 17 00:00:00 2001
+From e48d1f0fe4dda5ea699447f0ed1dc4ba0cdbc084 Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 09:35:52 +0100
-Subject: [PATCH 02/12] Add check for building with picolibc
+Subject: Add check for building with picolibc
 
 This is intended to identify changes that would fail to build on
 embedded platforms e.g. D152382
@@ -13,11 +13,28 @@ Differential Revision: https://reviews.llvm.org/D154246
  libcxx/cmake/caches/Armv7M-picolibc.cmake     |  38 ++++++
  libcxx/docs/index.rst                         |  21 ++--
  libcxx/test/configs/armv7m-libc++.cfg.in      |  42 +++++++
+ .../atomics.types.float/lockfree.pass.cpp     |   1 +
  .../test/libcxx/clang_modules_include.gen.py  |   3 +
  libcxx/test/libcxx/selftest/dsl/dsl.sh.py     |   2 +
  .../selftest/pass.cpp/run-error.pass.cpp      |   1 +
  .../libcxx/selftest/pass.mm/run-error.pass.mm |   1 +
  .../test/libcxx/system_reserved_names.gen.py  |  11 +-
+ .../atomics.types.float/assign.pass.cpp       |   1 +
+ .../compare_exchange_strong.pass.cpp          |   1 +
+ .../compare_exchange_weak.pass.cpp            |   1 +
+ .../atomics.types.float/ctor.pass.cpp         |   1 +
+ .../atomics.types.float/exchange.pass.cpp     |   1 +
+ .../atomics.types.float/fetch_add.pass.cpp    |   1 +
+ .../atomics.types.float/fetch_sub.pass.cpp    |   1 +
+ .../atomics.types.float/load.pass.cpp         |   1 +
+ .../atomics.types.float/lockfree.pass.cpp     |   1 +
+ .../atomics.types.float/notify_all.pass.cpp   |   1 +
+ .../atomics.types.float/notify_one.pass.cpp   |   1 +
+ .../operator.float.pass.cpp                   |   1 +
+ .../operator.minus_equals.pass.cpp            |   1 +
+ .../operator.plus_equals.pass.cpp             |   1 +
+ .../atomics.types.float/store.pass.cpp        |   1 +
+ .../atomics.types.float/wait.pass.cpp         |   1 +
  .../atomics.types.generic/integral.pass.cpp   |   2 +
  .../atomic_fetch_add.pass.cpp                 |   2 +
  .../atomic_fetch_add_explicit.pass.cpp        |   2 +
@@ -56,7 +73,7 @@ Differential Revision: https://reviews.llvm.org/D154246
  .../test/configs/armv7m-libc++abi.cfg.in      |  33 ++++++
  libcxxabi/test/test_demangle.pass.cpp         |   3 +
  .../test/configs/armv7m-libunwind.cfg.in      |  33 ++++++
- 46 files changed, 429 insertions(+), 14 deletions(-)
+ 63 files changed, 446 insertions(+), 14 deletions(-)
  create mode 100644 libcxx/cmake/caches/Armv7M-picolibc.cmake
  create mode 100644 libcxx/test/configs/armv7m-libc++.cfg.in
  create mode 100755 libcxx/utils/ci/build-picolibc.sh
@@ -187,6 +204,18 @@ index 000000000000..688c791b2028
 +    config,
 +    lit_config
 +)
+diff --git a/libcxx/test/libcxx/atomics/atomics.types.generic/atomics.types.float/lockfree.pass.cpp b/libcxx/test/libcxx/atomics/atomics.types.generic/atomics.types.float/lockfree.pass.cpp
+index 46511530c7c7..85a717acfd26 100644
+--- a/libcxx/test/libcxx/atomics/atomics.types.generic/atomics.types.float/lockfree.pass.cpp
++++ b/libcxx/test/libcxx/atomics/atomics.types.generic/atomics.types.float/lockfree.pass.cpp
+@@ -8,6 +8,7 @@
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // UNSUPPORTED: target={{.+}}-windows-gnu
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ //   static constexpr bool is_always_lock_free = implementation-defined;
+ //   bool is_lock_free() const volatile noexcept;
 diff --git a/libcxx/test/libcxx/clang_modules_include.gen.py b/libcxx/test/libcxx/clang_modules_include.gen.py
 index 04c8e03affee..26ef2077449b 100644
 --- a/libcxx/test/libcxx/clang_modules_include.gen.py
@@ -274,6 +303,198 @@ index e2aa8fc47348..29c1ce0d4faf 100644
  #define __output SYSTEM_RESERVED_NAME
  
  #define __acquire SYSTEM_RESERVED_NAME
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/assign.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/assign.pass.cpp
+index 8efb556cb5d9..653391fa7b6a 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/assign.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/assign.pass.cpp
+@@ -8,6 +8,7 @@
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // UNSUPPORTED: target={{.+}}-windows-gnu
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ //  floating-point-type operator=(floating-point-type) volatile noexcept;
+ //  floating-point-type operator=(floating-point-type) noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/compare_exchange_strong.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/compare_exchange_strong.pass.cpp
+index 839d79d3a411..7dcb2af6e3da 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/compare_exchange_strong.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/compare_exchange_strong.pass.cpp
+@@ -7,6 +7,7 @@
+ //===----------------------------------------------------------------------===//
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ // bool compare_exchange_strong(T& expected, T desired,
+ //                            memory_order success, memory_order failure) volatile noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/compare_exchange_weak.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/compare_exchange_weak.pass.cpp
+index 097210cc4a9d..042e7cea799c 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/compare_exchange_weak.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/compare_exchange_weak.pass.cpp
+@@ -7,6 +7,7 @@
+ //===----------------------------------------------------------------------===//
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ // bool compare_exchange_weak(T& expected, T desired,
+ //                            memory_order success, memory_order failure) volatile noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/ctor.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/ctor.pass.cpp
+index febabb4f2678..2d0f0220e05f 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/ctor.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/ctor.pass.cpp
+@@ -8,6 +8,7 @@
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // UNSUPPORTED: target={{.+}}-windows-gnu
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ // constexpr atomic() noexcept;
+ // constexpr atomic(floating-point-type) noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/exchange.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/exchange.pass.cpp
+index a8306304280c..105ae59a5b67 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/exchange.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/exchange.pass.cpp
+@@ -11,6 +11,7 @@
+ // XFAIL: tsan
+ // XFAIL: target={{x86_64-.*}} && msan
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ //  T exchange(T, memory_order = memory_order::seq_cst) volatile noexcept;
+ //  T exchange(T, memory_order = memory_order::seq_cst) noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/fetch_add.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/fetch_add.pass.cpp
+index 0c59b50eb807..965df56b2502 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/fetch_add.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/fetch_add.pass.cpp
+@@ -13,6 +13,7 @@
+ // Hangs with msan.
+ // UNSUPPORTED: msan
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ // floating-point-type fetch_add(floating-point-type,
+ //                               memory_order = memory_order::seq_cst) volatile noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/fetch_sub.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/fetch_sub.pass.cpp
+index 4435e3fc19b4..666953c07a4f 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/fetch_sub.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/fetch_sub.pass.cpp
+@@ -13,6 +13,7 @@
+ // Hangs with msan.
+ // UNSUPPORTED: msan
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ // floating-point-type fetch_sub(floating-point-type,
+ //                               memory_order = memory_order::seq_cst) volatile noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/load.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/load.pass.cpp
+index fa085275de29..dac5a0b0a15f 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/load.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/load.pass.cpp
+@@ -10,6 +10,7 @@
+ // Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
+ // XFAIL: tsan
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ //  floating-point-type load(memory_order = memory_order::seq_cst) volatile noexcept;
+ //  floating-point-type load(memory_order = memory_order::seq_cst) noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/lockfree.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/lockfree.pass.cpp
+index 447e0f865002..ee15b66573f7 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/lockfree.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/lockfree.pass.cpp
+@@ -8,6 +8,7 @@
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // UNSUPPORTED: target={{.+}}-windows-gnu
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ //   static constexpr bool is_always_lock_free = implementation-defined;
+ //   bool is_lock_free() const volatile noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/notify_all.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/notify_all.pass.cpp
+index e2320ed0b70e..a7b93c54252c 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/notify_all.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/notify_all.pass.cpp
+@@ -9,6 +9,7 @@
+ // XFAIL: availability-synchronization_library-missing
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ //  void notify_all() volatile noexcept;
+ //  void notify_all() noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/notify_one.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/notify_one.pass.cpp
+index 058424f5cee0..a0ae671763cc 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/notify_one.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/notify_one.pass.cpp
+@@ -9,6 +9,7 @@
+ // XFAIL: availability-synchronization_library-missing
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ //  void notify_one() volatile noexcept;
+ //  void notify_one() noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.float.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.float.pass.cpp
+index 54c62ba8d091..85e699f48f94 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.float.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.float.pass.cpp
+@@ -8,6 +8,7 @@
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // UNSUPPORTED: target={{.+}}-windows-gnu
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ //  operator floating-point-type() volatile noexcept;
+ //  operator floating-point-type() noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.minus_equals.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.minus_equals.pass.cpp
+index 23ad0c5c819d..9a58bfda9bf4 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.minus_equals.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.minus_equals.pass.cpp
+@@ -9,6 +9,7 @@
+ // UNSUPPORTED: target={{.+}}-windows-gnu
+ // XFAIL: LIBCXX-AIX-FIXME
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ // Hangs with msan.
+ // UNSUPPORTED: msan
+ 
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.plus_equals.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.plus_equals.pass.cpp
+index 0676645fcfa1..e61f34f57ca7 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.plus_equals.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/operator.plus_equals.pass.cpp
+@@ -9,6 +9,7 @@
+ // UNSUPPORTED: target={{.+}}-windows-gnu
+ // XFAIL: LIBCXX-AIX-FIXME
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ // Hangs with msan.
+ // UNSUPPORTED: msan
+ 
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/store.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/store.pass.cpp
+index 0bb1f00840a8..fe415f3a6a19 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/store.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/store.pass.cpp
+@@ -9,6 +9,7 @@
+ // Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
+ // XFAIL: tsan
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ // void store(floating-point-type, memory_order = memory_order::seq_cst) volatile noexcept;
+ // void store(floating-point-type, memory_order = memory_order::seq_cst) noexcept;
+diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/wait.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/wait.pass.cpp
+index 15f3613245a8..2c453c7065d7 100644
+--- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/wait.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/wait.pass.cpp
+@@ -11,6 +11,7 @@
+ // XFAIL: tsan
+ // XFAIL: target={{x86_64-.*}} && msan
+ // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
++// REQUIRES: has-64-bit-atomics
+ 
+ // void wait(T old, memory_order order = memory_order::seq_cst) const volatile noexcept;
+ // void wait(T old, memory_order order = memory_order::seq_cst) const noexcept;
 diff --git a/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp
 index 2695ff94da30..bb88f551bd06 100644
 --- a/libcxx/test/std/atomics/atomics.types.generic/integral.pass.cpp
@@ -808,7 +1029,7 @@ index 000000000000..078c2bdf5ebc
 +
 +"${venv_dir}/bin/meson" install -C "${picolibc_build_dir}"
 diff --git a/libcxx/utils/ci/buildkite-pipeline.yml b/libcxx/utils/ci/buildkite-pipeline.yml
-index 39db2bfc4738..fee0f0525105 100644
+index 3c49247ab5ae..06b0c55e6f3c 100644
 --- a/libcxx/utils/ci/buildkite-pipeline.yml
 +++ b/libcxx/utils/ci/buildkite-pipeline.yml
 @@ -227,6 +227,11 @@ steps:
@@ -824,10 +1045,10 @@ index 39db2bfc4738..fee0f0525105 100644
    steps:
    - label: AIX (32-bit)
 diff --git a/libcxx/utils/ci/run-buildbot b/libcxx/utils/ci/run-buildbot
-index 65d0cd6ee6b2..310adc3e2478 100755
+index 58c4c2a1021b..f3cc9b306288 100755
 --- a/libcxx/utils/ci/run-buildbot
 +++ b/libcxx/utils/ci/run-buildbot
-@@ -624,6 +624,41 @@ armv7-no-exceptions)
+@@ -610,6 +610,41 @@ armv7-no-exceptions)
      generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
      check-runtimes
  ;;
@@ -870,10 +1091,10 @@ index 65d0cd6ee6b2..310adc3e2478 100755
      clean
      # TODO: Currently, building with the experimental library breaks running
 diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
-index 29822f555213..124d05769de0 100644
+index e854aed66513..17ee5839d08c 100644
 --- a/libcxx/utils/libcxx/test/features.py
 +++ b/libcxx/utils/libcxx/test/features.py
-@@ -197,7 +197,8 @@ DEFAULT_FEATURES = [
+@@ -207,7 +207,8 @@ DEFAULT_FEATURES = [
              #include <unistd.h>
              #include <sys/wait.h>
              int main(int, char**) {
@@ -883,7 +1104,7 @@ index 29822f555213..124d05769de0 100644
              }
            """,
          ),
-@@ -277,6 +278,19 @@ DEFAULT_FEATURES = [
+@@ -287,6 +288,19 @@ DEFAULT_FEATURES = [
      Feature(name="msvc", when=_isMSVC),
      Feature(name=lambda cfg: "msvc-{}".format(*_msvcVersion(cfg)), when=_isMSVC),
      Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
@@ -903,7 +1124,7 @@ index 29822f555213..124d05769de0 100644
  ]
  
  # Deduce and add the test features that that are implied by the #defines in
-@@ -401,6 +415,19 @@ DEFAULT_FEATURES += [
+@@ -411,6 +425,19 @@ DEFAULT_FEATURES += [
          name="LIBCXX-FREEBSD-FIXME",
          when=lambda cfg: "__FreeBSD__" in compilerMacros(cfg),
      ),

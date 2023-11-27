@@ -35,8 +35,8 @@ def main():
     parser.add_argument(
         "--timeout",
         type=int,
-        default=120,
-        help="timeout, in seconds (default: 120)",
+        default=900,
+        help="timeout, in seconds (default: 900)",
     )
     parser.add_argument(
         "--execdir",

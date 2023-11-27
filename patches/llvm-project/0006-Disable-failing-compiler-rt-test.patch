@@ -1,7 +1,7 @@
-From 67a194ba20d6a4d1ef409f8af3a7d30c0414695e Mon Sep 17 00:00:00 2001
+From 16b274d55c685eedcb02c725825a5bb1b56d8d62 Mon Sep 17 00:00:00 2001
 From: Piotr Przybyla <piotr.przybyla@arm.com>
 Date: Wed, 15 Nov 2023 16:04:24 +0000
-Subject: [PATCH] Disable failing compiler-rt test
+Subject: Disable failing compiler-rt test
 
 ---
  compiler-rt/test/builtins/Unit/arm/aeabi_uldivmod_test.c | 2 ++
@@ -18,5 +18,5 @@ index 2ff65a8b9ec3..98611a75e85f 100644
  // RUN: %clang_builtins %s %librt -o %t && %run %t
  
 -- 
-2.25.1
+2.34.1
 

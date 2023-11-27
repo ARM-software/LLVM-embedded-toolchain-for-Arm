@@ -1,0 +1,118 @@
+From d8bd73c8514741feb05dd4070fcb8a5d79fe6f86 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Thu, 9 Nov 2023 15:25:14 +0100
+Subject: [libc++] tests with picolibc: XFAIL uses of atomics
+
+---
+ libcxx/test/libcxx/atomics/lit.local.cfg          |  3 +++
+ .../test/libcxx/experimental/memory/lit.local.cfg |  3 +++
+ .../intrusive_shared_ptr.pass.cpp                 |  2 ++
+ libcxx/test/std/atomics/lit.local.cfg             |  3 +++
+ .../lit.local.cfg                                 |  3 +++
+ .../memory/memory.resource.aliases/lit.local.cfg  |  3 +++
+ .../memory/memory.resource.global/lit.local.cfg   |  3 +++
+ libcxx/utils/libcxx/test/features.py              | 15 +++++++++++++++
+ 8 files changed, 35 insertions(+)
+ create mode 100644 libcxx/test/libcxx/atomics/lit.local.cfg
+ create mode 100644 libcxx/test/libcxx/experimental/memory/lit.local.cfg
+ create mode 100644 libcxx/test/std/atomics/lit.local.cfg
+ create mode 100644 libcxx/test/std/experimental/memory/memory.polymorphic.allocator.class/lit.local.cfg
+ create mode 100644 libcxx/test/std/experimental/memory/memory.resource.aliases/lit.local.cfg
+ create mode 100644 libcxx/test/std/experimental/memory/memory.resource.global/lit.local.cfg
+
+diff --git a/libcxx/test/libcxx/atomics/lit.local.cfg b/libcxx/test/libcxx/atomics/lit.local.cfg
+new file mode 100644
+index 000000000000..5ecc58f3e385
+--- /dev/null
++++ b/libcxx/test/libcxx/atomics/lit.local.cfg
+@@ -0,0 +1,3 @@
++# Disable all of the atomics tests if the correct feature is not available.
++if "has-no-atomics" in config.available_features:
++    config.unsupported = True
+diff --git a/libcxx/test/libcxx/experimental/memory/lit.local.cfg b/libcxx/test/libcxx/experimental/memory/lit.local.cfg
+new file mode 100644
+index 000000000000..5ecc58f3e385
+--- /dev/null
++++ b/libcxx/test/libcxx/experimental/memory/lit.local.cfg
+@@ -0,0 +1,3 @@
++# Disable all of the atomics tests if the correct feature is not available.
++if "has-no-atomics" in config.available_features:
++    config.unsupported = True
+diff --git a/libcxx/test/libcxx/thread/thread.stoptoken/intrusive_shared_ptr.pass.cpp b/libcxx/test/libcxx/thread/thread.stoptoken/intrusive_shared_ptr.pass.cpp
+index 47440015f2c5..4350de3dfa65 100644
+--- a/libcxx/test/libcxx/thread/thread.stoptoken/intrusive_shared_ptr.pass.cpp
++++ b/libcxx/test/libcxx/thread/thread.stoptoken/intrusive_shared_ptr.pass.cpp
+@@ -7,6 +7,8 @@
+ //===----------------------------------------------------------------------===//
+ //
+ 
++// XFAIL: has-no-atomics
++
+ // UNSUPPORTED: c++03, c++11, c++14, c++17
+ 
+ #include <__stop_token/intrusive_shared_ptr.h>
+diff --git a/libcxx/test/std/atomics/lit.local.cfg b/libcxx/test/std/atomics/lit.local.cfg
+new file mode 100644
+index 000000000000..5ecc58f3e385
+--- /dev/null
++++ b/libcxx/test/std/atomics/lit.local.cfg
+@@ -0,0 +1,3 @@
++# Disable all of the atomics tests if the correct feature is not available.
++if "has-no-atomics" in config.available_features:
++    config.unsupported = True
+diff --git a/libcxx/test/std/experimental/memory/memory.polymorphic.allocator.class/lit.local.cfg b/libcxx/test/std/experimental/memory/memory.polymorphic.allocator.class/lit.local.cfg
+new file mode 100644
+index 000000000000..5ecc58f3e385
+--- /dev/null
++++ b/libcxx/test/std/experimental/memory/memory.polymorphic.allocator.class/lit.local.cfg
+@@ -0,0 +1,3 @@
++# Disable all of the atomics tests if the correct feature is not available.
++if "has-no-atomics" in config.available_features:
++    config.unsupported = True
+diff --git a/libcxx/test/std/experimental/memory/memory.resource.aliases/lit.local.cfg b/libcxx/test/std/experimental/memory/memory.resource.aliases/lit.local.cfg
+new file mode 100644
+index 000000000000..5ecc58f3e385
+--- /dev/null
++++ b/libcxx/test/std/experimental/memory/memory.resource.aliases/lit.local.cfg
+@@ -0,0 +1,3 @@
++# Disable all of the atomics tests if the correct feature is not available.
++if "has-no-atomics" in config.available_features:
++    config.unsupported = True
+diff --git a/libcxx/test/std/experimental/memory/memory.resource.global/lit.local.cfg b/libcxx/test/std/experimental/memory/memory.resource.global/lit.local.cfg
+new file mode 100644
+index 000000000000..5ecc58f3e385
+--- /dev/null
++++ b/libcxx/test/std/experimental/memory/memory.resource.global/lit.local.cfg
+@@ -0,0 +1,3 @@
++# Disable all of the atomics tests if the correct feature is not available.
++if "has-no-atomics" in config.available_features:
++    config.unsupported = True
+diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
+index 9426e49351c8..3c2d48e1d78e 100644
+--- a/libcxx/utils/libcxx/test/features.py
++++ b/libcxx/utils/libcxx/test/features.py
+@@ -330,6 +330,21 @@ DEFAULT_FEATURES = [
+           """,
+         ),
+     ),
++    Feature(
++        name="has-no-atomics",
++        when=lambda cfg: not sourceBuilds(
++            cfg,
++            """
++            #include <atomic>
++            std::atomic_uint x;
++            int main(int, char**) { (void)x.load(); return 0; }
++          """,
++        ),
++        actions=[
++            AddFeature("availability-pmr-missing"),
++            AddFeature("libcpp-has-no-incomplete-pstl"),
++        ],
++    ),
+ ]
+ 
+ # Deduce and add the test features that that are implied by the #defines in
+-- 
+2.34.1
+

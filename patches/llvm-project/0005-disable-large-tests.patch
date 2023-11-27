@@ -1,7 +1,7 @@
-From 8789ad306129822ae49eb69bd05731fe366ee372 Mon Sep 17 00:00:00 2001
+From a757cee4a572c0592b64ee9d8c3d8850ae33a1cd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Wed, 15 Nov 2023 12:18:35 +0100
-Subject: [PATCH 5/5] disable large tests
+Subject: disable large tests
 
 ---
  libcxx/test/configs/armv7m-libc++.cfg.in       | 2 ++

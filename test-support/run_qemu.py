@@ -43,11 +43,8 @@ def run_qemu(
     else:
         qemu_params += ["-device", f"loader,file={image},cpu-num=0"]
 
-    # setting stdin to devnull prevents qemu from fiddling with the echo bit of
-    # the parent terminal
     result = subprocess.run(
         [qemu_command] + qemu_params,
-        stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=sys.stderr,
         timeout=timeout,
