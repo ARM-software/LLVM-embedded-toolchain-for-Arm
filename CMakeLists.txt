@@ -272,6 +272,7 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0012-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0013-libc-tests-with-picolibc-mark-two-more-large-tests.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0014-libc-tests-with-picolibc-xfail-test-missing-rt-libra.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0015-libc-add-missing-has-unix-headers-requirement-in-PST.patch
 )
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git

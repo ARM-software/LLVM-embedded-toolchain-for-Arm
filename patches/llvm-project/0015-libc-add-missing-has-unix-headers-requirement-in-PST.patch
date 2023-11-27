@@ -1,0 +1,24 @@
+From a3a3381cd4246646d9a48ceb1d592e4704c0f83f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Mon, 27 Nov 2023 13:23:48 +0100
+Subject: [libc++] add missing "has-unix-headers" requirement in PSTL test
+
+---
+ .../alg.nonmodifying/alg.all_of/pstl.exception_handling.pass.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/libcxx/test/std/algorithms/alg.nonmodifying/alg.all_of/pstl.exception_handling.pass.cpp b/libcxx/test/std/algorithms/alg.nonmodifying/alg.all_of/pstl.exception_handling.pass.cpp
+index cc6297983536..ae5063c5264e 100644
+--- a/libcxx/test/std/algorithms/alg.nonmodifying/alg.all_of/pstl.exception_handling.pass.cpp
++++ b/libcxx/test/std/algorithms/alg.nonmodifying/alg.all_of/pstl.exception_handling.pass.cpp
+@@ -8,6 +8,7 @@
+ 
+ // UNSUPPORTED: c++03, c++11, c++14
+ // UNSUPPORTED: no-exceptions
++// REQUIRES: has-unix-headers
+ 
+ // UNSUPPORTED: libcpp-has-no-incomplete-pstl
+ 
+-- 
+2.34.1
+
