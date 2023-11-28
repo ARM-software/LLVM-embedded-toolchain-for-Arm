@@ -1,4 +1,4 @@
-From 864ff32efb746704641fb1a7066fa1f00c512804 Mon Sep 17 00:00:00 2001
+From ce6b430fac8e2e94325c691eb7ff29fb5a6acf8e Mon Sep 17 00:00:00 2001
 From: Michael Platings <michael.platings@arm.com>
 Date: Fri, 29 Sep 2023 12:23:37 +0100
 Subject: Run picolibc tests with qemu
@@ -7,8 +7,10 @@ Differential Revision: https://reviews.llvm.org/D155521
 ---
  libcxx/cmake/caches/Armv7M-picolibc.cmake           |  1 +
  libcxx/docs/index.rst                               |  2 +-
- libcxx/test/configs/armv7m-libc++.cfg.in            | 13 +++++++++++--
- libcxx/test/libcxx/selftest/dsl/dsl.sh.py           |  4 ++++
+ libcxx/test/configs/armv7m-picolibc-libc++.cfg.in   | 13 +++++++++++--
+ libcxx/test/libcxx/selftest/dsl/dsl.sh.py           |  4 +++-
+ .../libcxx/selftest/pass.cpp/run-error.pass.cpp     |  1 -
+ .../test/libcxx/selftest/pass.mm/run-error.pass.mm  |  1 -
  libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp   |  2 ++
  .../alg.sorting/alg.sort/sort/sort.pass.cpp         |  3 +++
  .../syserr.errcat.objects/generic_category.pass.cpp |  1 +
@@ -23,9 +25,9 @@ Differential Revision: https://reviews.llvm.org/D155521
  .../facet.num.put.members/put_long_double.pass.cpp  |  1 +
  .../rand.dist.bern.bin/eval.PR44847.pass.cpp        |  3 +++
  .../time/time.clock/time.clock.file/now.pass.cpp    |  3 +++
- libcxxabi/test/configs/armv7m-libc++abi.cfg.in      | 10 ++++++++--
- libunwind/test/configs/armv7m-libunwind.cfg.in      | 10 ++++++++--
- 20 files changed, 52 insertions(+), 13 deletions(-)
+ .../test/configs/armv7m-picolibc-libc++abi.cfg.in   | 10 ++++++++--
+ .../test/configs/armv7m-picolibc-libunwind.cfg.in   | 10 ++++++++--
+ 22 files changed, 51 insertions(+), 16 deletions(-)
 
 diff --git a/libcxx/cmake/caches/Armv7M-picolibc.cmake b/libcxx/cmake/caches/Armv7M-picolibc.cmake
 index 6ed1866a5084..e308ac31d1d1 100644
@@ -49,10 +51,10 @@ index 7bb5512beb1f..e8b4a95dbcff 100644
  ===================== ========================= ============================
  
  Generally speaking, libc++ should work on any platform that provides a fairly complete
-diff --git a/libcxx/test/configs/armv7m-libc++.cfg.in b/libcxx/test/configs/armv7m-libc++.cfg.in
-index 688c791b2028..9d8d567d7766 100644
---- a/libcxx/test/configs/armv7m-libc++.cfg.in
-+++ b/libcxx/test/configs/armv7m-libc++.cfg.in
+diff --git a/libcxx/test/configs/armv7m-picolibc-libc++.cfg.in b/libcxx/test/configs/armv7m-picolibc-libc++.cfg.in
+index c0d23f136475..14526c007924 100644
+--- a/libcxx/test/configs/armv7m-picolibc-libc++.cfg.in
++++ b/libcxx/test/configs/armv7m-picolibc-libc++.cfg.in
 @@ -26,10 +26,19 @@ config.substitutions.append(('%{link_flags}',
      ' -Wl,--defsym=__ram_size=0x1000000'
      ' -Wl,--defsym=__stack_size=0x1000'
@@ -76,20 +78,44 @@ index 688c791b2028..9d8d567d7766 100644
  import os, site
  site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
 diff --git a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
-index 6c695a0d672e..6cb79d98228c 100644
+index 6c695a0d672e..012759436d89 100644
 --- a/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
 +++ b/libcxx/test/libcxx/selftest/dsl/dsl.sh.py
-@@ -8,6 +8,10 @@
+@@ -6,7 +6,9 @@
+ #
+ # ===----------------------------------------------------------------------===##
  
- # XFAIL: libcxx-fake-executor
- 
+-# XFAIL: libcxx-fake-executor
 +# With picolibc, test_program_stderr_is_not_conflated_with_stdout fails
 +# because stdout & stderr are treated as the same.
 +# XFAIL: LIBCXX-PICOLIBC-FIXME
-+
+ 
  # Note: We prepend arguments with 'x' to avoid thinking there are too few
  #       arguments in case an argument is an empty string.
- # RUN: %{python} %s x%S x%T x%{substitutions}
+diff --git a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
+index 1df98ef11191..eac7d8846e23 100644
+--- a/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
++++ b/libcxx/test/libcxx/selftest/pass.cpp/run-error.pass.cpp
+@@ -6,7 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// UNSUPPORTED: libcxx-fake-executor
+ // XFAIL: *
+ 
+ // Make sure the test DOES NOT pass if it fails at runtime.
+diff --git a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
+index 02e8321c96b2..22e17666eab0 100644
+--- a/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
++++ b/libcxx/test/libcxx/selftest/pass.mm/run-error.pass.mm
+@@ -7,7 +7,6 @@
+ //===----------------------------------------------------------------------===//
+ 
+ // REQUIRES: objective-c++
+-// UNSUPPORTED: libcxx-fake-executor
+ 
+ // XFAIL: *
+ 
 diff --git a/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp b/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp
 index ffd10631c6a6..897e10e94783 100644
 --- a/libcxx/test/libcxx/selftest/stdin-is-piped.sh.cpp
@@ -104,7 +130,7 @@ index ffd10631c6a6..897e10e94783 100644
  // RUN: echo "abc" | %{exec} %t.exe
  
 diff --git a/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp b/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
-index ed26c5b861f5..56c0964c8750 100644
+index 554bd8982ab3..e2581fbf2fa6 100644
 --- a/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
 +++ b/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
 @@ -6,6 +6,9 @@
@@ -269,10 +295,10 @@ index 0852483a8b39..4ba17a48988b 100644
  // <chrono>
  
  // file_clock
-diff --git a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
-index 876f43e44bbb..c244e44bbe71 100644
---- a/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
-+++ b/libcxxabi/test/configs/armv7m-libc++abi.cfg.in
+diff --git a/libcxxabi/test/configs/armv7m-picolibc-libc++abi.cfg.in b/libcxxabi/test/configs/armv7m-picolibc-libc++abi.cfg.in
+index cb5ede3ac67a..b4744f935ad8 100644
+--- a/libcxxabi/test/configs/armv7m-picolibc-libc++abi.cfg.in
++++ b/libcxxabi/test/configs/armv7m-picolibc-libc++abi.cfg.in
 @@ -17,10 +17,16 @@ config.substitutions.append(('%{link_flags}',
      ' -Wl,--defsym=__ram_size=0x1000000'
      ' -Wl,--defsym=__stack_size=0x1000'
@@ -292,10 +318,10 @@ index 876f43e44bbb..c244e44bbe71 100644
  
  import os, site
  site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
-diff --git a/libunwind/test/configs/armv7m-libunwind.cfg.in b/libunwind/test/configs/armv7m-libunwind.cfg.in
-index 6ddb6138c402..48c02add6e49 100644
---- a/libunwind/test/configs/armv7m-libunwind.cfg.in
-+++ b/libunwind/test/configs/armv7m-libunwind.cfg.in
+diff --git a/libunwind/test/configs/armv7m-picolibc-libunwind.cfg.in b/libunwind/test/configs/armv7m-picolibc-libunwind.cfg.in
+index c2dd320ddfd1..e8f68a51fc53 100644
+--- a/libunwind/test/configs/armv7m-picolibc-libunwind.cfg.in
++++ b/libunwind/test/configs/armv7m-picolibc-libunwind.cfg.in
 @@ -17,10 +17,16 @@ config.substitutions.append(('%{link_flags}',
      ' -Wl,--defsym=__ram_size=0x1000000'
      ' -Wl,--defsym=__stack_size=0x1000'

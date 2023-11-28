@@ -1,4 +1,4 @@
-From 2b3ba0af92170971a54678e95eeaae43b72d184d Mon Sep 17 00:00:00 2001
+From 26677138b697566f283715359171272842867ac9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Mon, 23 Oct 2023 14:37:41 +0200
 Subject: [libc++] tests with picolibc: handle stdin
