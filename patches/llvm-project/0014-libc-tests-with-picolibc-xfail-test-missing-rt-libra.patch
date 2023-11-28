@@ -1,4 +1,4 @@
-From c48ba7df7d254a51b73a0679ae3ad64caab7c25b Mon Sep 17 00:00:00 2001
+From 22a9ced293a5bc87619e9c28432c7d9137a2feb0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Fri, 24 Nov 2023 10:18:29 +0100
 Subject: [libc++] tests with picolibc: xfail test missing "rt" library
@@ -8,13 +8,13 @@ Subject: [libc++] tests with picolibc: xfail test missing "rt" library
  1 file changed, 4 insertions(+)
 
 diff --git a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/wait.pass.cpp b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/wait.pass.cpp
-index 2c453c7065d7..c18669fb6685 100644
+index 6c4f65d3bc38..f78a9504a617 100644
 --- a/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/wait.pass.cpp
 +++ b/libcxx/test/std/atomics/atomics.types.generic/atomics.types.float/wait.pass.cpp
 @@ -12,6 +12,10 @@
  // XFAIL: target={{x86_64-.*}} && msan
  // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
- // REQUIRES: has-64-bit-atomics
+ // XFAIL: !has-64-bit-atomics
 +// TODO: Check, why the tests fails with picolibc, even on platforms which
 +// support 64-bit atomics. The error message is:
 +//   libc++.a(chrono.cpp.obj): unable to find library from dependent library specifier: rt

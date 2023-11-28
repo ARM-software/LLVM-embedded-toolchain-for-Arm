@@ -1,4 +1,4 @@
-From d8bd73c8514741feb05dd4070fcb8a5d79fe6f86 Mon Sep 17 00:00:00 2001
+From 59042dbd4f0afad0453aeb7a8e96a09b94d2c7be Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Thu, 9 Nov 2023 15:25:14 +0100
 Subject: [libc++] tests with picolibc: XFAIL uses of atomics
@@ -88,10 +88,10 @@ index 000000000000..5ecc58f3e385
 +if "has-no-atomics" in config.available_features:
 +    config.unsupported = True
 diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
-index 9426e49351c8..3c2d48e1d78e 100644
+index 1217070dc6ae..411acd2c964c 100644
 --- a/libcxx/utils/libcxx/test/features.py
 +++ b/libcxx/utils/libcxx/test/features.py
-@@ -330,6 +330,21 @@ DEFAULT_FEATURES = [
+@@ -201,6 +201,21 @@ DEFAULT_FEATURES = [
            """,
          ),
      ),
@@ -110,9 +110,9 @@ index 9426e49351c8..3c2d48e1d78e 100644
 +            AddFeature("libcpp-has-no-incomplete-pstl"),
 +        ],
 +    ),
- ]
- 
- # Deduce and add the test features that that are implied by the #defines in
+     # TODO: Remove this feature once compiler-rt includes __atomic_is_lockfree()
+     # on all supported platforms.
+     Feature(
 -- 
 2.34.1
 
