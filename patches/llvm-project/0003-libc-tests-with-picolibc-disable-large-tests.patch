@@ -1,0 +1,58 @@
+From 555fbcabc83763423e547d9e18a7289078cb47bc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Wed, 15 Nov 2023 12:18:35 +0100
+Subject: [libc++] tests with picolibc: disable large tests
+
+---
+ libcxx/cmake/caches/Armv7M-picolibc.cmake | 9 ++++++++-
+ libcxxabi/test/test_demangle.pass.cpp     | 2 +-
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/libcxx/cmake/caches/Armv7M-picolibc.cmake b/libcxx/cmake/caches/Armv7M-picolibc.cmake
+index 9f8863943444..3ac426ad7948 100644
+--- a/libcxx/cmake/caches/Armv7M-picolibc.cmake
++++ b/libcxx/cmake/caches/Armv7M-picolibc.cmake
+@@ -17,6 +17,9 @@ set(LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
+ set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
+ set(LIBCXXABI_ENABLE_STATIC ON CACHE BOOL "")
+ set(LIBCXXABI_ENABLE_THREADS OFF CACHE BOOL "")
++# Long tests are prohibitively slow when run via emulation.
++# The emulated target has limited memory.
++set(LIBCXXABI_TEST_PARAMS "long_tests=False large_tests=False" CACHE STRING "")
+ set(LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
+ set(LIBCXXABI_USE_LLVM_UNWINDER ON CACHE BOOL "")
+ set(LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
+@@ -30,12 +33,16 @@ set(LIBCXX_ENABLE_THREADS OFF CACHE BOOL "")
+ set(LIBCXX_ENABLE_WIDE_CHARACTERS OFF CACHE BOOL "")
+ set(LIBCXX_INCLUDE_BENCHMARKS OFF CACHE BOOL "")
+ # Long tests are prohibitively slow when run via emulation.
+-set(LIBCXX_TEST_PARAMS "long_tests=False" CACHE STRING "")
++# The emulated target has limited memory.
++set(LIBCXX_TEST_PARAMS "long_tests=False large_tests=False" CACHE STRING "")
+ set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
+ set(LIBUNWIND_ENABLE_SHARED OFF CACHE BOOL "")
+ set(LIBUNWIND_ENABLE_STATIC ON CACHE BOOL "")
+ set(LIBUNWIND_ENABLE_THREADS OFF CACHE BOOL "")
+ set(LIBUNWIND_IS_BAREMETAL ON CACHE BOOL "")
+ set(LIBUNWIND_REMEMBER_HEAP_ALLOC ON CACHE BOOL "")
++# Long tests are prohibitively slow when run via emulation.
++# The emulated target has limited memory.
++set(LIBUNWIND_TEST_PARAMS "long_tests=False large_tests=False" CACHE STRING "")
+ set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
+ find_program(QEMU_SYSTEM_ARM qemu-system-arm)
+diff --git a/libcxxabi/test/test_demangle.pass.cpp b/libcxxabi/test/test_demangle.pass.cpp
+index b7e41099ebfc..8f04caba6ad9 100644
+--- a/libcxxabi/test/test_demangle.pass.cpp
++++ b/libcxxabi/test/test_demangle.pass.cpp
+@@ -10,7 +10,7 @@
+ // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+ 
+ // This test is too big for most embedded devices.
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
++// REQUIRES: large_tests
+ 
+ // https://llvm.org/PR51407 was not fixed in some previously-released
+ // demanglers, which causes them to run into the infinite loop.
+-- 
+2.34.1
+

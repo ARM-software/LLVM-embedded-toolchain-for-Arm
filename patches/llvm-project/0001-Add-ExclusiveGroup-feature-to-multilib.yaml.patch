@@ -1,4 +1,4 @@
-From 4710a6c7f72252b503d1269b774f08ab93ce7622 Mon Sep 17 00:00:00 2001
+From c401df2e493a01d4785e3135d9bbd842ce9ceb89 Mon Sep 17 00:00:00 2001
 From: Simi Pallipurath <simi.pallipurath@arm.com>
 Date: Tue, 21 Nov 2023 16:20:43 +0000
 Subject: Add ExclusiveGroup feature to multilib.yaml.
