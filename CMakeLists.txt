@@ -259,19 +259,17 @@ read_repo_version(${LLVM_TOOLCHAIN_C_LIBRARY} ${LLVM_TOOLCHAIN_C_LIBRARY})
 set(
     llvm_project_patches
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-Add-ExclusiveGroup-feature-to-multilib.yaml.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0002-Add-check-for-building-with-picolibc.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0003-Run-picolibc-tests-with-qemu.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-xfail-two-remaining-libcxx-with-picolibc-tests.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-disable-large-tests.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0006-Disable-failing-compiler-rt-test.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0007-libc-tests-with-picolibc-handle-stdin.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0008-libc-tests-with-picolibc-add-has-compolete-fenv-feat.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0009-libc-tests-with-picolibc-Fix-expected-error-message.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0010-libc-tests-with-picolibc-Fix-iterator-diff_type-to-s.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0011-libc-tests-with-picolibc-mark-sort-test-as-long-one.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0012-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0013-libc-tests-with-picolibc-mark-two-more-large-tests.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0014-libc-tests-with-picolibc-xfail-test-missing-rt-libra.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0002-xfail-two-remaining-libcxx-with-picolibc-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0003-libc-tests-with-picolibc-disable-large-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-Disable-failing-compiler-rt-test.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-libc-tests-with-picolibc-handle-stdin.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0006-libc-tests-with-picolibc-add-has-compolete-fenv-feat.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0007-libc-tests-with-picolibc-Fix-expected-error-message.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0008-libc-tests-with-picolibc-Fix-iterator-diff_type-to-s.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0009-libc-tests-with-picolibc-mark-sort-test-as-long-one.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0010-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0011-libc-tests-with-picolibc-mark-two-more-large-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0012-libc-tests-with-picolibc-xfail-test-missing-rt-libra.patch
 )
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git

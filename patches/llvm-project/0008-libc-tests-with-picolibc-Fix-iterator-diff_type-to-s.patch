@@ -1,4 +1,4 @@
-From bc25322abaeabed5302e97e96b102d4f29fdb566 Mon Sep 17 00:00:00 2001
+From 00f5102bee1a415d31ee38f13b45f99cdf68217c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Fri, 27 Oct 2023 14:33:48 +0200
 Subject: [libc++] tests with picolibc: Fix iterator diff_type to
