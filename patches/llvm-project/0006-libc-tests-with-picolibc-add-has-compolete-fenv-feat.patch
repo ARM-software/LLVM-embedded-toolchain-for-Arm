@@ -1,4 +1,4 @@
-From 69b8c896e78334d601e46aa0f29be523f15e461c Mon Sep 17 00:00:00 2001
+From 9e005bc9511e8d3407c3b09348d7b656ccb1ceae Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Tue, 24 Oct 2023 12:12:27 +0200
 Subject: [libc++] tests with picolibc: add has-compolete-fenv feature
@@ -36,10 +36,10 @@ index 7b3b490eba27..5a39003d00d0 100644
  // <cfenv>
  
 diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
-index ab5a24dadb60..1217070dc6ae 100644
+index ccabb48833f1..f5b12f90c051 100644
 --- a/libcxx/utils/libcxx/test/features.py
 +++ b/libcxx/utils/libcxx/test/features.py
-@@ -215,6 +215,35 @@ DEFAULT_FEATURES = [
+@@ -212,6 +212,35 @@ DEFAULT_FEATURES = [
            """,
          ),
      ),

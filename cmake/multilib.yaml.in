@@ -29,6 +29,21 @@
 
 MultilibVersion: '1.0'
 
+# Make an exclusive group for library variants, to make sure we don't
+# accidentally include two or more variants at once.
+#
+# Even if they all match the command-line options, putting two sets of
+# include directories on the include path can cause build failure,
+# because of the #include_next used in the libc++ headers. The first
+# libc++ stdio.h (for example) will #include_next <stdio.h>, which
+# will find the second libc++ version. That won't do anything at all,
+# because it has the same include-guard macro as the first, and so
+# nothing will ever include the _libc_ stdio.h, which was what the
+# #include_next was really looking for.
+Groups:
+- Name: stdlibs
+  Type: Exclusive
+
 # The list of library variants is substituted in by CMakeLists.txt, so
 # that it can respect the LLVM_TOOLCHAIN_LIBRARY_VARIANTS setting and
 # only include the set of libraries actually included in this build.
