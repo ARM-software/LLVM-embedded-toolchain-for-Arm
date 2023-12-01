@@ -269,7 +269,6 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0009-libc-tests-with-picolibc-mark-sort-test-as-long-one.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0010-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0011-libc-tests-with-picolibc-mark-two-more-large-tests.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0012-libc-tests-with-picolibc-xfail-test-missing-rt-libra.patch
 )
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
