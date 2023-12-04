@@ -1,4 +1,4 @@
-From 16ef107e767d1351e062f69ea1daa618af2c1cd1 Mon Sep 17 00:00:00 2001
+From c3514e7f708b8b12acf624db57f58d3d196ea7d2 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Wed, 25 Oct 2023 12:27:18 +0200
 Subject: [libc++] tests with picolibc: Fix expected error message
