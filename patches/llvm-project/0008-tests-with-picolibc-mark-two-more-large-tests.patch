@@ -1,7 +1,7 @@
-From 7bd2160775f94995f45e7332a378fea587eb2f02 Mon Sep 17 00:00:00 2001
+From 1511d6e3211952773ff58a794227f14e243dd7eb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Wed, 22 Nov 2023 16:12:39 +0100
-Subject: [libc++] tests with picolibc: mark two more large tests
+Subject: tests with picolibc: mark two more large tests
 
 ---
  libcxx/test/std/re/re.alg/re.alg.match/exponential.pass.cpp  | 3 +++
