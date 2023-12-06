@@ -1,7 +1,7 @@
-From b9a58fab5a33b6387e4132adda20b13e3b46465f Mon Sep 17 00:00:00 2001
+From 5f187ea76f49652df69aad6539275f8d8d27fb77 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Thu, 9 Nov 2023 14:14:30 +0100
-Subject: [libc++] tests with picolibc: mark sort test as long one
+Subject: tests with picolibc: mark sort test as long one
 
 ---
  .../std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp     | 3 +--
