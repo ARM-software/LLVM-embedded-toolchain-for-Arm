@@ -1,7 +1,7 @@
-From 783b79866bb492c7a9f0238940cd925390162c24 Mon Sep 17 00:00:00 2001
+From 7003d597f4b91c793851f58e8ad60a9144faafbc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Thu, 9 Nov 2023 15:25:14 +0100
-Subject: tests with picolibc: XFAIL uses of atomics
+Subject: [libc++] tests with picolibc: XFAIL uses of atomics
 
 ---
  libcxx/test/libcxx/atomics/lit.local.cfg          |  3 +++

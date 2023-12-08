@@ -1,7 +1,7 @@
-From 63ea8fb8d08ba3b66b3a6d68523156dc457df36f Mon Sep 17 00:00:00 2001
+From f95049b382c9d0f163dce8f3be5254649be8b154 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Tue, 24 Oct 2023 12:12:27 +0200
-Subject: tests with picolibc: add has-compolete-fenv feature
+Subject: [libc++] tests with picolibc: add has-compolete-fenv feature
 
 ---
  .../depr.c.headers/fenv_h.compile.pass.cpp    |  2 +-
