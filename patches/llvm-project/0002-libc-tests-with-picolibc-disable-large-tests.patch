@@ -1,7 +1,7 @@
-From e94b92010b1f50481aa9655bee29ce168e922773 Mon Sep 17 00:00:00 2001
+From 30d78a36b959e8bc829bc2f37249e5d043dfe4bd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Wed, 15 Nov 2023 12:18:35 +0100
-Subject: tests with picolibc: disable large tests
+Subject: [libc++] tests with picolibc: disable large tests
 
 ---
  libcxx/cmake/caches/Armv7M-picolibc.cmake | 9 ++++++++-

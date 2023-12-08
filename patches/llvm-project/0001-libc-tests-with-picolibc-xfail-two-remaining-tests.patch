@@ -1,7 +1,7 @@
-From 847015a9b8fe28d6a39a2e4d37e717f866dea210 Mon Sep 17 00:00:00 2001
+From c3b32b7c3951171770507dae2ce53c73ed593dfb Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Mon, 16 Oct 2023 11:35:48 +0200
-Subject: xfail two remaining libcxx with picolibc tests
+Subject: [libc++] tests with picolibc: xfail two remaining tests
 
 ---
  .../cmp/cmp.alg/strong_order_long_double.verify.cpp          | 5 +++++

@@ -258,14 +258,13 @@ read_repo_version(${LLVM_TOOLCHAIN_C_LIBRARY} ${LLVM_TOOLCHAIN_C_LIBRARY})
 #   git format-patch -k origin/main
 set(
     llvm_project_patches
-    ${CMAKE_CURRENT_SOURCE_DIR}patches/llvm-project/0001-xfail-two-remaining-libcxx-with-picolibc-tests.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}patches/llvm-project/0002-tests-with-picolibc-disable-large-tests.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}patches/llvm-project/0003-Disable-failing-compiler-rt-test.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}patches/llvm-project/0004-tests-with-picolibc-handle-stdin.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}patches/llvm-project/0005-tests-with-picolibc-add-has-compolete-fenv-feature.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}patches/llvm-project/0006-tests-with-picolibc-mark-sort-test-as-long-one.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}patches/llvm-project/0007-tests-with-picolibc-XFAIL-uses-of-atomics.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}patches/llvm-project/0008-tests-with-picolibc-mark-two-more-large-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-libc-tests-with-picolibc-xfail-two-remaining-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0002-libc-tests-with-picolibc-disable-large-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0003-Disable-failing-compiler-rt-test.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-libc-tests-with-picolibc-add-has-compolete-fenv-feat.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-libc-tests-with-picolibc-mark-sort-test-as-long-one.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0006-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0007-libc-tests-with-picolibc-mark-two-more-large-tests.patch
 )
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
