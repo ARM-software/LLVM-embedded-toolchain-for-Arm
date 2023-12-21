@@ -21,8 +21,8 @@ embedded and realtime operating systems.
 - Armv6-M
 - Armv7-M
 - Armv7E-M
-- Armv8-M Mainline
-- Armv8.1-M Mainline
+- Armv8-M Mainline and Baseline
+- Armv8.1-M Mainline and Baseline
 - Armv4T (experimental)
 - Armv5TE (experimental)
 - Armv6 (experimental, using the Armv5TE library variant)
