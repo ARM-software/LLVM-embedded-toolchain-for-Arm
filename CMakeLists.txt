@@ -1503,6 +1503,38 @@ add_library_variant(
 )
 add_library_variant(
     armv7m
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "mps2-an385"
+    QEMU_CPU "cortex-m3"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x21000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x21600000
+    RAM_SIZE 0xa00000
+    STACK_SIZE 4K
+    ENABLE_RTTI_EXCEPTIONS OFF
+)
+add_library_variant(
+    armv7m
+    SUFFIX soft_nofp_exceptions_rtti
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "mps2-an385"
+    QEMU_CPU "cortex-m3"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x21000000
+    FLASH_SIZE 0x600000
+    RAM_ADDRESS 0x21600000
+    RAM_SIZE 0xa00000
+    STACK_SIZE 4K
+    ENABLE_RTTI_EXCEPTIONS ON
+)
+add_library_variant(
+    armv7m
     SUFFIX soft_fpv4_sp_d16
     COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7m -mfpu=fpv4-sp-d16"
     MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=fpv4-sp-d16"
@@ -1533,19 +1565,13 @@ add_library_variant(
     STACK_SIZE 4K
     ENABLE_RTTI_EXCEPTIONS ON
 )
-# When no -mfpu=none is specified, the compiler internally adds all other
-# possible fpu settings before searching for matching variants. So for the
-# no-fpu variant to win, it has to be in multilab.yaml after all other
-# fpu variants. The order of variants in multilab.yaml depends on the order
-# of the add_library_variant calls. So the add_library_variant that adds
-# the soft_nofp for armv7m is placed after all other armv7m variants.
 add_library_variant(
-    armv7m
+    armv7em
     SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an385"
-    QEMU_CPU "cortex-m3"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "mps2-an386"
+    QEMU_CPU "cortex-m4"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
     FLASH_ADDRESS 0x21000000
@@ -1556,12 +1582,12 @@ add_library_variant(
     ENABLE_RTTI_EXCEPTIONS OFF
 )
 add_library_variant(
-    armv7m
+    armv7em
     SUFFIX soft_nofp_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an385"
-    QEMU_CPU "cortex-m3"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
+    QEMU_MACHINE "mps2-an386"
+    QEMU_CPU "cortex-m4"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
     FLASH_ADDRESS 0x21000000
@@ -1631,44 +1657,6 @@ add_library_variant(
     FLASH_ADDRESS 0x60000000
     FLASH_SIZE 0x600000
     RAM_ADDRESS 0x60600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-# When no -mfpu=none is specified, the compiler internally adds all other
-# possible fpu settings before searching for matching variants. So for the
-# no-fpu variant to win, it has to be in multilab.yaml after all other
-# fpu variants. The order of variants in multilab.yaml depends on the order
-# of the add_library_variant calls. So the add_library_variant that adds
-# the soft_nofp for armv7em is placed after all other armv7em variants.
-add_library_variant(
-    armv7em
-    SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an386"
-    QEMU_CPU "cortex-m4"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x21000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x21600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
-)
-add_library_variant(
-    armv7em
-    SUFFIX soft_nofp_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an386"
-    QEMU_CPU "cortex-m4"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x21000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x21600000
     RAM_SIZE 0xa00000
     STACK_SIZE 4K
     ENABLE_RTTI_EXCEPTIONS ON
