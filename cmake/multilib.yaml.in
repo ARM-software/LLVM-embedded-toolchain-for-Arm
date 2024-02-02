@@ -117,15 +117,18 @@ Mappings:
   - --target=armv8a-none-unknown-eabi
 
 # -march extensions
-- Match: -march=thumbv8\.[1-9]m\.main.*\+fp16.*
+- Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+fp16(\+[^\+]+)*
   Flags:
   - -march=thumbv8.1m.main+fp16
-- Match: -march=thumbv8\.[1-9]m\.main.*\+dsp.*\+mve.*
+- Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+mve(\+[^\+]+)*
   Flags:
-  - -march=thumbv8.1m.main+dsp+mve
-- Match: -march=thumbv8\.[1-9]m\.main.*\+mve\.fp.*\+fp16.*\+lob.*
+  - -march=thumbv8.1m.main+mve
+- Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+mve\.fp(\+[^\+]+)*
   Flags:
-  - -march=thumbv8.1m.main+fp16+lob+mve.fp
+  - -march=thumbv8.1m.main+mve.fp
+- Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+lob(\+[^\+]+)*
+  Flags:
+  - -march=thumbv8.1m.main+lob
 
 # -mfloat-abi settings
 - Match: -mfloat-abi=softfp

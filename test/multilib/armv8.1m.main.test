@@ -15,4 +15,6 @@
 # MVE-EMPTY:
 
 # RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -mcpu=cortex-m55 | FileCheck --check-prefix=CORTEXM55 %s
-# CORTEXM55: -march=thumbv8.1m.main+fp16+lob+mve.fp
+# CORTEXM55: -march=thumbv8.1m.main+fp16
+# CORTEXM55: -march=thumbv8.1m.main+lob
+# CORTEXM55: -march=thumbv8.1m.main+mve.fp
