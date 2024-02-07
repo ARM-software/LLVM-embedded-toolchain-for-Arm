@@ -302,28 +302,6 @@ FetchContent_Declare(newlib
 FetchContent_MakeAvailable(llvmproject)
 FetchContent_MakeAvailable(${LLVM_TOOLCHAIN_C_LIBRARY})
 
-function(get_llvm_version_numbers llvmproject_SOURCE_DIR)
-    # Grab the version out of LLVM sources
-    file(
-        STRINGS ${llvmproject_SOURCE_DIR}/llvm/CMakeLists.txt version_strings
-        REGEX [[set\(LLVM_VERSION_[A-Z]+ [0-9]+\)]]
-    )
-    string(REGEX MATCH [[MAJOR ([0-9]+)]] unused "${version_strings}")
-    set(LLVM_VERSION_MAJOR ${CMAKE_MATCH_1} PARENT_SCOPE)
-    string(REGEX MATCH [[MINOR ([0-9]+)]] unused "${version_strings}")
-    set(LLVM_VERSION_MINOR ${CMAKE_MATCH_1} PARENT_SCOPE)
-    string(REGEX MATCH [[PATCH ([0-9]+)]] unused "${version_strings}")
-    set(LLVM_VERSION_PATCH ${CMAKE_MATCH_1} PARENT_SCOPE)
-endfunction()
-get_llvm_version_numbers(${llvmproject_SOURCE_DIR})
-
-project(
-    LLVMEmbeddedToolchainForArm
-    VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
-    DESCRIPTION "LLVM Embedded Toolchain for Arm"
-    HOMEPAGE_URL "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm"
-)
-
 # We generally want to install to a local directory to see what the
 # output will look like rather than install into the system, so change
 # the default accordingly.
@@ -346,7 +324,33 @@ if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
     )
 endif()
 
-# These must be set before include(CPack) which the llvm CMakeLists.txt does.
+add_subdirectory(
+    ${llvmproject_SOURCE_DIR}/llvm llvm
+)
+
+get_directory_property(LLVM_VERSION_MAJOR DIRECTORY ${llvmproject_SOURCE_DIR}/llvm DEFINITION LLVM_VERSION_MAJOR)
+get_directory_property(LLVM_VERSION_MINOR DIRECTORY ${llvmproject_SOURCE_DIR}/llvm DEFINITION LLVM_VERSION_MINOR)
+get_directory_property(LLVM_VERSION_PATCH DIRECTORY ${llvmproject_SOURCE_DIR}/llvm DEFINITION LLVM_VERSION_PATCH)
+
+project(
+    LLVMEmbeddedToolchainForArm
+    VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
+    DESCRIPTION "LLVM Embedded Toolchain for Arm"
+    HOMEPAGE_URL "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm"
+)
+
+# Set package name and version.
+if(DEFINED LLVM_TOOLCHAIN_PACKAGE_NAME)
+    set(PACKAGE_NAME ${LLVM_TOOLCHAIN_PACKAGE_NAME})
+else()
+    set(PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+endif()
+set(CPACK_PACKAGE_NAME ${PACKAGE_NAME})
+set(PACKAGE_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+if(DEFINED LLVM_TOOLCHAIN_VERSION_SUFFIX)
+    set(PACKAGE_VERSION "${PACKAGE_VERSION}-${LLVM_TOOLCHAIN_VERSION_SUFFIX}")
+endif()
+
 # Restrict which LLVM components are installed.
 if(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
     set(CPACK_COMPONENTS_ALL
@@ -407,13 +411,14 @@ else()
     set(CPACK_SYSTEM_NAME "${CMAKE_SYSTEM_NAME}-${processor_name}")
 endif()
 
-add_subdirectory(
-    ${llvmproject_SOURCE_DIR}/llvm llvm
-)
+set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
 
 if(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
-    set(CPACK_PACKAGE_FILE_NAME ${CMAKE_PROJECT_NAME}-newlib-overlay-${CMAKE_PROJECT_VERSION})
+    set(PACKAGE_FILE_NAME ${PACKAGE_NAME}-newlib-overlay-${PACKAGE_VERSION})
+else()
+    set(PACKAGE_FILE_NAME ${PACKAGE_NAME}-${PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
 endif()
+set(CPACK_PACKAGE_FILE_NAME ${PACKAGE_FILE_NAME})
 
 # Including CPack again after llvm CMakeLists.txt included it
 # resets CPACK_PACKAGE_VERSION to the default MAJOR.MINOR.PATCH format.
@@ -2034,10 +2039,8 @@ else()
     set(cpack_generator TXZ)
     set(package_filename_extension ".tar.xz")
 endif()
-# CPACK_PACKAGE_FILE_NAME may refer to the source package so use this variable instead.
-set(binary_package_name ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
-set(package_filepath ${CMAKE_BINARY_DIR}/${binary_package_name}${package_filename_extension})
-set(unpack_directory ${CMAKE_CURRENT_BINARY_DIR}/unpack/${binary_package_name})
+set(package_filepath ${CMAKE_BINARY_DIR}/${PACKAGE_FILE_NAME}${package_filename_extension})
+set(unpack_directory ${CMAKE_CURRENT_BINARY_DIR}/unpack/${PACKAGE_FILE_NAME})
 add_custom_command(
     OUTPUT ${package_filepath}
     COMMAND "${CMAKE_COMMAND}" -E rm -f ${package_filepath}
