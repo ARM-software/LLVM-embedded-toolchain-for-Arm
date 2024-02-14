@@ -1,7 +1,7 @@
 # RUN: %clang -print-multi-directory --target=armv7r-none-eabi -mfpu=none | FileCheck %s
-# CHECK: arm-none-eabi/armv7r_soft_nofp
+# CHECK: arm-none-eabi/armv7r_soft_nofp_exceptions_rtti{{$}}
 # CHECK-EMPTY:
 
 # RUN: %clang -print-multi-directory --target=armv7r-none-eabihf -mfpu=vfpv3-d16 | FileCheck --check-prefix=VFPV3 %s
-# VFPV3: arm-none-eabi/armv7r_hard_vfpv3_d16
+# VFPV3: arm-none-eabi/armv7r_hard_vfpv3_d16_exceptions_rtti{{$}}
 # VFPV3-EMPTY:

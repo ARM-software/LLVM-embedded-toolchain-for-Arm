@@ -1,18 +1,31 @@
 # RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabi -mfpu=none | FileCheck %s
-# CHECK: arm-none-eabi/armv8.1m.main_soft_nofp
+# CHECK: arm-none-eabi/armv8.1m.main_soft_nofp_nomve_exceptions_rtti{{$}}
 # CHECK-EMPTY:
 
+# If both MVE and FPU are present, FPU variant is selected. This is because,
+# the nofp variant is only considered, when "-mfpu=none" is inferred from user
+# commandline.
+
 # RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main -mfpu=fp-armv8-fullfp16-sp-d16 | FileCheck --check-prefix=HARD_FP %s
-# HARD_FP: arm-none-eabi/armv8.1m.main_hard_fp_nomve
+# RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main+mve -mfpu=fp-armv8-fullfp16-sp-d16 | FileCheck --check-prefix=HARD_FP %s
+# HARD_FP: arm-none-eabi/armv8.1m.main_hard_fp_nomve_exceptions_rtti{{$}}
 # HARD_FP-EMPTY:
 
 # RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main -mfpu=fp-armv8-fullfp16-d16 | FileCheck --check-prefix=HARD_FPDP %s
-# HARD_FPDP: arm-none-eabi/armv8.1m.main_hard_fpdp_nomve
+# RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main+mve -mfpu=fp-armv8-fullfp16-d16 | FileCheck --check-prefix=HARD_FPDP %s
+# HARD_FPDP: arm-none-eabi/armv8.1m.main_hard_fpdp_nomve_exceptions_rtti{{$}}
 # HARD_FPDP-EMPTY:
 
 # RUN: %clang -print-multi-directory --target=armv8.1m.main-none-eabihf -march=armv8.1m.main+mve -mfpu=none | FileCheck --check-prefix=MVE %s
-# MVE: arm-none-eabi/armv8.1m.main_hard_nofp_mve
+# MVE: arm-none-eabi/armv8.1m.main_hard_nofp_mve_exceptions_rtti{{$}}
 # MVE-EMPTY:
+
+# TODO: We need to find a way to make this fail. For now it fallbacks to
+# arm-none-eabi/armv8.1m.main_soft_nofp, which will not initilize the
+# coprocessor nor will save/restore its registers in setjmp/longjmp.
+# DONT-RUN-YET: %clang -print-multi-directory --target=armv8.1m.main-none-eabi -march=armv8.1m.main+mve -mfpu=none | FileCheck --check-prefix=SOFTFP_MVE %s
+# SOFTFP_MVE: ?
+# SOFTFP_MVE-EMPTY:
 
 # RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -mcpu=cortex-m55 | FileCheck --check-prefix=CORTEXM55 %s
 # CORTEXM55: -march=thumbv8.1m.main+fp16
