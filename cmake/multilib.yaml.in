@@ -129,8 +129,3 @@ Mappings:
 - Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+lob(\+[^\+]+)*
   Flags:
   - -march=thumbv8.1m.main+lob
-
-# -mfloat-abi settings
-- Match: -mfloat-abi=softfp
-  Flags:
-  - -mfpu=fpv4-sp-d16
