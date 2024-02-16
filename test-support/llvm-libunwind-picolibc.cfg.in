@@ -6,14 +6,9 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.name = 'libunwind-@RUNTIME_VARIANT_NAME@'
 
-config.substitutions.append(('%{libc-include}', '@CMAKE_INSTALL_PREFIX@/include'))
-config.substitutions.append(('%{libc-lib}', '@CMAKE_INSTALL_PREFIX@/lib'))
 config.substitutions.append(('%{libc-linker-script}', '@LIBC_LINKER_SCRIPT@'))
 
-compile_flags = ['-isystem %{libc-include}']
-link_flags = ['-nostdlib', '-T %{libc-linker-script}',
-              '-lc', '-lm', '-lclang_rt.builtins', '-lsemihost',
-              '%{libc-lib}/crt0-semihost.o', '-L', '%{libc-lib}']
+compile_flags = []
 
 if @LIBUNWIND_ENABLE_CET@:
     compile_flags.append('-fcf-protection=full')
@@ -30,7 +25,11 @@ config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{{include}} {}'.format(' '.join(compile_flags))
 ))
 config.substitutions.append(('%{link_flags}',
-    '%{{lib}}/libunwind.a {}'.format(' '.join(link_flags))
+    '-nostdlib -nostdlib++ -L %{lib}'
+    ' -lc++ -lc++abi'
+    ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost'
+    ' -T %{libc-linker-script}'
+    ' -lunwind'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T -- '
