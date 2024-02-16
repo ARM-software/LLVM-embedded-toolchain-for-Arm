@@ -5,14 +5,11 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.name = 'libc++-@RUNTIME_VARIANT_NAME@'
 
-config.substitutions.append(('%{libc-include}', '@CMAKE_INSTALL_PREFIX@/include'))
-config.substitutions.append(('%{libc-lib}', '@CMAKE_INSTALL_PREFIX@/lib'))
 config.substitutions.append(('%{libc-linker-script}', '@LIBC_LINKER_SCRIPT@'))
 
 config.substitutions.append(('%{flags}', '@RUNTIME_TEST_ARCH_FLAGS@'))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support'
-    ' -isystem %{libc-include}'
+    '-nostdinc++ -I %{include-dir} -I %{target-include-dir} -I %{libcxx-dir}/test/support'
 
     # Disable warnings in cxx_atomic_impl.h:
     # "large atomic operation may incur significant performance penalty; the
@@ -24,11 +21,10 @@ config.substitutions.append(('%{compile_flags}',
     ' -include picolibc.h'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -nostdlib -L %{lib} -lc++ -lc++abi'
+    '-nostdlib -nostdlib++ -L %{lib-dir}'
+    ' -lc++ -lc++abi'
+    ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost'
     ' -T %{libc-linker-script}'
-    ' -lc -lm -lclang_rt.builtins -lsemihost'
-    ' %{libc-lib}/crt0-semihost.o'
-    ' -L %{libc-lib} -lc++ -lc++abi'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T -- '
@@ -37,13 +33,6 @@ config.substitutions.append(('%{exec}',
 # Long tests are prohibitively slow when run via emulation.
 config.long_tests = False
 config.large_tests = False
-
-# LIBCXX-PICOLIBC-FIXME is the feature name used to XFAIL the
-# initial picolibc failures until they can be properly diagnosed
-# and fixed. This allows easier detection of new test failures
-# and regressions. Note: New failures should not be suppressed
-# using this feature.
-config.available_features.add('LIBCXX-PICOLIBC-FIXME')
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
