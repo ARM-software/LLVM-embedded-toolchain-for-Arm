@@ -1,0 +1,124 @@
+From 8939fb173dc8c649976e3eef90c61d2ef76233cd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Mon, 19 Feb 2024 16:40:17 +0100
+Subject: [libc++] tests with picolibc: prevent looking for unneeded "rt"
+ library
+
+The clock_gettime function is provided by picolibc. There is no need to
+link to "rt" library, to have it. If still trying to link to "rt",
+following error is given:
+    unable to find library from dependent library specifier: rt
+---
+ libcxx/cmake/config-ix.cmake                               | 7 ++++++-
+ .../time/time.clock/time.clock.file/to_from_sys.pass.cpp   | 3 ---
+ .../test/std/time/time.clock/time.clock.hires/now.pass.cpp | 3 ---
+ .../time/time.clock/time.clock.system/from_time_t.pass.cpp | 3 ---
+ .../std/time/time.clock/time.clock.system/now.pass.cpp     | 3 ---
+ .../time/time.clock/time.clock.system/to_time_t.pass.cpp   | 3 ---
+ .../time.point/time.point.nonmember/op_-duration.pass.cpp  | 3 ---
+ 7 files changed, 6 insertions(+), 19 deletions(-)
+
+diff --git a/libcxx/cmake/config-ix.cmake b/libcxx/cmake/config-ix.cmake
+index 1e8c2f5ce463..24f158f03bcd 100644
+--- a/libcxx/cmake/config-ix.cmake
++++ b/libcxx/cmake/config-ix.cmake
+@@ -118,6 +118,11 @@ elseif(ANDROID)
+   set(LIBCXX_HAS_ATOMIC_LIB NO)
+ else()
+   check_library_exists(pthread pthread_create "" LIBCXX_HAS_PTHREAD_LIB)
+-  check_library_exists(rt clock_gettime "" LIBCXX_HAS_RT_LIB)
++  check_library_exists("" clock_gettime "" LIBCXX_HAS_RT_FUNC_WITHOUT_LIB)
++  if (LIBCXX_HAS_RT_FUNC_WITHOUT_LIB)
++    set(LIBCXX_HAS_RT_LIB NO)
++  else()
++    check_library_exists("" clock_gettime "" LIBCXX_HAS_RT_FUNC_WITHOUT_LIB)
++  endif()
+   check_library_exists(atomic __atomic_fetch_add_8 "" LIBCXX_HAS_ATOMIC_LIB)
+ endif()
+diff --git a/libcxx/test/std/time/time.clock/time.clock.file/to_from_sys.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.file/to_from_sys.pass.cpp
+index b1031c815610..5b1f46599111 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.file/to_from_sys.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.file/to_from_sys.pass.cpp
+@@ -10,9 +10,6 @@
+ 
+ // UNSUPPORTED: availability-filesystem-missing
+ 
+-// "unable to find library from dependent library specifier: rt"
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
+-
+ // <chrono>
+ //
+ // file_clock
+diff --git a/libcxx/test/std/time/time.clock/time.clock.hires/now.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.hires/now.pass.cpp
+index 8625ac58bde5..db1fb55df907 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.hires/now.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.hires/now.pass.cpp
+@@ -6,9 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// "unable to find library from dependent library specifier: rt"
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
+-
+ // <chrono>
+ 
+ // high_resolution_clock
+diff --git a/libcxx/test/std/time/time.clock/time.clock.system/from_time_t.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.system/from_time_t.pass.cpp
+index 5ff667445b1a..70dd8117e6ce 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.system/from_time_t.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.system/from_time_t.pass.cpp
+@@ -6,9 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// "unable to find library from dependent library specifier: rt"
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
+-
+ // <chrono>
+ 
+ // system_clock
+diff --git a/libcxx/test/std/time/time.clock/time.clock.system/now.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.system/now.pass.cpp
+index 70fbe98d8dfd..dade6bafa471 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.system/now.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.system/now.pass.cpp
+@@ -6,9 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// "unable to find library from dependent library specifier: rt"
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
+-
+ // <chrono>
+ 
+ // system_clock
+diff --git a/libcxx/test/std/time/time.clock/time.clock.system/to_time_t.pass.cpp b/libcxx/test/std/time/time.clock/time.clock.system/to_time_t.pass.cpp
+index f3238f7bb1bb..bf4339c32d1c 100644
+--- a/libcxx/test/std/time/time.clock/time.clock.system/to_time_t.pass.cpp
++++ b/libcxx/test/std/time/time.clock/time.clock.system/to_time_t.pass.cpp
+@@ -6,9 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// "unable to find library from dependent library specifier: rt"
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
+-
+ // <chrono>
+ 
+ // system_clock
+diff --git a/libcxx/test/std/time/time.point/time.point.nonmember/op_-duration.pass.cpp b/libcxx/test/std/time/time.point/time.point.nonmember/op_-duration.pass.cpp
+index 199bdec66878..80e9d04a769f 100644
+--- a/libcxx/test/std/time/time.point/time.point.nonmember/op_-duration.pass.cpp
++++ b/libcxx/test/std/time/time.point/time.point.nonmember/op_-duration.pass.cpp
+@@ -6,9 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// "unable to find library from dependent library specifier: rt"
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
+-
+ // <chrono>
+ 
+ // time_point
+-- 
+2.34.1
+
