@@ -1,4 +1,4 @@
-From 9d9f7585ef58f0c17a12999dd9ed0850cf599728 Mon Sep 17 00:00:00 2001
+From 1044139f897608b9f684c614211e1ffb9639529c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Thu, 9 Nov 2023 15:25:14 +0100
 Subject: [libc++] tests with picolibc: XFAIL uses of atomics
@@ -88,10 +88,10 @@ index 000000000000..5ecc58f3e385
 +if "has-no-atomics" in config.available_features:
 +    config.unsupported = True
 diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
-index 5e854917e6ef..c8db925bb51e 100644
+index 6ef40755c59d..6c2960260189 100644
 --- a/libcxx/utils/libcxx/test/features.py
 +++ b/libcxx/utils/libcxx/test/features.py
-@@ -198,6 +198,21 @@ DEFAULT_FEATURES = [
+@@ -206,6 +206,21 @@ DEFAULT_FEATURES = [
            """,
          ),
      ),

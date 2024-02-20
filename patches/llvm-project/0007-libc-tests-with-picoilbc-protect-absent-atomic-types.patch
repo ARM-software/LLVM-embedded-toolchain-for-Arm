@@ -1,0 +1,29 @@
+From f69c5ad51f5a148c6b3ee917ba7897d7d1c01269 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Mon, 19 Feb 2024 11:23:25 +0100
+Subject: [libc++] tests with picoilbc: protect absent atomic types with ifdef
+
+On some platforms, like armv4t, there are currently no atomic types at
+all. This ifdef prevents module from trying to import absent types.
+---
+ libcxx/modules/std/atomic.inc | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/libcxx/modules/std/atomic.inc b/libcxx/modules/std/atomic.inc
+index 88b31ccdb208..2b54cef863e5 100644
+--- a/libcxx/modules/std/atomic.inc
++++ b/libcxx/modules/std/atomic.inc
+@@ -111,8 +111,10 @@ export namespace std {
+   using std::atomic_uintmax_t;
+   using std::atomic_uintptr_t;
+ 
++#ifndef _LIBCPP_NO_LOCK_FREE_TYPES
+   using std::atomic_signed_lock_free;
+   using std::atomic_unsigned_lock_free;
++#endif
+ 
+   // [atomics.flag], flag type and operations
+   using std::atomic_flag;
+-- 
+2.34.1
+
