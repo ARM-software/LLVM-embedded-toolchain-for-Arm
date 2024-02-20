@@ -1,4 +1,4 @@
-From 08b2f73f8e2e4fd6f30261f3dff46708857ee62d Mon Sep 17 00:00:00 2001
+From 309e9168febae9c240daf3f507b360ef2688904c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Wed, 15 Nov 2023 12:18:35 +0100
 Subject: [libc++] tests with picolibc: disable large tests
@@ -9,7 +9,7 @@ Subject: [libc++] tests with picolibc: disable large tests
  2 files changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/libcxx/cmake/caches/Armv7M-picolibc.cmake b/libcxx/cmake/caches/Armv7M-picolibc.cmake
-index b5f9089308d2..fedf13548131 100644
+index b5f9089308d2..0a83e75ceceb 100644
 --- a/libcxx/cmake/caches/Armv7M-picolibc.cmake
 +++ b/libcxx/cmake/caches/Armv7M-picolibc.cmake
 @@ -18,6 +18,9 @@ set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
@@ -18,7 +18,7 @@ index b5f9089308d2..fedf13548131 100644
  set(LIBCXXABI_ENABLE_THREADS OFF CACHE BOOL "")
 +# Long tests are prohibitively slow when run via emulation.
 +# The emulated target has limited memory.
-+set(LIBCXXABI_TEST_PARAMS "long_tests=False large_tests=False" CACHE STRING "")
++set(LIBCXXABI_TEST_PARAMS "long_tests=False;large_tests=False" CACHE STRING "")
  set(LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
  set(LIBCXX_ENABLE_EXCEPTIONS ON CACHE BOOL "")
  set(LIBCXX_ENABLE_FILESYSTEM OFF CACHE STRING "")
@@ -28,7 +28,7 @@ index b5f9089308d2..fedf13548131 100644
  # Long tests are prohibitively slow when run via emulation.
 -set(LIBCXX_TEST_PARAMS "long_tests=False" CACHE STRING "")
 +# The emulated target has limited memory.
-+set(LIBCXX_TEST_PARAMS "long_tests=False large_tests=False" CACHE STRING "")
++set(LIBCXX_TEST_PARAMS "long_tests=False;large_tests=False" CACHE STRING "")
  set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
  set(LIBUNWIND_ENABLE_SHARED OFF CACHE BOOL "")
  set(LIBUNWIND_ENABLE_STATIC ON CACHE BOOL "")
@@ -37,7 +37,7 @@ index b5f9089308d2..fedf13548131 100644
  set(LIBUNWIND_REMEMBER_HEAP_ALLOC ON CACHE BOOL "")
 +# Long tests are prohibitively slow when run via emulation.
 +# The emulated target has limited memory.
-+set(LIBUNWIND_TEST_PARAMS "long_tests=False large_tests=False" CACHE STRING "")
++set(LIBUNWIND_TEST_PARAMS "long_tests=False;large_tests=False" CACHE STRING "")
  set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
  find_program(QEMU_SYSTEM_ARM qemu-system-arm REQUIRED)
 diff --git a/libcxxabi/test/test_demangle.pass.cpp b/libcxxabi/test/test_demangle.pass.cpp

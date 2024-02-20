@@ -1,10 +1,8 @@
-From f69c5ad51f5a148c6b3ee917ba7897d7d1c01269 Mon Sep 17 00:00:00 2001
+From fac4a4499279bd0c44177c47a7f163adc0269baf Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Mon, 19 Feb 2024 11:23:25 +0100
-Subject: [libc++] tests with picoilbc: protect absent atomic types with ifdef
+Subject: [libc++] tests with picolibc: protect absent atomic types with ifdef
 
-On some platforms, like armv4t, there are currently no atomic types at
-all. This ifdef prevents module from trying to import absent types.
 ---
  libcxx/modules/std/atomic.inc | 2 ++
  1 file changed, 2 insertions(+)
