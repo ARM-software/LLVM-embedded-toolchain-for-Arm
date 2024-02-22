@@ -1,8 +1,8 @@
 diff --git a/meson.build b/meson.build
-index d82736966..55105b25c 100644
+index 0fdfa0412..8e679f166 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -1212,6 +1212,18 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
+@@ -1224,6 +1224,18 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
    error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
  endif
  
@@ -21,3 +21,15 @@ index d82736966..55105b25c 100644
  conf_data.set('_HAVE_CC_INHIBIT_LOOP_TO_LIBCALL',
  	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
  	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
+diff --git a/picolibc.ld.in b/picolibc.ld.in
+index b97ea3300..e1a1318a2 100644
+--- a/picolibc.ld.in
++++ b/picolibc.ld.in
+@@ -68,6 +68,7 @@ SECTIONS
+ 		*(.text.unlikely .text.unlikely.*)
+ 		*(.text.startup .text.startup.*)
+ 		*(.text .text.* .opd .opd.*)
++		*(__lcxx_override)
+ 		*(.gnu.linkonce.t.*)
+ 		KEEP (*(.fini .fini.*))
+ 		@PREFIX@__text_end = .;
