@@ -22,14 +22,16 @@ index 0fdfa0412..8e679f166 100644
  	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
  	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
 diff --git a/picolibc.ld.in b/picolibc.ld.in
-index b97ea3300..71cf51afe 100644
+index b97ea3300..04b94f35c 100644
 --- a/picolibc.ld.in
 +++ b/picolibc.ld.in
-@@ -68,6 +68,7 @@ SECTIONS
+@@ -68,6 +68,9 @@ SECTIONS
  		*(.text.unlikely .text.unlikely.*)
  		*(.text.startup .text.startup.*)
  		*(.text .text.* .opd .opd.*)
-+		*(__lcxx_*)
++		PROVIDE (__start___lcxx_override = .);
++		*(__lcxx_override)
++		PROVIDE (__stop___lcxx_override = .);
  		*(.gnu.linkonce.t.*)
  		KEEP (*(.fini .fini.*))
  		@PREFIX@__text_end = .;
