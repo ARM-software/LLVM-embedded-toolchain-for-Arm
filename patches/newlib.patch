@@ -1,5 +1,5 @@
 diff --git a/libgloss/arm/cpu-init/rdimon-aem.S b/libgloss/arm/cpu-init/rdimon-aem.S
-index 95b86e4d..b91034ae 100644
+index 95b86e4d4..b91034ae6 100644
 --- a/libgloss/arm/cpu-init/rdimon-aem.S
 +++ b/libgloss/arm/cpu-init/rdimon-aem.S
 @@ -60,7 +60,7 @@
@@ -279,7 +279,7 @@ index 95b86e4d..b91034ae 100644
      movt        r9, #0xff0f
      and         r8, r8, r9
 diff --git a/libgloss/arm/crt0.S b/libgloss/arm/crt0.S
-index 8490bde2..8b85b28f 100644
+index 8490bde2f..8b85b28f4 100644
 --- a/libgloss/arm/crt0.S
 +++ b/libgloss/arm/crt0.S
 @@ -565,7 +565,7 @@ change_back:
@@ -292,7 +292,7 @@ index 8490bde2..8b85b28f 100644
  #ifdef ARM_RDI_MONITOR
  	.word	HeapBase
 diff --git a/libgloss/arm/linux-crt0.c b/libgloss/arm/linux-crt0.c
-index 6b2d62a9..000a2c72 100644
+index 6b2d62a9b..000a2c728 100644
 --- a/libgloss/arm/linux-crt0.c
 +++ b/libgloss/arm/linux-crt0.c
 @@ -29,7 +29,7 @@ asm("\n"
@@ -305,7 +305,7 @@ index 6b2d62a9..000a2c72 100644
  #endif
  {
 diff --git a/libgloss/arm/syscalls.c b/libgloss/arm/syscalls.c
-index fc394f94..0b3287df 100644
+index fc394f94b..0b3287df4 100644
 --- a/libgloss/arm/syscalls.c
 +++ b/libgloss/arm/syscalls.c
 @@ -180,7 +180,7 @@ initialise_monitor_handles (void)
@@ -335,7 +335,7 @@ index fc394f94..0b3287df 100644
  	 : "i" (SWI_Open),"r"(name)
  	 : "r0","r1");
 diff --git a/libgloss/arm/trap.S b/libgloss/arm/trap.S
-index 845ad017..2056c2ad 100644
+index 845ad0173..2056c2adf 100644
 --- a/libgloss/arm/trap.S
 +++ b/libgloss/arm/trap.S
 @@ -5,7 +5,7 @@
@@ -348,7 +348,7 @@ index 845ad017..2056c2ad 100644
          .global __rt_stkovf_split_small
  
 diff --git a/libgloss/libnosys/configure b/libgloss/libnosys/configure
-index 7c23c7a0..2fc58416 100755
+index 7c23c7a0a..2fc584169 100755
 --- a/libgloss/libnosys/configure
 +++ b/libgloss/libnosys/configure
 @@ -2058,7 +2058,7 @@ case "${target}" in
@@ -360,21 +360,21 @@ index 7c23c7a0..2fc58416 100755
          $as_echo "#define HAVE_ELF 1" >>confdefs.h
  
  
-diff --git a/newlib/libc/include/wchar.h b/newlib/libc/include/wchar.h
-index 0d3e636f..cdc3e4ef 100644
---- a/newlib/libc/include/wchar.h
-+++ b/newlib/libc/include/wchar.h
-@@ -69,7 +69,7 @@ typedef __gnuc_va_list va_list;
+diff --git a/newlib/libc/include/sys/features.h b/newlib/libc/include/sys/features.h
+index 218807178..b86caeaff 100644
+--- a/newlib/libc/include/sys/features.h
++++ b/newlib/libc/include/sys/features.h
+@@ -27,6 +27,8 @@ extern "C" {
  
- _BEGIN_STD_C
+ #include <_newlib_version.h>
  
--#if __POSIX_VISIBLE >= 200809 || _XSI_VISIBLE
-+#if 1 // __POSIX_VISIBLE >= 200809 || _XSI_VISIBLE
- /* As in stdio.h, <sys/reent.h> defines __FILE. */
- #if !defined(__FILE_defined)
- typedef __FILE FILE;
++#define _DEFAULT_SOURCE
++
+ /* Macro to test version of GCC.  Returns 0 for non-GCC or too old GCC. */
+ #ifndef __GNUC_PREREQ
+ # if defined __GNUC__ && defined __GNUC_MINOR__
 diff --git a/newlib/libc/machine/aarch64/memchr.S b/newlib/libc/machine/aarch64/memchr.S
-index 53f5d6bc..81fceccc 100644
+index 53f5d6bc0..81fcecccd 100644
 --- a/newlib/libc/machine/aarch64/memchr.S
 +++ b/newlib/libc/machine/aarch64/memchr.S
 @@ -110,7 +110,7 @@ def_fn memchr
@@ -405,7 +405,7 @@ index 53f5d6bc..81fceccc 100644
  	b.hi	.Ltail
  
 diff --git a/newlib/libc/machine/aarch64/strchr.S b/newlib/libc/machine/aarch64/strchr.S
-index 2448dbc7..70610783 100644
+index 2448dbc7d..706107836 100644
 --- a/newlib/libc/machine/aarch64/strchr.S
 +++ b/newlib/libc/machine/aarch64/strchr.S
 @@ -117,7 +117,7 @@ def_fn strchr
@@ -436,7 +436,7 @@ index 2448dbc7..70610783 100644
  	/* Count the trailing zeros, by bit reversing...  */
  	rbit	tmp1, tmp1
 diff --git a/newlib/libc/machine/aarch64/strchrnul.S b/newlib/libc/machine/aarch64/strchrnul.S
-index a0ac13b7..fd2002f0 100644
+index a0ac13b7f..fd2002f0d 100644
 --- a/newlib/libc/machine/aarch64/strchrnul.S
 +++ b/newlib/libc/machine/aarch64/strchrnul.S
 @@ -109,7 +109,7 @@ def_fn strchrnul
@@ -467,7 +467,7 @@ index a0ac13b7..fd2002f0 100644
  	/* Count the trailing zeros, by bit reversing...  */
  	rbit	tmp1, tmp1
 diff --git a/newlib/libc/machine/aarch64/strrchr.S b/newlib/libc/machine/aarch64/strrchr.S
-index d64fc09b..1b6f0756 100644
+index d64fc09b1..1b6f07562 100644
 --- a/newlib/libc/machine/aarch64/strrchr.S
 +++ b/newlib/libc/machine/aarch64/strrchr.S
 @@ -120,10 +120,10 @@ def_fn strrchr
@@ -503,7 +503,7 @@ index d64fc09b..1b6f0756 100644
  .Ltail:
  	/* Work out exactly where the string ends.  */
 diff --git a/newlib/libc/stdlib/aligned_alloc.c b/newlib/libc/stdlib/aligned_alloc.c
-index feb22c24..06b3883c 100644
+index feb22c24b..06b3883cf 100644
 --- a/newlib/libc/stdlib/aligned_alloc.c
 +++ b/newlib/libc/stdlib/aligned_alloc.c
 @@ -28,6 +28,7 @@
@@ -515,7 +515,7 @@ index feb22c24..06b3883c 100644
  void *
  aligned_alloc (size_t align, size_t size)
 diff --git a/newlib/libc/sys/arm/crt0.S b/newlib/libc/sys/arm/crt0.S
-index 5e677a23..6faf7409 100644
+index 5e677a23c..6faf74096 100644
 --- a/newlib/libc/sys/arm/crt0.S
 +++ b/newlib/libc/sys/arm/crt0.S
 @@ -556,7 +556,7 @@ change_back:
@@ -528,7 +528,7 @@ index 5e677a23..6faf7409 100644
  #ifdef ARM_RDI_MONITOR
  	.word	HeapBase
 diff --git a/newlib/libc/sys/arm/trap.S b/newlib/libc/sys/arm/trap.S
-index 681b3dbe..8a49f39f 100644
+index 681b3dbe0..8a49f39f3 100644
 --- a/newlib/libc/sys/arm/trap.S
 +++ b/newlib/libc/sys/arm/trap.S
 @@ -4,7 +4,7 @@
@@ -541,7 +541,7 @@ index 681b3dbe..8a49f39f 100644
          .global __rt_stkovf_split_small
  
 diff --git a/newlib/libm/machine/arm/sf_ceil.c b/newlib/libm/machine/arm/sf_ceil.c
-index b6efbff0..44fdf834 100644
+index b6efbff0b..44fdf834a 100644
 --- a/newlib/libm/machine/arm/sf_ceil.c
 +++ b/newlib/libm/machine/arm/sf_ceil.c
 @@ -24,7 +24,7 @@
@@ -554,7 +554,7 @@ index b6efbff0..44fdf834 100644
  
  float
 diff --git a/newlib/libm/machine/arm/sf_floor.c b/newlib/libm/machine/arm/sf_floor.c
-index 7bc95808..44c38c42 100644
+index 7bc95808c..44c38c42c 100644
 --- a/newlib/libm/machine/arm/sf_floor.c
 +++ b/newlib/libm/machine/arm/sf_floor.c
 @@ -24,7 +24,7 @@
@@ -567,7 +567,7 @@ index 7bc95808..44c38c42 100644
  
  float
 diff --git a/newlib/libm/machine/arm/sf_nearbyint.c b/newlib/libm/machine/arm/sf_nearbyint.c
-index c70d8444..126673e9 100644
+index c70d84442..126673e97 100644
 --- a/newlib/libm/machine/arm/sf_nearbyint.c
 +++ b/newlib/libm/machine/arm/sf_nearbyint.c
 @@ -24,7 +24,7 @@
@@ -580,7 +580,7 @@ index c70d8444..126673e9 100644
  
  float
 diff --git a/newlib/libm/machine/arm/sf_rint.c b/newlib/libm/machine/arm/sf_rint.c
-index d9c383a7..5def2100 100644
+index d9c383a7e..5def21009 100644
 --- a/newlib/libm/machine/arm/sf_rint.c
 +++ b/newlib/libm/machine/arm/sf_rint.c
 @@ -24,7 +24,7 @@
@@ -593,7 +593,7 @@ index d9c383a7..5def2100 100644
  
  float
 diff --git a/newlib/libm/machine/arm/sf_round.c b/newlib/libm/machine/arm/sf_round.c
-index 232fc084..88c53ba1 100644
+index 232fc0848..88c53ba13 100644
 --- a/newlib/libm/machine/arm/sf_round.c
 +++ b/newlib/libm/machine/arm/sf_round.c
 @@ -24,7 +24,7 @@
@@ -606,7 +606,7 @@ index 232fc084..88c53ba1 100644
  
  float
 diff --git a/newlib/libm/machine/arm/sf_trunc.c b/newlib/libm/machine/arm/sf_trunc.c
-index 64e4aeb9..c08fa6fe 100644
+index 64e4aeb9a..c08fa6fed 100644
 --- a/newlib/libm/machine/arm/sf_trunc.c
 +++ b/newlib/libm/machine/arm/sf_trunc.c
 @@ -24,7 +24,7 @@
