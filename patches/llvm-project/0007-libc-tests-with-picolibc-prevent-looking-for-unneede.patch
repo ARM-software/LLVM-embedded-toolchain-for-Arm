@@ -1,4 +1,4 @@
-From 8939fb173dc8c649976e3eef90c61d2ef76233cd Mon Sep 17 00:00:00 2001
+From ed551e0778a35f00ab60f1c80d83ea8274d8d400 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Mon, 19 Feb 2024 16:40:17 +0100
 Subject: [libc++] tests with picolibc: prevent looking for unneeded "rt"
