@@ -1006,20 +1006,20 @@ function(
         -DLIBCXXABI_LIBCXX_INCLUDES="${LLVM_BINARY_DIR}/${directory}/include/c++/v1"
         -DLIBCXXABI_USE_COMPILER_RT=ON
         -DLIBCXXABI_USE_LLVM_UNWINDER=ON
-        -DLIBCXXABI_EXECUTOR=${test_executor}
+        -DLIBCXXABI_TEST_PARAMS=executor=${test_executor}
         -DLIBCXX_ABI_UNSTABLE=ON
         -DLIBCXX_CXX_ABI=libcxxabi
         -DLIBCXX_ENABLE_FILESYSTEM=OFF
         -DLIBCXX_ENABLE_SHARED=OFF
         -DLIBCXX_ENABLE_STATIC=ON
         -DLIBCXX_INCLUDE_BENCHMARKS=OFF
-        -DLIBCXX_EXECUTOR=${test_executor}
+        -DLIBCXX_TEST_PARAMS=executor=${test_executor}
         -DLIBUNWIND_ENABLE_SHARED=OFF
         -DLIBUNWIND_ENABLE_STATIC=ON
         -DLIBUNWIND_IS_BAREMETAL=ON
         -DLIBUNWIND_REMEMBER_HEAP_ALLOC=ON
         -DLIBUNWIND_USE_COMPILER_RT=ON
-        -DLIBUNWIND_EXECUTOR=${test_executor}
+        -DLIBUNWIND_TEST_PARAMS=executor=${test_executor}
         -DLLVM_LIT_ARGS=${LLVM_LIT_ARGS}
         -DLLVM_ENABLE_RUNTIMES=libcxxabi,libcxx,libunwind
         -DRUNTIME_TEST_ARCH_FLAGS=${flags}
