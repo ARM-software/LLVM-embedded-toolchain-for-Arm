@@ -32,8 +32,6 @@ embedded and realtime operating systems.
 
 C++ is partially supported with the use of libc++ and libc++abi from LLVM. Features
 that are not supported include:
- - Exceptions
- - RTTI
  - Multithreading
 
 LLVM Embedded Toolchain for Arm uses the unstable libc++ ABI version. This ABI
@@ -83,7 +81,7 @@ and extract the archive into an arbitrary directory.
 To use the toolchain, on the command line you need to provide the following options:
 * The target triple.
 * The FPU to use.
-* Disabling C++ exceptions and RTTI that are not supported by the standard library provided yet.
+* Disabling/enabling C++ exceptions and RTTI.
 * The C runtime library: either `crt0` or `crt0-semihost`.
 * The semihosting library, if using `crt0-semihost`.
 * A [linker script](
