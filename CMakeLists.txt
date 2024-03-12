@@ -520,14 +520,11 @@ if(LIBS_DEPEND_ON_TOOLS)
 endif()
 
 set(picolibc_specific_runtimes_options
-    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
     -DLIBCXXABI_ENABLE_THREADS=OFF
     -DLIBCXX_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libc++-picolibc.cfg.in
-    -DLIBCXX_ENABLE_EXCEPTIONS=OFF
     -DLIBCXXABI_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libc++abi-picolibc.cfg.in
     -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF
     -DLIBCXX_ENABLE_RANDOM_DEVICE=OFF
-    -DLIBCXX_ENABLE_RTTI=OFF
     -DLIBCXX_ENABLE_THREADS=OFF
     -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
     -DLIBUNWIND_ENABLE_THREADS=OFF
@@ -535,11 +532,8 @@ set(picolibc_specific_runtimes_options
 )
 
 set(newlib_specific_runtimes_options
-    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
     -DLIBCXXABI_ENABLE_THREADS=OFF
-    -DLIBCXX_ENABLE_EXCEPTIONS=OFF
     -DLIBCXX_ENABLE_THREADS=OFF
-    -DLIBCXX_ENABLE_RTTI=OFF
     -DLIBCXX_ENABLE_MONOTONIC_CLOCK=OFF
     -DLIBCXX_ENABLE_RANDOM_DEVICE=OFF
     -DLIBCXX_ENABLE_WIDE_CHARACTERS=ON
@@ -944,18 +938,6 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
 endfunction()
 
 function(
-    extend_with_exception_and_rtti
-    extended_name
-    base_name
-    enable_exceptions_and_rtti
-)
-    if(${enable_exceptions_and_rtti})
-        set(base_name ${base_name}_exceptions_rtti)
-    endif()
-    set(${extended_name} ${base_name} PARENT_SCOPE)
-endfunction()
-
-function(
     add_libcxx_libcxxabi_libunwind
     directory
     variant
@@ -964,14 +946,21 @@ function(
     test_executor
     libc_target
     extra_cmake_options
-    enable_exceptions_and_rtti
+    enable_exceptions
+    enable_rtti
 )
     get_runtimes_flags("${directory}" "${flags}")
     set(target_name "libcxx_libcxxabi_libunwind_${variant}")
     set(prefix "libcxx_libcxxabi_libunwind/${variant}")
     set(instal_dir "${LLVM_BINARY_DIR}/${directory}")
     if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
-        list(APPEND extra_cmake_options -DLIBCXXABI_ENABLE_EXCEPTIONS=${enable_exceptions_and_rtti} -DLIBCXX_ENABLE_EXCEPTIONS=${enable_exceptions_and_rtti} -DLIBCXX_ENABLE_RTTI=${enable_exceptions_and_rtti} -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${enable_exceptions_and_rtti})
+        list(
+            APPEND extra_cmake_options
+            -DLIBCXXABI_ENABLE_EXCEPTIONS=${enable_exceptions}
+            -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${enable_exceptions}
+            -DLIBCXX_ENABLE_EXCEPTIONS=${enable_exceptions}
+            -DLIBCXX_ENABLE_RTTI=${enable_rtti}
+        )
     endif()
 
     ExternalProject_Add(
@@ -1062,7 +1051,7 @@ function(add_compiler_rt_tests variant)
     add_dependencies(check-llvm-toolchain-runtimes-${variant} check-compiler-rt-${variant})
 endfunction()
 
-function(add_libcxx_libcxxabi_libunwind_tests variant enable_exceptions_and_rtti)
+function(add_libcxx_libcxxabi_libunwind_tests variant)
     set(target_name "libcxx_libcxxabi_libunwind_${variant}")
     set(variant_with_extensions "${variant}")
     foreach(check_target check-cxxabi check-unwind check-cxx)
@@ -1130,7 +1119,8 @@ function(add_library_variant target_arch)
         RAM_ADDRESS
         RAM_SIZE
         STACK_SIZE
-        ENABLE_RTTI_EXCEPTIONS
+        ENABLE_EXCEPTIONS
+        ENABLE_RTTI
     )
     cmake_parse_arguments(VARIANT "" "${one_value_args}" "" ${ARGN})
 
@@ -1140,8 +1130,12 @@ function(add_library_variant target_arch)
         set(variant "${target_arch}")
     endif()
 
-    if(NOT VARIANT_ENABLE_RTTI_EXCEPTIONS)
-        set(VARIANT_MULTILIB_FLAGS "${VARIANT_MULTILIB_FLAGS} -fno-exceptions -fno-rtti")
+    if(NOT VARIANT_ENABLE_EXCEPTIONS)
+        set(VARIANT_MULTILIB_FLAGS "${VARIANT_MULTILIB_FLAGS} -fno-exceptions")
+    endif()
+
+    if(NOT VARIANT_ENABLE_RTTI)
+        set(VARIANT_MULTILIB_FLAGS "${VARIANT_MULTILIB_FLAGS} -fno-rtti")
     endif()
 
     if(LLVM_TOOLCHAIN_LIBRARY_VARIANTS)
@@ -1206,7 +1200,8 @@ function(add_library_variant target_arch)
             "${lit_test_executor}"
             "${LLVM_TOOLCHAIN_C_LIBRARY}_${variant}-install"
             "${${LLVM_TOOLCHAIN_C_LIBRARY}_specific_runtimes_options}"
-            ${VARIANT_ENABLE_RTTI_EXCEPTIONS}
+            ${VARIANT_ENABLE_EXCEPTIONS}
+            ${VARIANT_ENABLE_RTTI}
         )
         if(VARIANT_COMPILE_FLAGS MATCHES "-march=armv8")
             message("C++ runtime libraries tests disabled for ${variant}")
@@ -1214,7 +1209,7 @@ function(add_library_variant target_arch)
             add_custom_target(check-llvm-toolchain-runtimes-${variant})
             add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
             add_compiler_rt_tests("${variant}")
-            add_libcxx_libcxxabi_libunwind_tests("${variant}" OFF)
+            add_libcxx_libcxxabi_libunwind_tests("${variant}")
         endif()
     endif()
 
@@ -1235,29 +1230,68 @@ function(add_library_variant target_arch)
     set(multilib_yaml_content "${multilib_yaml_content}" PARENT_SCOPE)
 endfunction()
 
+function(add_library_variants_for_cpu target_arch)
+    set(
+        one_value_args
+        SUFFIX
+        COMPILE_FLAGS
+        MULTILIB_FLAGS
+        QEMU_MACHINE
+        QEMU_CPU
+        QEMU_PARAMS
+        BOOT_FLASH_ADDRESS
+        BOOT_FLASH_SIZE
+        FLASH_ADDRESS
+        FLASH_SIZE
+        RAM_ADDRESS
+        RAM_SIZE
+        STACK_SIZE
+    )
+    cmake_parse_arguments(VARIANT "" "${one_value_args}" "" ${ARGN})
+
+    # Variant with no exceptions needs to come later in multilib.yaml to
+    # take priority.
+    foreach(enable_exceptions_and_rtti IN ITEMS ON OFF)
+        set(SUFFIXES)
+        if(VARIANT_SUFFIX)
+            list(APPEND SUFFIXES ${VARIANT_SUFFIX})
+        endif()
+        if(enable_exceptions_and_rtti)
+            list(APPEND SUFFIXES "exceptions")
+            list(APPEND SUFFIXES "rtti")
+        endif()
+        list(JOIN SUFFIXES "_" COMBINED_SUFFIX)
+
+        add_library_variant(
+            "${target_arch}"
+            SUFFIX "${COMBINED_SUFFIX}"
+            COMPILE_FLAGS "${VARIANT_COMPILE_FLAGS}"
+            MULTILIB_FLAGS "${VARIANT_MULTILIB_FLAGS}"
+            QEMU_MACHINE "${VARIANT_QEMU_MACHINE}"
+            QEMU_CPU "${VARIANT_QEMU_CPU}"
+            QEMU_PARAMS "${VARIANT_QEMU_PARAMS}"
+            BOOT_FLASH_ADDRESS "${VARIANT_BOOT_FLASH_ADDRESS}"
+            BOOT_FLASH_SIZE "${VARIANT_BOOT_FLASH_SIZE}"
+            FLASH_ADDRESS "${VARIANT_FLASH_ADDRESS}"
+            FLASH_SIZE "${VARIANT_FLASH_SIZE}"
+            RAM_ADDRESS "${VARIANT_RAM_ADDRESS}"
+            RAM_SIZE "${VARIANT_RAM_SIZE}"
+            STACK_SIZE "${VARIANT_STACK_SIZE}"
+            ENABLE_EXCEPTIONS "${enable_exceptions_and_rtti}"
+            ENABLE_RTTI "${enable_exceptions_and_rtti}"
+        )
+    endforeach()
+
+    set(multilib_yaml_content "${multilib_yaml_content}" PARENT_SCOPE)
+endfunction()
+
 set(multilib_yaml_content "")
 
 # Define which library variants to build and which flags to use.
 # For most variants, the "flash" memory is placed in address range, where
 # simulated boards have RAM. This is because code for some tests does not fit
 # the real flash.
-add_library_variant(
-    aarch64
-    SUFFIX exceptions_rtti
-    COMPILE_FLAGS "-march=armv8-a"
-    MULTILIB_FLAGS "--target=aarch64-none-unknown-elf"
-    QEMU_MACHINE "virt"
-    QEMU_CPU "cortex-a57"
-    BOOT_FLASH_ADDRESS 0x40000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x40001000
-    FLASH_SIZE 0xfff000
-    RAM_ADDRESS 0x41000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 8K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     aarch64
     COMPILE_FLAGS "-march=armv8-a"
     MULTILIB_FLAGS "--target=aarch64-none-unknown-elf"
@@ -1270,29 +1304,11 @@ add_library_variant(
     RAM_ADDRESS 0x41000000
     RAM_SIZE 0x1000000
     STACK_SIZE 8K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
 # For AArch32, clang uses different defaults for FPU selection than GCC, both
 # when "+fp" or "+fp.dp" are used and when no FPU specifier is provided in
 # "-march=". Using "-mfpu=" explicitly.
-add_library_variant(
-    armv4t
-    SUFFIX exceptions_rtti
-    COMPILE_FLAGS "-march=armv4t -mfpu=none"
-    MULTILIB_FLAGS "--target=armv4t-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "none"
-    QEMU_CPU "ti925t"
-    QEMU_PARAMS "-m 1G"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x20000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x21000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv4t
     COMPILE_FLAGS "-march=armv4t -mfpu=none"
     MULTILIB_FLAGS "--target=armv4t-none-unknown-eabi -mfpu=none"
@@ -1306,26 +1322,8 @@ add_library_variant(
     RAM_ADDRESS 0x21000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv5te
-    SUFFIX exceptions_rtti
-    COMPILE_FLAGS "-march=armv5te -mfpu=none"
-    MULTILIB_FLAGS "--target=armv5e-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "none"
-    QEMU_CPU "arm926"
-    QEMU_PARAMS "-m 1G"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x20000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x21000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv5te
     COMPILE_FLAGS "-march=armv5te -mfpu=none"
     MULTILIB_FLAGS "--target=armv5e-none-unknown-eabi -mfpu=none"
@@ -1339,24 +1337,8 @@ add_library_variant(
     RAM_ADDRESS 0x21000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv6m
-    SUFFIX soft_nofp_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv6m-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an385"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x21000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x21600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv6m
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m -mfpu=none"
@@ -1369,26 +1351,8 @@ add_library_variant(
     RAM_ADDRESS 0x21600000
     RAM_SIZE 0xa00000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv7a
-    SUFFIX soft_nofp_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7a -mfpu=none"
-    MULTILIB_FLAGS "--target=armv7-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "none"
-    QEMU_CPU "cortex-a7"
-    QEMU_PARAMS "-m 1G"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x20000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x21000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv7a
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7a -mfpu=none"
@@ -1403,26 +1367,8 @@ add_library_variant(
     RAM_ADDRESS 0x21000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv7a
-    SUFFIX hard_vfpv3_d16_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7a -mfpu=vfpv3-d16"
-    MULTILIB_FLAGS "--target=armv7-none-unknown-eabihf -mfpu=vfpv3-d16"
-    QEMU_MACHINE "none"
-    QEMU_CPU "cortex-a8"
-    QEMU_PARAMS "-m 1G"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x20000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x21000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv7a
     SUFFIX hard_vfpv3_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7a -mfpu=vfpv3-d16"
@@ -1437,26 +1383,8 @@ add_library_variant(
     RAM_ADDRESS 0x21000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv7r
-    SUFFIX soft_nofp_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7r -mfpu=none"
-    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "none"
-    QEMU_CPU "cortex-r5f"
-    QEMU_PARAMS "-m 1G"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x20000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x21000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv7r
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7r -mfpu=none"
@@ -1471,26 +1399,8 @@ add_library_variant(
     RAM_ADDRESS 0x21000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv7r
-    SUFFIX hard_vfpv3_d16_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3-d16"
-    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabihf -mfpu=vfpv3-d16"
-    QEMU_MACHINE "none"
-    QEMU_CPU "cortex-r5f"
-    QEMU_PARAMS "-m 1G"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x20000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x21000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv7r
     SUFFIX hard_vfpv3_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3-d16"
@@ -1505,25 +1415,8 @@ add_library_variant(
     RAM_ADDRESS 0x21000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv7m
-    SUFFIX soft_fpv4_sp_d16_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7m -mfpu=fpv4-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=fpv4-sp-d16"
-    QEMU_MACHINE "mps2-an386"
-    QEMU_CPU "cortex-m4"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x21000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x21600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv7m
     SUFFIX soft_fpv4_sp_d16
     COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7m -mfpu=fpv4-sp-d16"
@@ -1537,25 +1430,8 @@ add_library_variant(
     RAM_ADDRESS 0x21600000
     RAM_SIZE 0xa00000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv7m
-    SUFFIX soft_nofp_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an385"
-    QEMU_CPU "cortex-m3"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x21000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x21600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv7m
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
@@ -1569,25 +1445,8 @@ add_library_variant(
     RAM_ADDRESS 0x21600000
     RAM_SIZE 0xa00000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv7em
-    SUFFIX hard_fpv4_sp_d16_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv4-sp-d16"
-    QEMU_MACHINE "mps2-an386"
-    QEMU_CPU "cortex-m4"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x21000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x21600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv7em
     SUFFIX hard_fpv4_sp_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"
@@ -1601,25 +1460,8 @@ add_library_variant(
     RAM_ADDRESS 0x21600000
     RAM_SIZE 0xa00000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv7em
-    SUFFIX hard_fpv5_d16_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv5-d16"
-    QEMU_MACHINE "mps2-an500"
-    QEMU_CPU "cortex-m7"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x60000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x60600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv7em
     SUFFIX hard_fpv5_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"
@@ -1633,7 +1475,6 @@ add_library_variant(
     RAM_ADDRESS 0x60600000
     RAM_SIZE 0xa00000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
 # When no -mfpu=none is specified, the compiler internally adds all other
 # possible fpu settings before searching for matching variants. So for the
@@ -1641,23 +1482,7 @@ add_library_variant(
 # fpu variants. The order of variants in multilab.yaml depends on the order
 # of the add_library_variant calls. So the add_library_variant that adds
 # the soft_nofp for armv7em is placed after all other armv7em variants.
-add_library_variant(
-    armv7em
-    SUFFIX soft_nofp_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an386"
-    QEMU_CPU "cortex-m4"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x21000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x21600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv7em
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
@@ -1671,25 +1496,8 @@ add_library_variant(
     RAM_ADDRESS 0x21600000
     RAM_SIZE 0xa00000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv8m.main
-    SUFFIX soft_nofp_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8m.main -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps2-an505"
-    QEMU_CPU "cortex-m33"
-    BOOT_FLASH_ADDRESS 0x10000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x80000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x80600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv8m.main
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv8m.main -mfpu=none"
@@ -1703,25 +1511,8 @@ add_library_variant(
     RAM_ADDRESS 0x80600000
     RAM_SIZE 0xa00000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv8m.main
-    SUFFIX hard_fp_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8m.main -mfpu=fpv5-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-sp-d16"
-    QEMU_MACHINE "mps2-an505"
-    QEMU_CPU "cortex-m33"
-    BOOT_FLASH_ADDRESS 0x10000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x80000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x80600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv8m.main
     SUFFIX hard_fp
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8m.main -mfpu=fpv5-sp-d16"
@@ -1735,25 +1526,8 @@ add_library_variant(
     RAM_ADDRESS 0x80600000
     RAM_SIZE 0xa00000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv8.1m.main
-    SUFFIX soft_nofp_nomve_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nomve -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabi -mfpu=none"
-    QEMU_MACHINE "mps3-an547"
-    QEMU_CPU "cortex-m55"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 512K
-    FLASH_ADDRESS 0x60000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x61000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX soft_nofp_nomve
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nomve -mfpu=none"
@@ -1767,25 +1541,8 @@ add_library_variant(
     RAM_ADDRESS 0x61000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv8.1m.main
-    SUFFIX hard_fp_nomve_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
-    QEMU_MACHINE "mps3-an547"
-    QEMU_CPU "cortex-m55"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 512K
-    FLASH_ADDRESS 0x60000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x61000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_fp_nomve
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-sp-d16"
@@ -1799,25 +1556,8 @@ add_library_variant(
     RAM_ADDRESS 0x61000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv8.1m.main
-    SUFFIX hard_fpdp_nomve_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-d16"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16"
-    QEMU_MACHINE "mps3-an547"
-    QEMU_CPU "cortex-m55"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 512K
-    FLASH_ADDRESS 0x60000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x61000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_fpdp_nomve
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-d16"
@@ -1831,25 +1571,8 @@ add_library_variant(
     RAM_ADDRESS 0x61000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
-add_library_variant(
-    armv8.1m.main
-    SUFFIX hard_nofp_mve_exceptions_rtti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+mve -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+mve -mfpu=none"
-    QEMU_MACHINE "mps3-an547"
-    QEMU_CPU "cortex-m55"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 512K
-    FLASH_ADDRESS 0x60000000
-    FLASH_SIZE 0x1000000
-    RAM_ADDRESS 0x61000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS ON
-)
-add_library_variant(
+add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_nofp_mve
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+mve -mfpu=none"
@@ -1863,7 +1586,6 @@ add_library_variant(
     RAM_ADDRESS 0x61000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
-    ENABLE_RTTI_EXCEPTIONS OFF
 )
 
 
