@@ -14,7 +14,7 @@ library variants is provided.
 1. Download corresponding `LLVMEmbeddedToolchainForArm-newlib-overlay` package
 and extract it on top of the main toolchain folder.
 
-    * Note: The overlay packages copies all the `newlib` library variants into the
+    * Note: The overlay package copies all the `newlib` library variants into the
     `lib/clang-runtimes/newlib` subdirectory, so that they do not collide with
     the `picolibc` variants in `lib/clang-runtimes`.
     It also adds the `newlib.cfg` into the `bin` directory,
@@ -35,7 +35,7 @@ $ clang --config=newlib.cfg --target=arm-none-eabi -march=armv7m -T redboot.ld -
 ## Building `newlib` library package
 
 Add the `-DLLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL=on` CMake option for the
-`package-llvm-toolchain` CMake target to generates the `newlib` overlay package.
+`package-llvm-toolchain` CMake target to generate the `newlib` overlay package.
 
 Note that the `-DLLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL=on` option only generates
 the `newlib` package, but does not install it as part of the `install` CMake
