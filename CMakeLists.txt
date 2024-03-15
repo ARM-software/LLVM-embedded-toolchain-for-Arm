@@ -741,6 +741,7 @@ function(
             --disable-nls
             --enable-lite-exit
             --disable-multilib
+            --enable-newlib-retargetable-locking
         BUILD_COMMAND
             ${CMAKE_COMMAND} -E env ${build_env}
             make ${make_flags}
