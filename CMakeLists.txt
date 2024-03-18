@@ -468,7 +468,6 @@ install(
     COMPONENT llvm-toolchain-docs
 )
 
-
 # Groups all the targets that comprise the toolchain.
 add_custom_target(llvm-toolchain ALL)
 
@@ -1794,12 +1793,12 @@ add_dependencies(
     clear-unpack-directory
 )
 
-
 add_custom_target(check-llvm-toolchain)
 add_dependencies(check-llvm-toolchain check-${LLVM_TOOLCHAIN_C_LIBRARY})
 add_dependencies(check-llvm-toolchain check-compiler-rt)
 add_subdirectory(test)
 add_dependencies(check-llvm-toolchain check-llvm-toolchain-lit)
+add_dependencies(check-llvm-toolchain check-llvm-toolchain-runtimes)
 add_subdirectory(packagetest)
 
 if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
