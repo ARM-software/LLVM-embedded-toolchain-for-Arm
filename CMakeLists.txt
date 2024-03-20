@@ -632,13 +632,13 @@ function(
         BUILD_COMMAND ${MESON_EXECUTABLE} configure -Dtests=false
         COMMAND ${MESON_EXECUTABLE} compile
         INSTALL_COMMAND ${MESON_EXECUTABLE} install ${MESON_INSTALL_QUIET}
-        TEST_COMMAND ${MESON_EXECUTABLE} configure -Dtests=true
-        # meson<0.64.0 does not properly apply new configuration after
-        # "meson configure -Dtests=false"
-        # use "meson setup --reconfigure" as a workaround
-        COMMAND ${MESON_EXECUTABLE} setup . <SOURCE_DIR> -Dtests=true --reconfigure
-        COMMAND ${MESON_EXECUTABLE} test
-        COMMAND ${MESON_EXECUTABLE} configure -Dtests=false
+        TEST_COMMAND
+            ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/test-support/run-picolibc-tests.py
+            --meson-command ${MESON_EXECUTABLE}
+            --picolibc-build-dir <BINARY_DIR>
+            --picolibc-source-dir <SOURCE_DIR>
+            --variant ${variant}
         USES_TERMINAL_CONFIGURE FALSE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_TEST TRUE
@@ -671,11 +671,10 @@ function(
     # only in tests step, otherwise, they would be built before install.
     ExternalProject_Add_StepDependencies(picolibc_${variant} test compiler_rt_${variant}-install)
 
-    add_dependencies(check-picolibc picolibc_${variant}-test)
-    add_dependencies(
-        llvm-toolchain-runtimes
-        picolibc_${variant}
-    )
+    add_custom_target(check-picolibc-${variant})
+    add_dependencies(check-picolibc-${variant} picolibc_${variant}-test)
+    add_dependencies(check-picolibc check-picolibc-${variant})
+    add_dependencies(llvm-toolchain-runtimes picolibc_${variant})
 endfunction()
 
 function(
