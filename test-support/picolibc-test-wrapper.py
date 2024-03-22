@@ -47,6 +47,7 @@ def run(args):
         ["program-name"] + args.arguments,
         None,
         pathlib.Path.cwd(),
+        args.verbose,
     )
 
 
@@ -69,6 +70,12 @@ def main():
         "--qemu-params",
         required=False,
         help='list of arguments to pass to qemu, separated with ":"',
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print verbose output. This may affect test result, as the output "
+        "will be added to the output of the test.",
     )
     parser.add_argument("image", help="image file to execute")
     parser.add_argument(

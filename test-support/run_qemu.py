@@ -15,6 +15,7 @@ def run_qemu(
     arguments,
     timeout,
     working_directory,
+    verbose,
 ):
     """Execute the program using QEMU and return the subprocess return code."""
     qemu_params = ["-M", qemu_machine]
@@ -43,8 +44,13 @@ def run_qemu(
     else:
         qemu_params += ["-device", f"loader,file={image},cpu-num=0"]
 
+    command = [qemu_command] + qemu_params
+
+    if verbose:
+        print("running: {}".format(" ".join(command)))
+
     result = subprocess.run(
-        [qemu_command] + qemu_params,
+        command,
         stdout=subprocess.PIPE,
         stderr=sys.stderr,
         timeout=timeout,
