@@ -48,7 +48,6 @@ def run(args):
         None,
         pathlib.Path.cwd(),
         args.verbose,
-        args.gdb_server,
     )
 
 
@@ -77,11 +76,6 @@ def main():
         action="store_true",
         help="Print verbose output. This may affect test result, as the output "
         "will be added to the output of the test.",
-    )
-    parser.add_argument(
-        "--gdb-server",
-        action="store_true",
-        help="Stop and run a gdb server on localhost:1234.",
     )
     parser.add_argument("image", help="image file to execute")
     parser.add_argument(
