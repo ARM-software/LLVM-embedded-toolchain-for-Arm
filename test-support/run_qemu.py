@@ -54,7 +54,7 @@ def run_qemu(
         print("running: {}".format(" ".join(command)))
 
     result = subprocess.run(
-        [qemu_command] + qemu_params,
+        command,
         stdout=subprocess.PIPE,
         stderr=sys.stderr,
         timeout=timeout,
