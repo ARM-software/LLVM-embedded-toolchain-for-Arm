@@ -145,6 +145,11 @@ and [Experimental newlib support](https://github.com/ARM-software/LLVM-embedded-
 for advice on using LLVM Embedded Toolchain for Arm with existing projects
 relying on the Arm GNU Toolchain.
 
+> *Note:* `picolibc` provides excellent
+> [support for Arm GNU Toolchain](https://github.com/picolibc/picolibc/blob/main/doc/using.md),
+> so projects that require using both Arm GNU Toolchain and LLVM Embedded Toolchain for Arm
+> can choose either `picolibc` or `newlib`.
+
 ## Building from source
 
 LLVM Embedded Toolchain for Arm is an open source project and thus can be built
