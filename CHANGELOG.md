@@ -9,6 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - Use unstable libc++ ABI (#294).
 
+## [18.0.0]
+
+### Added
+
+- Documentation for the newlib overlay package (#399).
+- Support for C++ exceptions and RTTI added in the standard libraries (#339).
+
 ## [17.0.0]
 
 ### Fixed
