@@ -1,0 +1,801 @@
+From b77b8f6809afcb8f8579c96f825cfcaeea20f8d1 Mon Sep 17 00:00:00 2001
+From: quic-areg <aregmi@quicinc.com>
+Date: Fri, 9 Feb 2024 10:15:23 -0600
+Subject: [PATCH] [llvm-objcopy] Support SREC output format (#75874)
+
+Adds a new output target "srec" to write SREC files from ELF inputs.
+
+https://en.wikipedia.org/wiki/SREC_(file_format)
+---
+ llvm/docs/CommandGuide/llvm-objcopy.rst       |   9 +-
+ llvm/include/llvm/ObjCopy/CommonConfig.h      |   7 +-
+ llvm/lib/ObjCopy/ELF/ELFObjcopy.cpp           |   4 +-
+ llvm/lib/ObjCopy/ELF/ELFObject.cpp            | 282 +++++++++++++++---
+ llvm/lib/ObjCopy/ELF/ELFObject.h              | 134 ++++++++-
+ .../tools/llvm-objcopy/ELF/ihex-writer.test   |   6 +-
+ .../tools/llvm-objcopy/ELF/srec-writer.test   | 196 ++++++++++++
+ llvm/tools/llvm-objcopy/ObjcopyOptions.cpp    |   1 +
+ llvm/tools/llvm-objcopy/llvm-objcopy.cpp      |   1 +
+ 9 files changed, 577 insertions(+), 63 deletions(-)
+ create mode 100644 llvm/test/tools/llvm-objcopy/ELF/srec-writer.test
+
+diff --git a/llvm/docs/CommandGuide/llvm-objcopy.rst b/llvm/docs/CommandGuide/llvm-objcopy.rst
+index 42d11fa17cca..b823be9e8282 100644
+--- a/llvm/docs/CommandGuide/llvm-objcopy.rst
++++ b/llvm/docs/CommandGuide/llvm-objcopy.rst
+@@ -544,8 +544,13 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
+ - `elf32-sparc`
+ - `elf32-sparcel`
+ 
+-Additionally, all targets except `binary` and `ihex` can have `-freebsd` as a
+-suffix.
++The following formats are suppoprted by :program:`llvm-objcopy` for the
++:option:`--output-target` only:
++
++- `srec`
++
++Additionally, all targets except `binary`, `ihex`, and `srec` can have
++`-freebsd` as a suffix.
+ 
+ BINARY INPUT AND OUTPUT
+ -----------------------
+diff --git a/llvm/include/llvm/ObjCopy/CommonConfig.h b/llvm/include/llvm/ObjCopy/CommonConfig.h
+index 0d9320ec2efd..383395941475 100644
+--- a/llvm/include/llvm/ObjCopy/CommonConfig.h
++++ b/llvm/include/llvm/ObjCopy/CommonConfig.h
+@@ -27,12 +27,7 @@
+ namespace llvm {
+ namespace objcopy {
+ 
+-enum class FileFormat {
+-  Unspecified,
+-  ELF,
+-  Binary,
+-  IHex,
+-};
++enum class FileFormat { Unspecified, ELF, Binary, IHex, SREC };
+ 
+ // This type keeps track of the machine info for various architectures. This
+ // lets us map architecture names to ELF types and the e_machine value of the
+diff --git a/llvm/lib/ObjCopy/ELF/ELFObjcopy.cpp b/llvm/lib/ObjCopy/ELF/ELFObjcopy.cpp
+index 36f799446a04..1b3a58298ec0 100644
+--- a/llvm/lib/ObjCopy/ELF/ELFObjcopy.cpp
++++ b/llvm/lib/ObjCopy/ELF/ELFObjcopy.cpp
+@@ -182,7 +182,9 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
+   case FileFormat::Binary:
+     return std::make_unique<BinaryWriter>(Obj, Out, Config);
+   case FileFormat::IHex:
+-    return std::make_unique<IHexWriter>(Obj, Out);
++    return std::make_unique<IHexWriter>(Obj, Out, Config.OutputFilename);
++  case FileFormat::SREC:
++    return std::make_unique<SRECWriter>(Obj, Out, Config.OutputFilename);
+   default:
+     return createELFWriter(Config, Obj, Out, OutputElfType);
+   }
+diff --git a/llvm/lib/ObjCopy/ELF/ELFObject.cpp b/llvm/lib/ObjCopy/ELF/ELFObject.cpp
+index c8b66d6fcb5e..b9b91670b998 100644
+--- a/llvm/lib/ObjCopy/ELF/ELFObject.cpp
++++ b/llvm/lib/ObjCopy/ELF/ELFObject.cpp
+@@ -2707,10 +2707,52 @@ Error BinaryWriter::finalize() {
+   return Error::success();
+ }
+ 
+-bool IHexWriter::SectionCompare::operator()(const SectionBase *Lhs,
+-                                            const SectionBase *Rhs) const {
+-  return (sectionPhysicalAddr(Lhs) & 0xFFFFFFFFU) <
+-         (sectionPhysicalAddr(Rhs) & 0xFFFFFFFFU);
++Error ASCIIHexWriter::checkSection(const SectionBase &S) const {
++  if (addressOverflows32bit(S.Addr) ||
++      addressOverflows32bit(S.Addr + S.Size - 1))
++    return createStringError(
++        errc::invalid_argument,
++        "section '%s' address range [0x%llx, 0x%llx] is not 32 bit",
++        S.Name.c_str(), S.Addr, S.Addr + S.Size - 1);
++  return Error::success();
++}
++
++Error ASCIIHexWriter::finalize() {
++  // We can't write 64-bit addresses.
++  if (addressOverflows32bit(Obj.Entry))
++    return createStringError(errc::invalid_argument,
++                             "entry point address 0x%llx overflows 32 bits",
++                             Obj.Entry);
++
++  for (const SectionBase &S : Obj.sections()) {
++    if ((S.Flags & ELF::SHF_ALLOC) && S.Type != ELF::SHT_NOBITS && S.Size > 0) {
++      if (Error E = checkSection(S))
++        return E;
++      Sections.push_back(&S);
++    }
++  }
++
++  llvm::sort(Sections, [](const SectionBase *A, const SectionBase *B) {
++    return sectionPhysicalAddr(A) < sectionPhysicalAddr(B);
++  });
++
++  std::unique_ptr<WritableMemoryBuffer> EmptyBuffer =
++      WritableMemoryBuffer::getNewMemBuffer(0);
++  if (!EmptyBuffer)
++    return createStringError(errc::not_enough_memory,
++                             "failed to allocate memory buffer of 0 bytes");
++
++  Expected<size_t> ExpTotalSize = getTotalSize(*EmptyBuffer);
++  if (!ExpTotalSize)
++    return ExpTotalSize.takeError();
++  TotalSize = *ExpTotalSize;
++
++  Buf = WritableMemoryBuffer::getNewMemBuffer(TotalSize);
++  if (!Buf)
++    return createStringError(errc::not_enough_memory,
++                             "failed to allocate memory buffer of 0x" +
++                                 Twine::utohexstr(TotalSize) + " bytes");
++  return Error::success();
+ }
+ 
+ uint64_t IHexWriter::writeEntryPointRecord(uint8_t *Buf) {
+@@ -2740,6 +2782,20 @@ uint64_t IHexWriter::writeEndOfFileRecord(uint8_t *Buf) {
+   return HexData.size();
+ }
+ 
++Expected<size_t>
++IHexWriter::getTotalSize(WritableMemoryBuffer &EmptyBuffer) const {
++  IHexSectionWriterBase LengthCalc(EmptyBuffer);
++  for (const SectionBase *Sec : Sections)
++    if (Error Err = Sec->accept(LengthCalc))
++      return std::move(Err);
++
++  // We need space to write section records + StartAddress record
++  // (if start adress is not zero) + EndOfFile record.
++  return LengthCalc.getBufferOffset() +
++         (Obj.Entry ? IHexRecord::getLineLength(4) : 0) +
++         IHexRecord::getLineLength(0);
++}
++
+ Error IHexWriter::write() {
+   IHexSectionWriter Writer(*Buf);
+   // Write sections.
+@@ -2762,54 +2818,196 @@ Error IHexWriter::write() {
+   return Error::success();
+ }
+ 
+-Error IHexWriter::checkSection(const SectionBase &Sec) {
+-  uint64_t Addr = sectionPhysicalAddr(&Sec);
+-  if (addressOverflows32bit(Addr) || addressOverflows32bit(Addr + Sec.Size - 1))
+-    return createStringError(
+-        errc::invalid_argument,
+-        "Section '%s' address range [0x%llx, 0x%llx] is not 32 bit",
+-        Sec.Name.c_str(), Addr, Addr + Sec.Size - 1);
++Error SRECSectionWriterBase::visit(const StringTableSection &Sec) {
++  // Check that the sizer has already done its work.
++  assert(Sec.Size == Sec.StrTabBuilder.getSize() &&
++         "Expected section size to have been finalized");
++  // We don't need to write anything here because the real writer has already
++  // done it.
+   return Error::success();
+ }
+ 
+-Error IHexWriter::finalize() {
+-  // We can't write 64-bit addresses.
+-  if (addressOverflows32bit(Obj.Entry))
+-    return createStringError(errc::invalid_argument,
+-                             "Entry point address 0x%llx overflows 32 bits",
+-                             Obj.Entry);
++Error SRECSectionWriterBase::visit(const Section &Sec) {
++  writeSection(Sec, Sec.Contents);
++  return Error::success();
++}
+ 
+-  for (const SectionBase &Sec : Obj.sections())
+-    if ((Sec.Flags & ELF::SHF_ALLOC) && Sec.Type != ELF::SHT_NOBITS &&
+-        Sec.Size > 0) {
+-      if (Error E = checkSection(Sec))
+-        return E;
+-      Sections.insert(&Sec);
+-    }
++Error SRECSectionWriterBase::visit(const OwnedDataSection &Sec) {
++  writeSection(Sec, Sec.Data);
++  return Error::success();
++}
+ 
+-  std::unique_ptr<WritableMemoryBuffer> EmptyBuffer =
+-      WritableMemoryBuffer::getNewMemBuffer(0);
+-  if (!EmptyBuffer)
+-    return createStringError(errc::not_enough_memory,
+-                             "failed to allocate memory buffer of 0 bytes");
++Error SRECSectionWriterBase::visit(const DynamicRelocationSection &Sec) {
++  writeSection(Sec, Sec.Contents);
++  return Error::success();
++}
++
++void SRECSectionWriter::writeRecord(SRecord &Record, uint64_t Off) {
++  SRecLineData Data = Record.toString();
++  memcpy(Out.getBufferStart() + Off, Data.data(), Data.size());
++}
++
++void SRECSectionWriterBase::writeRecords(uint32_t Entry) {
++  // The ELF header could contain an entry point outside of the sections we have
++  // seen that does not fit the current record Type.
++  Type = std::max(Type, SRecord::getType(Entry));
++  uint64_t Off = HeaderSize;
++  for (SRecord &Record : Records) {
++    Record.Type = Type;
++    writeRecord(Record, Off);
++    Off += Record.getSize();
++  }
++  Offset = Off;
++}
++
++void SRECSectionWriterBase::writeSection(const SectionBase &S,
++                                         ArrayRef<uint8_t> Data) {
++  const uint32_t ChunkSize = 16;
++  uint32_t Address = sectionPhysicalAddr(&S);
++  uint32_t EndAddr = Address + S.Size - 1;
++  Type = std::max(SRecord::getType(EndAddr), Type);
++  while (!Data.empty()) {
++    uint64_t DataSize = std::min<uint64_t>(Data.size(), ChunkSize);
++    SRecord Record{Type, Address, Data.take_front(DataSize)};
++    Records.push_back(Record);
++    Data = Data.drop_front(DataSize);
++    Address += DataSize;
++  }
++}
++
++Error SRECSectionWriter::visit(const StringTableSection &Sec) {
++  assert(Sec.Size == Sec.StrTabBuilder.getSize() &&
++         "Section size does not match the section's string table builder size");
++  std::vector<uint8_t> Data(Sec.Size);
++  Sec.StrTabBuilder.write(Data.data());
++  writeSection(Sec, Data);
++  return Error::success();
++}
++
++SRecLineData SRecord::toString() const {
++  SRecLineData Line(getSize());
++  auto *Iter = Line.begin();
++  *Iter++ = 'S';
++  *Iter++ = '0' + Type;
++  // Write 1 byte (2 hex characters) record count.
++  Iter = toHexStr(getCount(), Iter, 2);
++  // Write the address field with length depending on record type.
++  Iter = toHexStr(Address, Iter, getAddressSize());
++  // Write data byte by byte.
++  for (uint8_t X : Data)
++    Iter = toHexStr(X, Iter, 2);
++  // Write the 1 byte checksum.
++  Iter = toHexStr(getChecksum(), Iter, 2);
++  *Iter++ = '\r';
++  *Iter++ = '\n';
++  assert(Iter == Line.end());
++  return Line;
++}
++
++uint8_t SRecord::getChecksum() const {
++  uint32_t Sum = getCount();
++  Sum += (Address >> 24) & 0xFF;
++  Sum += (Address >> 16) & 0xFF;
++  Sum += (Address >> 8) & 0xFF;
++  Sum += Address & 0xFF;
++  for (uint8_t Byte : Data)
++    Sum += Byte;
++  return 0xFF - (Sum & 0xFF);
++}
++
++size_t SRecord::getSize() const {
++  // Type, Count, Checksum, and CRLF are two characters each.
++  return 2 + 2 + getAddressSize() + Data.size() * 2 + 2 + 2;
++}
++
++uint8_t SRecord::getAddressSize() const {
++  switch (Type) {
++  case Type::S2:
++    return 6;
++  case Type::S3:
++    return 8;
++  case Type::S7:
++    return 8;
++  case Type::S8:
++    return 6;
++  default:
++    return 4;
++  }
++}
++
++uint8_t SRecord::getCount() const {
++  uint8_t DataSize = Data.size();
++  uint8_t ChecksumSize = 1;
++  return getAddressSize() / 2 + DataSize + ChecksumSize;
++}
++
++uint8_t SRecord::getType(uint32_t Address) {
++  if (isUInt<16>(Address))
++    return SRecord::S1;
++  if (isUInt<24>(Address))
++    return SRecord::S2;
++  return SRecord::S3;
++}
+ 
+-  IHexSectionWriterBase LengthCalc(*EmptyBuffer);
++SRecord SRecord::getHeader(StringRef FileName) {
++  // Header is a record with Type S0, Address 0, and Data that is a
++  // vendor-specific text comment. For the comment we will use the output file
++  // name truncated to 40 characters to match the behavior of GNU objcopy.
++  StringRef HeaderContents = FileName.slice(0, 40);
++  ArrayRef<uint8_t> Data(
++      reinterpret_cast<const uint8_t *>(HeaderContents.data()),
++      HeaderContents.size());
++  return {SRecord::S0, 0, Data};
++}
++
++size_t SRECWriter::writeHeader(uint8_t *Buf) {
++  SRecLineData Record = SRecord::getHeader(OutputFileName).toString();
++  memcpy(Buf, Record.data(), Record.size());
++  return Record.size();
++}
++
++size_t SRECWriter::writeTerminator(uint8_t *Buf, uint8_t Type) {
++  assert(Type >= SRecord::S7 && Type <= SRecord::S9 &&
++         "Invalid record type for terminator");
++  uint32_t Entry = Obj.Entry;
++  SRecLineData Data = SRecord{Type, Entry, {}}.toString();
++  memcpy(Buf, Data.data(), Data.size());
++  return Data.size();
++}
++
++Expected<size_t>
++SRECWriter::getTotalSize(WritableMemoryBuffer &EmptyBuffer) const {
++  SRECSizeCalculator SizeCalc(EmptyBuffer, 0);
+   for (const SectionBase *Sec : Sections)
+-    if (Error Err = Sec->accept(LengthCalc))
+-      return Err;
++    if (Error Err = Sec->accept(SizeCalc))
++      return std::move(Err);
+ 
+-  // We need space to write section records + StartAddress record
+-  // (if start adress is not zero) + EndOfFile record.
+-  TotalSize = LengthCalc.getBufferOffset() +
+-              (Obj.Entry ? IHexRecord::getLineLength(4) : 0) +
+-              IHexRecord::getLineLength(0);
++  SizeCalc.writeRecords(Obj.Entry);
++  // We need to add the size of the Header and Terminator records.
++  SRecord Header = SRecord::getHeader(OutputFileName);
++  uint8_t TerminatorType = 10 - SizeCalc.getType();
++  SRecord Terminator = {TerminatorType, static_cast<uint32_t>(Obj.Entry), {}};
++  return Header.getSize() + SizeCalc.getBufferOffset() + Terminator.getSize();
++}
+ 
+-  Buf = WritableMemoryBuffer::getNewMemBuffer(TotalSize);
+-  if (!Buf)
+-    return createStringError(errc::not_enough_memory,
+-                             "failed to allocate memory buffer of " +
+-                                 Twine::utohexstr(TotalSize) + " bytes");
++Error SRECWriter::write() {
++  uint32_t HeaderSize =
++      writeHeader(reinterpret_cast<uint8_t *>(Buf->getBufferStart()));
++  SRECSectionWriter Writer(*Buf, HeaderSize);
++  for (const SectionBase *S : Sections) {
++    if (Error E = S->accept(Writer))
++      return E;
++  }
++  Writer.writeRecords(Obj.Entry);
++  uint64_t Offset = Writer.getBufferOffset();
+ 
++  // An S1 record terminates with an S9 record, S2 with S8, and S3 with S7.
++  uint8_t TerminatorType = 10 - Writer.getType();
++  Offset += writeTerminator(
++      reinterpret_cast<uint8_t *>(Buf->getBufferStart() + Offset),
++      TerminatorType);
++  assert(Offset == TotalSize);
++  Out.write(Buf->getBufferStart(), Buf->getBufferSize());
+   return Error::success();
+ }
+ 
+diff --git a/llvm/lib/ObjCopy/ELF/ELFObject.h b/llvm/lib/ObjCopy/ELF/ELFObject.h
+index 95bea0964eae..7a2e20d82d11 100644
+--- a/llvm/lib/ObjCopy/ELF/ELFObject.h
++++ b/llvm/lib/ObjCopy/ELF/ELFObject.h
+@@ -172,6 +172,9 @@ public:
+   friend class SectionWriter;                                                  \
+   friend class IHexSectionWriterBase;                                          \
+   friend class IHexSectionWriter;                                              \
++  friend class SRECSectionWriter;                                              \
++  friend class SRECSectionWriterBase;                                          \
++  friend class SRECSizeCalculator;                                             \
+   template <class ELFT> friend class ELFSectionWriter;                         \
+   template <class ELFT> friend class ELFSectionSizer;
+ 
+@@ -371,23 +374,136 @@ public:
+       : Writer(Obj, Out), GapFill(Config.GapFill), PadTo(Config.PadTo) {}
+ };
+ 
+-class IHexWriter : public Writer {
+-  struct SectionCompare {
+-    bool operator()(const SectionBase *Lhs, const SectionBase *Rhs) const;
+-  };
++// A base class for writing ascii hex formats such as srec and ihex.
++class ASCIIHexWriter : public Writer {
++public:
++  ASCIIHexWriter(Object &Obj, raw_ostream &OS, StringRef OutputFile)
++      : Writer(Obj, OS), OutputFileName(OutputFile) {}
++  Error finalize() override;
+ 
+-  std::set<const SectionBase *, SectionCompare> Sections;
++protected:
++  StringRef OutputFileName;
+   size_t TotalSize = 0;
++  std::vector<const SectionBase *> Sections;
++
++  Error checkSection(const SectionBase &S) const;
++  virtual Expected<size_t>
++  getTotalSize(WritableMemoryBuffer &EmptyBuffer) const = 0;
++};
++
++class IHexWriter : public ASCIIHexWriter {
++public:
++  Error write() override;
++  IHexWriter(Object &Obj, raw_ostream &Out, StringRef OutputFile)
++      : ASCIIHexWriter(Obj, Out, OutputFile) {}
+ 
+-  Error checkSection(const SectionBase &Sec);
++private:
+   uint64_t writeEntryPointRecord(uint8_t *Buf);
+   uint64_t writeEndOfFileRecord(uint8_t *Buf);
++  Expected<size_t>
++  getTotalSize(WritableMemoryBuffer &EmptyBuffer) const override;
++};
+ 
++class SRECWriter : public ASCIIHexWriter {
+ public:
+-  ~IHexWriter() {}
+-  Error finalize() override;
++  SRECWriter(Object &Obj, raw_ostream &OS, StringRef OutputFile)
++      : ASCIIHexWriter(Obj, OS, OutputFile) {}
+   Error write() override;
+-  IHexWriter(Object &Obj, raw_ostream &Out) : Writer(Obj, Out) {}
++
++private:
++  size_t writeHeader(uint8_t *Buf);
++  size_t writeTerminator(uint8_t *Buf, uint8_t Type);
++  Expected<size_t>
++  getTotalSize(WritableMemoryBuffer &EmptyBuffer) const override;
++};
++
++using SRecLineData = SmallVector<char, 64>;
++struct SRecord {
++  uint8_t Type;
++  uint32_t Address;
++  ArrayRef<uint8_t> Data;
++  SRecLineData toString() const;
++  uint8_t getCount() const;
++  // Get address size in characters.
++  uint8_t getAddressSize() const;
++  uint8_t getChecksum() const;
++  size_t getSize() const;
++  static SRecord getHeader(StringRef FileName);
++  static uint8_t getType(uint32_t Address);
++
++  enum Type : uint8_t {
++    // Vendor specific text comment.
++    S0 = 0,
++    // Data that starts at a 16 bit address.
++    S1 = 1,
++    // Data that starts at a 24 bit address.
++    S2 = 2,
++    // Data that starts at a 32 bit address.
++    S3 = 3,
++    // Reserved.
++    S4 = 4,
++    // 16 bit count of S1/S2/S3 records (optional).
++    S5 = 5,
++    // 32 bit count of S1/S2/S3 records (optional).
++    S6 = 6,
++    // Terminates a series of S3 records.
++    S7 = 7,
++    // Terminates a series of S2 records.
++    S8 = 8,
++    // Terminates a series of S1 records.
++    S9 = 9
++  };
++};
++
++class SRECSectionWriterBase : public BinarySectionWriter {
++public:
++  explicit SRECSectionWriterBase(WritableMemoryBuffer &Buf,
++                                 uint64_t StartOffset)
++      : BinarySectionWriter(Buf), Offset(StartOffset), HeaderSize(StartOffset) {
++  }
++
++  using BinarySectionWriter::visit;
++
++  void writeRecords(uint32_t Entry);
++  uint64_t getBufferOffset() const { return Offset; }
++  Error visit(const Section &S) override;
++  Error visit(const OwnedDataSection &S) override;
++  Error visit(const StringTableSection &S) override;
++  Error visit(const DynamicRelocationSection &S) override;
++  uint8_t getType() const { return Type; };
++
++protected:
++  // Offset in the output buffer.
++  uint64_t Offset;
++  // Sections start after the header.
++  uint64_t HeaderSize;
++  // Type of records to write.
++  uint8_t Type = SRecord::S1;
++  std::vector<SRecord> Records;
++
++  void writeSection(const SectionBase &S, ArrayRef<uint8_t> Data);
++  virtual void writeRecord(SRecord &Record, uint64_t Off) = 0;
++};
++
++// An SRECSectionWriterBase that visits sections but does not write anything.
++// This class is only used to calculate the size of the output file.
++class SRECSizeCalculator : public SRECSectionWriterBase {
++public:
++  SRECSizeCalculator(WritableMemoryBuffer &EmptyBuffer, uint64_t Offset)
++      : SRECSectionWriterBase(EmptyBuffer, Offset) {}
++
++protected:
++  void writeRecord(SRecord &Record, uint64_t Off) override {}
++};
++
++class SRECSectionWriter : public SRECSectionWriterBase {
++public:
++  SRECSectionWriter(WritableMemoryBuffer &Buf, uint64_t Offset)
++      : SRECSectionWriterBase(Buf, Offset) {}
++  Error visit(const StringTableSection &Sec) override;
++
++protected:
++  void writeRecord(SRecord &Record, uint64_t Off) override;
+ };
+ 
+ class SectionBase {
+diff --git a/llvm/test/tools/llvm-objcopy/ELF/ihex-writer.test b/llvm/test/tools/llvm-objcopy/ELF/ihex-writer.test
+index 09ff8ae951d4..6c07f9f88bda 100644
+--- a/llvm/test/tools/llvm-objcopy/ELF/ihex-writer.test
++++ b/llvm/test/tools/llvm-objcopy/ELF/ihex-writer.test
+@@ -70,8 +70,8 @@
+ # SIGN_EXTENDED-NEXT: :051000000001020304E1
+ # SIGN_EXTENDED-NEXT: :00000001FF
+ 
+-# BAD-ADDR: error: {{.*}}: Section '.text2' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
+-# BAD-ADDR2: error: {{.*}}: Section '.text3' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
++# BAD-ADDR: error: {{.*}}: section '.text2' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
++# BAD-ADDR2: error: {{.*}}: section '.text3' address range [0x{{.*}}, 0x{{.*}}] is not 32 bit
+ 
+ # There shouldn't be 'ExtendedAddr' nor 'Data' records
+ # ZERO_SIZE_SEC-NOT:  :02000004
+@@ -81,4 +81,4 @@
+ # START1: :040000030000FFFFFB
+ # START2: :0400000500100000E7
+ # START3: :040000058000100067
+-# BAD-START: error: {{.*}}: Entry point address 0x{{.*}} overflows 32 bits
++# BAD-START: error: {{.*}}: entry point address 0x{{.*}} overflows 32 bits
+diff --git a/llvm/test/tools/llvm-objcopy/ELF/srec-writer.test b/llvm/test/tools/llvm-objcopy/ELF/srec-writer.test
+new file mode 100644
+index 000000000000..e96b87b85924
+--- /dev/null
++++ b/llvm/test/tools/llvm-objcopy/ELF/srec-writer.test
+@@ -0,0 +1,196 @@
++## Check for basic functionality using an input file with
++## various section types, adresses, data, and no segments.
++# RUN: yaml2obj %s --docnum=1 -o %t
++# RUN: llvm-objcopy -O srec %t - | \
++# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=SREC
++
++## The record type for the header should be S0 with a 2 byte address
++## of 0. For an output file named "-" the header data field should contain "2D".
++## The byte count field should therefore have a value of 4: 2 bytes for address,
++## 1 byte for output file and 1 byte for checksum.
++     # SREC:S00400002DCE
++# SREC-NEXT:S31500001000000102030405060708090A0B0C0D0E0F62
++# SREC-NEXT:S30A0000101010111213147B
++# SREC-NEXT:S30F00EFFFFF1111111111111111111159
++# SREC-NEXT:S31000FFFFF83031323334353637383940AC
++# SREC-NEXT:S30A8000100000010203045B
++# SREC-NEXT:S70500000000FA
++
++## Terminator should contain the entry point.
++# RUN: llvm-objcopy -O srec --set-start=0xF0000000 %t --only-section=.dummy - 2>&1 | \
++# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRY
++## Sign-extended entry point is OK.
++# RUN: llvm-objcopy -O srec --set-start=0xFFFFFFFFF0000000 %t --only-section=.dummy - 2>&1 | \
++# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRY
++
++     # ENTRY:S00400002DCE
++# ENTRY-NEXT:S705F00000000A
++
++## Start address which exceeds 32 bit range triggers an error.
++# RUN: not llvm-objcopy -O srec --set-start=0xF00000000 %t - 2>&1 | \
++# RUN:   FileCheck %s --check-prefix=BAD_START
++
++# BAD_START: entry point address 0xf00000000 overflows 32 bits
++
++## Sign-extended start address which exceeds 32 bit range triggers an error.
++# RUN: not llvm-objcopy -O srec --set-start=0xFFFFFFFF0F000000 %t - 2>&1 | \
++# RUN:   FileCheck %s --check-prefix=BAD_EXTENDED_START
++
++# BAD_EXTENDED_START: entry point address 0xffffffff0f000000 overflows 32 bits
++
++--- !ELF
++FileHeader:
++  Class:           ELFCLASS64
++  Data:            ELFDATA2LSB
++  Type:            ET_EXEC
++  Machine:         EM_X86_64
++Sections:
++  - Name:            .data1
++## Records for this section should come last.
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Content:         "11111111111111111111"
++    Address:         0xEFFFFF
++  - Name:            .data2
++## This section overlaps 24-bit address boundary, so we expect
++## its record type to be S3.
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Content:         "3031323334353637383940"
++    Address:         0xFFFFF8
++## Sign-extended addresses are OK.
++  - Name:            .data3
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Address:         0xFFFFFFFF80001000
++    Content:         "0001020304"
++  - Name:            .text
++## This section's contents exceed default line length of 16 bytes
++## so we expect two lines created for it. Records for this section
++## should appear before records for the previous section.
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Address:         0x1000
++    Content:         "000102030405060708090A0B0C0D0E0F1011121314"
++  - Name:            .bss
++## NOBITS sections are not written.
++    Type:            SHT_NOBITS
++    Flags:           [ SHF_ALLOC ]
++    Address:         0x10100
++    Size:            0x1000
++  - Name:            .dummy
++## Non-allocatable sections are not written.
++    Type:            SHT_PROGBITS
++    Flags:           [ ]
++    Address:         0x20FFF8
++    Size:            65536
++
++## Check for various error cases.
++
++## Check that section address range overlapping 32 bit range
++## triggers an error.
++# RUN: yaml2obj %s --docnum=2 -o %t.err
++# RUN: not llvm-objcopy -O srec --only-section=.text1 %t.err - 2>&1 | \
++# RUN:   FileCheck %s --check-prefix=BAD-ADDR
++# RUN: not llvm-objcopy -O srec --only-section=.text2 %t.err - 2>&1 | \
++# RUN:   FileCheck %s --check-prefix=BAD-ADDR2
++
++# BAD-ADDR: section '.text1' address range [0xfffffff8, 0x100000000] is not 32 bit
++# BAD-ADDR2: section '.text2' address range [0xffffffff0, 0xffffffff4] is not 32 bit
++
++## Check that zero length section is not written.
++# RUN: llvm-objcopy -O srec --only-section=.text %t.err - | \
++# RUN:   FileCheck --match-full-lines --strict-whitespace --implicit-check-not={{.}} %s --check-prefix=ZERO_SIZE_SEC
++
++## There should be no records besides header and terminator.
++# ZERO_SIZE_SEC:S00400002DCE
++# ZERO_SIZE_SEC-NEXT:S9030000FC
++
++--- !ELF
++FileHeader:
++  Class:           ELFCLASS64
++  Data:            ELFDATA2LSB
++  Type:            ET_EXEC
++  Machine:         EM_X86_64
++Sections:
++  - Name:            .text1
++## Part of section data is in 32-bit address range and part isn't.
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC]
++    Address:         0xFFFFFFF8
++    Content:         "000102030405060708"
++  - Name:            .text2
++  ## Entire secion is outside of 32-bit range.
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Address:         0xFFFFFFFF0
++    Content:         "0001020304"
++
++## This tests an input file with segments and expects
++## physical addresses instead of virtual addresses.
++# RUN: yaml2obj %s --docnum=3 -o %t.seg
++# RUN: llvm-objcopy -O srec %t.seg - | \
++# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=PADDR
++
++     # PADDR:S00400002DCE
++# PADDR-NEXT:S214100000000102030405060708090A0B0C0D0E0F63
++# PADDR-NEXT:S20910001010111213147C
++# PADDR-NEXT:S20F10001530313233343536373839407E
++# PADDR-NEXT:S20810002040414243C1
++# PADDR-NEXT:S20F10002450515253545556575859600F
++# PADDR-NEXT:S20720FFF8000000E1
++# PADDR-NEXT:S804100000EB
++
++--- !ELF
++## This file has a non-contiguous section layout with large gaps.
++## These sections are all tightly packed into one PT_LOAD segment
++## starting at physical address 0x100000. Records should use physical addresses.
++FileHeader:
++  Class:           ELFCLASS64
++  Data:            ELFDATA2LSB
++  Type:            ET_EXEC
++  Machine:         EM_X86_64
++  Entry:           0x100000
++Sections:
++  - Name:            .text
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Address:         0x0
++    Content:         "000102030405060708090A0B0C0D0E0F1011121314"
++  - Name:            .data1
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Content:         "3031323334353637383940"
++    Address:         0xFFF8
++  - Name:            .data2
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Content:         "40414243"
++    Address:         0x10100
++  - Name:            .data3
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Content:         "5051525354555657585960"
++    Address:         0x10FFF8
++  - Name:            .bss
++    Type:            SHT_NOBITS
++    Flags:           [ SHF_ALLOC ]
++    Address:         0x10100
++    Size:            0x1000
++  - Name:            .dummy
++    Type:            SHT_PROGBITS
++    Flags:           [ SHF_ALLOC ]
++    Address:         0x20FFF8
++    Size:            3
++  - Name:            .nonalloc
++    Type:            SHT_PROGBITS
++    Flags:           [ ]
++    Address:         0x300000
++    Size:            1
++ProgramHeaders:
++  - Type:     PT_LOAD
++    Flags:    [ PF_X, PF_R ]
++    VAddr:    0xF00000000
++    PAddr:    0x100000
++    FirstSec: .text
++    LastSec:  .bss
+diff --git a/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp b/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp
+index 394eacacb57e..9a9b631e98bc 100644
+--- a/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp
++++ b/llvm/tools/llvm-objcopy/ObjcopyOptions.cpp
+@@ -687,6 +687,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
+   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
+                             .Case("binary", FileFormat::Binary)
+                             .Case("ihex", FileFormat::IHex)
++                            .Case("srec", FileFormat::SREC)
+                             .Default(FileFormat::Unspecified);
+   if (Config.OutputFormat == FileFormat::Unspecified) {
+     if (OutputFormat.empty()) {
+diff --git a/llvm/tools/llvm-objcopy/llvm-objcopy.cpp b/llvm/tools/llvm-objcopy/llvm-objcopy.cpp
+index 730f423daa12..ad3e60472369 100644
+--- a/llvm/tools/llvm-objcopy/llvm-objcopy.cpp
++++ b/llvm/tools/llvm-objcopy/llvm-objcopy.cpp
+@@ -121,6 +121,7 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
+   case FileFormat::Binary:
+   case FileFormat::IHex:
+   case FileFormat::Unspecified:
++  case FileFormat::SREC:
+     Expected<const ELFConfig &> ELFConfig = ConfigMgr.getELFConfig();
+     if (!ELFConfig)
+       return ELFConfig.takeError();
+-- 
+2.34.1
+
