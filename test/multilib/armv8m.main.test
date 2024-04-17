@@ -1,12 +1,12 @@
 # RUN: %clang -print-multi-directory --target=armv8m.main-none-eabi -mfpu=none | FileCheck %s
-# CHECK: arm-none-eabi/armv8m.main_soft_nofp_exceptions_rtti{{$}}
+# CHECK: arm-none-eabi/armv8m.main_soft_nofp_exn_rtti{{$}}
 # CHECK-EMPTY:
 
 # RUN: %clang -print-multi-directory --target=armv8m.main-none-eabihf -mfpu=fpv5-sp-d16 | FileCheck --check-prefix=HARD %s
-# HARD: arm-none-eabi/armv8m.main_hard_fp_exceptions_rtti{{$}}
+# HARD: arm-none-eabi/armv8m.main_hard_fp_exn_rtti{{$}}
 # HARD-EMPTY:
 
 # Fallback to armv7m
 # RUN: %clang -print-multi-directory --target=armv8m.main-none-eabi -mfpu=fpv5-sp-d16 | FileCheck --check-prefix=SOFTFP %s
-# SOFTFP: arm-none-eabi/armv7m_soft_fpv4_sp_d16_exceptions_rtti{{$}}
+# SOFTFP: arm-none-eabi/armv7m_soft_fpv4_sp_d16_exn_rtti{{$}}
 # SOFTFP-EMPTY:
