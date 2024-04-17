@@ -335,7 +335,7 @@ get_directory_property(LLVM_VERSION_MINOR DIRECTORY ${llvmproject_SOURCE_DIR}/ll
 get_directory_property(LLVM_VERSION_PATCH DIRECTORY ${llvmproject_SOURCE_DIR}/llvm DEFINITION LLVM_VERSION_PATCH)
 
 project(
-    LLVMEmbeddedToolchainForArm
+    LLVM-ET-Arm
     VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
     DESCRIPTION "LLVM Embedded Toolchain for Arm"
     HOMEPAGE_URL "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm"
