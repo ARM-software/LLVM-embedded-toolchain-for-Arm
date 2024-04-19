@@ -22,7 +22,6 @@
 :make
 @if [%target%]==[build] goto :build
 @if [%target%]==[run] goto :run
-@if [%target%]==[prof] goto :prof
 @if [%target%]==[clean] goto :clean
 @echo Error: unknown target "%target%"
 @exit /B 1
@@ -38,9 +37,6 @@
 @call :build_fn
 :do_run
 qemu-system-arm.exe -M microbit -semihosting -nographic -device loader,file=hello.hex
-@exit /B
-
-:prof
 llvm-profdata.exe merge -sparse default.profraw -o hello.profdata
 llvm-cov.exe show hello.elf -instr-profile=hello.profdata
 @exit /B
