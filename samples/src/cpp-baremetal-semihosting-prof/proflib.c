@@ -9,10 +9,10 @@
 // This file is derived from various files in compiler-rt of the llvm-project,
 // see https://github.com/llvm/llvm-project/tree/main/compiler-rt/lib/profile
 
-// NOTE: The profile format changes regularly. See INSTR_PROF_RAW_VERSION. 
+// NOTE: The profile format changes regularly. See INSTR_PROF_RAW_VERSION.
 // This runtime will need updating if the version changes.
 
-// This C file should be compiled without -fprofile-instr-generate. 
+// This C file should be compiled without -fprofile-instr-generate.
 // It will provide enough of the runtime for files compiled with
 // -fprofile-instr-generate and, optionally, -fcoverage-mapping
 
@@ -25,7 +25,7 @@
 // Macros and __llvm functions derived from
 // compiler_rt/lib/profile.
 
-#define INSTR_PROF_RAW_VERSION 9
+#define INSTR_PROF_RAW_VERSION 10
 #define INSTR_PROF_RAW_VERSION_VAR __llvm_profile_raw_version
 #define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
 
@@ -66,8 +66,16 @@ typedef struct __llvm_profile_header {
   uint64_t CountersDelta;
   uint64_t BitmapDelta;
   uint64_t NamesDelta;
+  uint64_t NumVTables;
+  uint64_t VNamesSize;
   uint64_t ValueKindLast;
 } __llvm_profile_header;
+
+typedef struct VTableProfData {
+  uint64_t VTableNameHash;
+  IntPtrT VTablePointer;
+  uint32_t VTableSize;
+} VTableProfData;
 
 #define INSTR_PROF_SIMPLE_CONCAT(x, y) x##y
 #define INSTR_PROF_CONCAT(x, y) INSTR_PROF_SIMPLE_CONCAT(x, y)
@@ -84,10 +92,12 @@ typedef struct __llvm_profile_header {
    than WIN32 */
 #define INSTR_PROF_DATA_COMMON __llvm_prf_data
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
+#define INSTR_PROF_VNAME_COMMON __llvm_prf_vns
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
 #define INSTR_PROF_BITS_COMMON __llvm_prf_bits
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
+#define INSTR_PROF_VTAB_COMMON __llvm_prf_vtab
 #define INSTR_PROF_COVMAP_COMMON __llvm_covmap
 #define INSTR_PROF_COVFUN_COMMON __llvm_covfun
 #define INSTR_PROF_COVDATA_COMMON __llvm_covdata
@@ -101,8 +111,12 @@ typedef struct __llvm_profile_header {
 #define PROF_DATA_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_DATA_COMMON)
 #define PROF_NAME_START INSTR_PROF_SECT_START(INSTR_PROF_NAME_COMMON)
 #define PROF_NAME_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_NAME_COMMON)
+#define PROF_VNAME_START INSTR_PROF_SECT_START(INSTR_PROF_VNAME_COMMON)
+#define PROF_VNAME_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_VNAME_COMMON)
 #define PROF_CNTS_START INSTR_PROF_SECT_START(INSTR_PROF_CNTS_COMMON)
 #define PROF_CNTS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)
+#define PROF_VTABLE_START INSTR_PROF_SECT_START(INSTR_PROF_VTAB_COMMON)
+#define PROF_VTABLE_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_VTAB_COMMON)
 #define PROF_BITS_START INSTR_PROF_SECT_START(INSTR_PROF_BITS_COMMON)
 #define PROF_BITS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_BITS_COMMON)
 #define PROF_ORDERFILE_START INSTR_PROF_SECT_START(INSTR_PROF_ORDERFILE_COMMON)
@@ -121,6 +135,10 @@ extern __llvm_profile_data PROF_DATA_STOP COMPILER_RT_VISIBILITY
     COMPILER_RT_WEAK;
 extern char PROF_CNTS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_CNTS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+extern VTableProfData PROF_VTABLE_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+extern VTableProfData PROF_VTABLE_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+extern char PROF_VNAME_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+extern char PROF_VNAME_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_BITS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_BITS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern uint32_t PROF_ORDERFILE_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
@@ -225,6 +243,29 @@ static uint64_t __llvm_profile_get_counters_size(const char *Begin,
   return __llvm_profile_get_num_counters(Begin, End) *
          __llvm_profile_counter_entry_size();
 }
+static const VTableProfData *__llvm_profile_begin_vtables(void) {
+  return &PROF_VTABLE_START;
+}
+static const VTableProfData *__llvm_profile_end_vtables(void) {
+  return &PROF_VTABLE_STOP;
+}
+static const char *__llvm_profile_begin_vtabnames(void) {
+  return &PROF_VNAME_START;
+}
+static const char *__llvm_profile_end_vtabnames(void) {
+  return &PROF_VNAME_STOP;
+}
+static uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
+                                              const VTableProfData *End) {
+  // Convert pointers to intptr_t to use integer arithmetic.
+  intptr_t EndI = (intptr_t)End, BeginI = (intptr_t)Begin;
+  return (EndI - BeginI) / sizeof(VTableProfData);
+}
+static uint64_t
+__llvm_profile_get_vtable_section_size(const VTableProfData *Begin,
+                                       const VTableProfData *End) {
+  return (intptr_t)(End) - (intptr_t)(Begin);
+}
 
 /* At exit, the file is written out using semihosting using the default
  * filename of "default.profraw"
@@ -242,6 +283,10 @@ void __llvm_profile_dump(void) {
   const char *BitmapEnd = __llvm_profile_end_bitmap();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
+  const VTableProfData *VTableBegin = __llvm_profile_begin_vtables();
+  const VTableProfData *VTableEnd = __llvm_profile_end_vtables();
+  const char *VNamesBegin = __llvm_profile_begin_vtabnames();
+  const char *VNamesEnd = __llvm_profile_end_vtabnames();
   const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   const uint64_t NumCounters =
       __llvm_profile_get_num_counters(CountersBegin, CountersEnd);
@@ -250,8 +295,18 @@ void __llvm_profile_dump(void) {
   const uint64_t NamesSize = __llvm_profile_get_name_size(NamesBegin, NamesEnd);
   const uint64_t NumBitmapBytes =
       __llvm_profile_get_num_bitmap_bytes(BitmapBegin, BitmapEnd);
+  const uint64_t NumVTables =
+      __llvm_profile_get_num_vtable(VTableBegin, VTableEnd);
+  const uint64_t VTableSectionSize =
+      __llvm_profile_get_vtable_section_size(VTableBegin, VTableEnd);
+  const uint64_t VNamesSize =
+      __llvm_profile_get_name_size(VNamesBegin, VNamesEnd);
   uint64_t PaddingBytesAfterNames =
       __llvm_profile_get_num_padding_bytes(NamesSize);
+  uint64_t PaddingBytesAfterVTable =
+      __llvm_profile_get_num_padding_bytes(VTableSectionSize);
+  uint64_t PaddingBytesAfterVNames =
+      __llvm_profile_get_num_padding_bytes(VNamesSize);
 
 #ifdef PROFLIB_DEBUG
   fprintf(stderr, "__llvm_profile_dump\n");
@@ -272,6 +327,8 @@ void __llvm_profile_dump(void) {
   Hdr.CountersDelta = (uintptr_t)CountersBegin - (uintptr_t)DataBegin;
   Hdr.BitmapDelta = (uintptr_t)BitmapBegin - (uintptr_t)DataBegin;
   Hdr.NamesDelta = (uintptr_t)NamesBegin;
+  Hdr.NumVTables = NumVTables;
+  Hdr.VNamesSize = VNamesSize;
   Hdr.ValueKindLast = IPVK_Last;
 
   Fd = fopen(FileName, "wb");
@@ -316,6 +373,34 @@ void __llvm_profile_dump(void) {
           PaddingBytesAfterNames);
 #endif // PROFLIB_DEBUG
   for (; PaddingBytesAfterNames != 0; --PaddingBytesAfterNames)
+    fputc(0, Fd);
+
+    /* VTables */
+#ifdef PROFLIB_DEBUG
+  fprintf(stderr, "VTableSectionSize: %" PRIu64 "\n", VTableSectionSize);
+#endif // PROFLIB_DEBUG
+  fwrite(VTableBegin, sizeof(uint8_t), VTableSectionSize, Fd);
+
+  /* Padding */
+#ifdef PROFLIB_DEBUG
+  fprintf(stderr, "PaddingBytesAfterVTable: %" PRIu64 "\n",
+          PaddingBytesAfterVTable);
+#endif // PROFLIB_DEBUG
+  for (; PaddingBytesAfterVTable != 0; --PaddingBytesAfterVTable)
+    fputc(0, Fd);
+
+    /* VNames */
+#ifdef PROFLIB_DEBUG
+  fprintf(stderr, "VNamesSize: %" PRIu64 "\n", VNamesSize);
+#endif // PROFLIB_DEBUG
+  fwrite(VNamesBegin, sizeof(uint8_t), VNamesSize, Fd);
+
+  /* Padding */
+#ifdef PROFLIB_DEBUG
+  fprintf(stderr, "PaddingBytesAfterVNames: %" PRIu64 "\n",
+          PaddingBytesAfterVNames);
+#endif // PROFLIB_DEBUG
+  for (; PaddingBytesAfterVNames != 0; --PaddingBytesAfterVNames)
     fputc(0, Fd);
 
   fclose(Fd);
