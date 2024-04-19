@@ -856,7 +856,7 @@ function(
     # Exceptions are architectures pre-armv7, which compiler-rt expects to
     # see in the triple because that's where it looks to decide whether to
     # use specific assembly sources.
-    if(NOT target_triple MATCHES "^(aarch64-none-elf|arm-none-eabi|armv[4-6])")
+    if(NOT target_triple MATCHES "^(aarch64-none-unknown-elf|arm-none-unknown-eabi|armv[4-6])")
         message(FATAL_ERROR "\
 Target triple name \"${target_triple}\" not compatible with compiler-rt.
 Use -march to specify the architecture.")
@@ -1078,7 +1078,7 @@ endfunction()
 
 function(get_compiler_rt_target_triple target_arch flags)
     if(target_arch STREQUAL "aarch64")
-        set(target_triple "aarch64-none-elf")
+        set(target_triple "aarch64-none-unknown-elf")
     else()
         # Choose the target triple so that compiler-rt will do the
         # right thing. We can't always put the exact target
@@ -1090,9 +1090,9 @@ function(get_compiler_rt_target_triple target_arch flags)
         # see in the triple because that's where it looks to decide whether to
         # use specific assembly sources.
         if(target_arch MATCHES "^armv[4-6]")
-            set(target_triple "${target_arch}-none-eabi")
+            set(target_triple "${target_arch}-none-unknown-eabi")
         else()
-            set(target_triple "arm-none-eabi")
+            set(target_triple "arm-none-unknown-eabi")
         endif()
         if(flags MATCHES "-mfloat-abi=hard")
             # Also, compiler-rt looks in the ABI component of the
