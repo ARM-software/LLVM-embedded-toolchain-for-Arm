@@ -28,13 +28,11 @@ hello.elf: *.cpp
 
 run: hello.hex
 	qemu-system-arm -M microbit -semihosting -nographic -device loader,file=$<
+	$(BIN_PATH)/llvm-profdata merge -sparse default.profraw -o hello.profdata
+	$(BIN_PATH)/llvm-cov show hello.elf -instr-profile=hello.profdata
 
 debug: hello.hex
 	qemu-system-arm -M microbit -semihosting -nographic -device loader,file=$< -s -S
-
-prof: run
-	llvm-profdata merge -sparse default.profraw -o hello.profdata
-	llvm-cov show hello.elf -instr-profile=hello.profdata
 
 clean:
 	rm -f *.elf *.hex *.profraw *.profdata *.o
