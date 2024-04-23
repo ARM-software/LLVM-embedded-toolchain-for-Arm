@@ -335,17 +335,20 @@ get_directory_property(LLVM_VERSION_MINOR DIRECTORY ${llvmproject_SOURCE_DIR}/ll
 get_directory_property(LLVM_VERSION_PATCH DIRECTORY ${llvmproject_SOURCE_DIR}/llvm DEFINITION LLVM_VERSION_PATCH)
 
 project(
-    LLVM-ET-Arm
+    LLVMEmbeddedToolchainForArm
     VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
     DESCRIPTION "LLVM Embedded Toolchain for Arm"
     HOMEPAGE_URL "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm"
 )
 
+# Set package name for shorter archive file name
+set(SHORT_PACKAGE_NAME "LLVM-ET-Arm")
+
 # Set package name and version.
 if(DEFINED LLVM_TOOLCHAIN_PACKAGE_NAME)
     set(PACKAGE_NAME ${LLVM_TOOLCHAIN_PACKAGE_NAME})
 else()
-    set(PACKAGE_NAME ${CMAKE_PROJECT_NAME})
+    set(PACKAGE_NAME ${SHORT_PACKAGE_NAME})
 endif()
 set(CPACK_PACKAGE_NAME ${PACKAGE_NAME})
 set(PACKAGE_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
