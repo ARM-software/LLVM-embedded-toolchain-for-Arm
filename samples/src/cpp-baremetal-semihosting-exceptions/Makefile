@@ -17,7 +17,7 @@
 
 include ../../Makefile.conf
 
-build: hello.hex, hello-exn.hex
+build: hello.hex hello-exn.hex
 
 hello.hex: hello.cpp
 	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CRT_SEMIHOST) $(CPP_FLAGS) -print-multi-directory -g -T ../../ldscripts/microbit.ld -o hello.elf $^ | grep -v "_exn_"
