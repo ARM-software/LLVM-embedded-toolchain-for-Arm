@@ -1,0 +1,89 @@
+From 78acc1685def3efa6e5af212f4edee7842de28a6 Mon Sep 17 00:00:00 2001
+From: Piotr Przybyla <piotr.przybyla@arm.com>
+Date: Wed, 29 Nov 2023 14:05:00 +0000
+Subject: [PATCH] Multilib support for libraries with exceptions and rtti
+
+---
+ clang/include/clang/Driver/ToolChain.h | 10 ++++++++++
+ clang/lib/Driver/ToolChain.cpp         | 23 ++++++++++++++++++++++-
+ 2 files changed, 32 insertions(+), 1 deletion(-)
+
+diff --git a/clang/include/clang/Driver/ToolChain.h b/clang/include/clang/Driver/ToolChain.h
+index 2d0c1f826c1728..fbe2e8fe8e88d8 100644
+--- a/clang/include/clang/Driver/ToolChain.h
++++ b/clang/include/clang/Driver/ToolChain.h
+@@ -120,6 +120,11 @@ class ToolChain {
+     RM_Disabled,
+   };
+ 
++  enum ExceptionsMode {
++    EM_Enabled,
++    EM_Disabled,
++  };
++
+   struct BitCodeLibraryInfo {
+     std::string Path;
+     bool ShouldInternalize;
+@@ -141,6 +146,8 @@ class ToolChain {
+ 
+   const RTTIMode CachedRTTIMode;
+ 
++  const ExceptionsMode CachedExceptionsMode;
++
+   /// The list of toolchain specific path prefixes to search for libraries.
+   path_list LibraryPaths;
+ 
+@@ -318,6 +325,9 @@ class ToolChain {
+   // Returns the RTTIMode for the toolchain with the current arguments.
+   RTTIMode getRTTIMode() const { return CachedRTTIMode; }
+ 
++  // Returns the ExceptionsMode for the toolchain with the current arguments.
++  ExceptionsMode getExceptionsMode() const { return CachedExceptionsMode; }
++
+   /// Return any implicit target and/or mode flag for an invocation of
+   /// the compiler driver as `ProgName`.
+   ///
+diff --git a/clang/lib/Driver/ToolChain.cpp b/clang/lib/Driver/ToolChain.cpp
+index 388030592b4836..f8c13c86daf9b0 100644
+--- a/clang/lib/Driver/ToolChain.cpp
++++ b/clang/lib/Driver/ToolChain.cpp
+@@ -77,10 +77,19 @@ static ToolChain::RTTIMode CalculateRTTIMode(const ArgList &Args,
+   return NoRTTI ? ToolChain::RM_Disabled : ToolChain::RM_Enabled;
+ }
+ 
++static ToolChain::ExceptionsMode CalculateExceptionsMode(const ArgList &Args) {
++  if (Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
++                   true)) {
++    return ToolChain::EM_Enabled;
++  }
++  return ToolChain::EM_Disabled;
++}
++
+ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
+                      const ArgList &Args)
+     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
+-      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
++      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
++      CachedExceptionsMode(CalculateExceptionsMode(Args)) {
+   auto addIfExists = [this](path_list &List, const std::string &Path) {
+     if (getVFS().exists(Path))
+       List.push_back(Path);
+@@ -264,6 +273,18 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
+     break;
+   }
+ 
++  // Include fno-exceptions and fno-rtti
++  // to improve multilib selection
++  if (getRTTIMode() == ToolChain::RTTIMode::RM_Disabled)
++    Result.push_back("-fno-rtti");
++  else
++    Result.push_back("-frtti");
++
++  if (getExceptionsMode() == ToolChain::ExceptionsMode::EM_Disabled)
++    Result.push_back("-fno-exceptions");
++  else
++    Result.push_back("-fexceptions");
++
+   // Sort and remove duplicates.
+   std::sort(Result.begin(), Result.end());
+   Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
