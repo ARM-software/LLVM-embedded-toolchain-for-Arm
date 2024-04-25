@@ -1,0 +1,5 @@
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-exceptions clean
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-exceptions run BIN_PATH=%unpack_directory/bin 2>&1 | FileCheck %s
+# RUN: make -C %samples_dir/src/cpp-baremetal-semihosting-exceptions clean
+# CHECK: No exceptions.
+# CHECK: Exception caught.
