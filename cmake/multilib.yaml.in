@@ -58,9 +58,9 @@ Mappings:
 # specific variants for.
 
 # v8-M Baseline is a superset of v6-M
-- Match: --target=thumbv8m\.base-none-unknown-eabi
+- Match: --target=thumbv8m\.base-unknown-none-eabi
   Flags:
-  - --target=thumbv6m-none-unknown-eabi
+  - --target=thumbv6m-unknown-none-eabi
 
 # v8.2-M Mainline is a superset of v8.1-M Mainline, in both hard and
 # soft float variants.
@@ -71,50 +71,50 @@ Mappings:
 # combination of them with FPUs, so in some cases it might be
 # necessary to fall back to a lower architecture in order to provide
 # the needed FPU support.
-- Match: --target=thumbv8\.[2-9]m\.main-none-unknown-eabi
+- Match: --target=thumbv8\.[2-9]m\.main-unknown-none-eabi
   Flags:
-  - --target=thumbv8.1m.main-none-unknown-eabi
-  - --target=thumbv8m.main-none-unknown-eabi
-  - --target=thumbv7em-none-unknown-eabi
-  - --target=thumbv7m-none-unknown-eabi
-- Match: --target=thumbv8\.[2-9]m\.main-none-unknown-eabihf
+  - --target=thumbv8.1m.main-unknown-none-eabi
+  - --target=thumbv8m.main-unknown-none-eabi
+  - --target=thumbv7em-unknown-none-eabi
+  - --target=thumbv7m-unknown-none-eabi
+- Match: --target=thumbv8\.[2-9]m\.main-unknown-none-eabihf
   Flags:
-  - --target=thumbv8.1m.main-none-unknown-eabihf
-  - --target=thumbv8m.main-none-unknown-eabihf
-  - --target=thumbv7em-none-unknown-eabihf
-  - --target=thumbv7m-none-unknown-eabihf
-- Match: --target=thumbv8\.1m\.main-none-unknown-eabi
+  - --target=thumbv8.1m.main-unknown-none-eabihf
+  - --target=thumbv8m.main-unknown-none-eabihf
+  - --target=thumbv7em-unknown-none-eabihf
+  - --target=thumbv7m-unknown-none-eabihf
+- Match: --target=thumbv8\.1m\.main-unknown-none-eabi
   Flags:
-  - --target=thumbv8m.main-none-unknown-eabi
-  - --target=thumbv7em-none-unknown-eabi
-  - --target=thumbv7m-none-unknown-eabi
-- Match: --target=thumbv8\.1m\.main-none-unknown-eabihf
+  - --target=thumbv8m.main-unknown-none-eabi
+  - --target=thumbv7em-unknown-none-eabi
+  - --target=thumbv7m-unknown-none-eabi
+- Match: --target=thumbv8\.1m\.main-unknown-none-eabihf
   Flags:
-  - --target=thumbv8m.main-none-unknown-eabihf
-  - --target=thumbv7em-none-unknown-eabihf
-  - --target=thumbv7m-none-unknown-eabihf
-- Match: --target=thumbv8m\.main-none-unknown-eabi
+  - --target=thumbv8m.main-unknown-none-eabihf
+  - --target=thumbv7em-unknown-none-eabihf
+  - --target=thumbv7m-unknown-none-eabihf
+- Match: --target=thumbv8m\.main-unknown-none-eabi
   Flags:
-  - --target=thumbv7em-none-unknown-eabi
-  - --target=thumbv7m-none-unknown-eabi
-- Match: --target=thumbv8m\.main-none-unknown-eabihf
+  - --target=thumbv7em-unknown-none-eabi
+  - --target=thumbv7m-unknown-none-eabi
+- Match: --target=thumbv8m\.main-unknown-none-eabihf
   Flags:
-  - --target=thumbv7em-none-unknown-eabihf
-  - --target=thumbv7m-none-unknown-eabihf
-- Match: --target=thumbv7em-none-unknown-eabi
+  - --target=thumbv7em-unknown-none-eabihf
+  - --target=thumbv7m-unknown-none-eabihf
+- Match: --target=thumbv7em-unknown-none-eabi
   Flags:
-  - --target=thumbv7m-none-unknown-eabi
-- Match: --target=thumbv7em-none-unknown-eabihf
+  - --target=thumbv7m-unknown-none-eabi
+- Match: --target=thumbv7em-unknown-none-eabihf
   Flags:
-  - --target=thumbv7m-none-unknown-eabihf
+  - --target=thumbv7m-unknown-none-eabihf
 
 # Higher versions of v8-A, and v9-A, are all supersets of v8-A. (And
 # of each other, in the obvious way, but we don't have any libraries
 # for those at present, so there's no need to generate all their
 # flags.)
-- Match: --target=armv(8\.[1-9]|9|9\.[1-9])a-none-unknown-eabi
+- Match: --target=armv(8\.[1-9]|9|9\.[1-9])a-unknown-none-eabi
   Flags:
-  - --target=armv8a-none-unknown-eabi
+  - --target=armv8a-unknown-none-eabi
 
 # -march extensions
 - Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+fp16(\+[^\+]+)*
