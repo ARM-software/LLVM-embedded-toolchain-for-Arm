@@ -870,7 +870,7 @@ Use -march to specify the architecture.")
         message(FATAL_ERROR "\
 Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\"")
     endif()
-    string(REPLACE "-none-" "-none-unknown-" normalized_target_triple ${target_triple})
+    string(REPLACE "-none-" "-unknown-none-" normalized_target_triple ${target_triple})
 
     get_runtimes_flags("${directory}" "${flags}")
 
@@ -1298,7 +1298,7 @@ set(multilib_yaml_content "")
 add_library_variants_for_cpu(
     aarch64
     COMPILE_FLAGS "-march=armv8-a"
-    MULTILIB_FLAGS "--target=aarch64-none-unknown-elf"
+    MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
     QEMU_MACHINE "virt"
     QEMU_CPU "cortex-a57"
     BOOT_FLASH_ADDRESS 0x40000000
@@ -1315,7 +1315,7 @@ add_library_variants_for_cpu(
 add_library_variants_for_cpu(
     armv4t
     COMPILE_FLAGS "-march=armv4t -mfpu=none"
-    MULTILIB_FLAGS "--target=armv4t-none-unknown-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=armv4t-unknown-none-eabi -mfpu=none"
     QEMU_MACHINE "none"
     QEMU_CPU "ti925t"
     QEMU_PARAMS "-m 1G"
@@ -1330,7 +1330,7 @@ add_library_variants_for_cpu(
 add_library_variants_for_cpu(
     armv5te
     COMPILE_FLAGS "-march=armv5te -mfpu=none"
-    MULTILIB_FLAGS "--target=armv5e-none-unknown-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=armv5e-unknown-none-eabi -mfpu=none"
     QEMU_MACHINE "none"
     QEMU_CPU "arm926"
     QEMU_PARAMS "-m 1G"
@@ -1346,7 +1346,7 @@ add_library_variants_for_cpu(
     armv6m
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv6m-none-unknown-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv6m-unknown-none-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
     BOOT_FLASH_ADDRESS 0x00000000
     BOOT_FLASH_SIZE 0x1000
@@ -1360,7 +1360,7 @@ add_library_variants_for_cpu(
     armv7a
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7a -mfpu=none"
-    MULTILIB_FLAGS "--target=armv7-none-unknown-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=armv7-unknown-none-eabi -mfpu=none"
     QEMU_MACHINE "none"
     QEMU_CPU "cortex-a7"
     QEMU_PARAMS "-m 1G"
@@ -1376,7 +1376,7 @@ add_library_variants_for_cpu(
     armv7a
     SUFFIX hard_vfpv3_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7a -mfpu=vfpv3-d16"
-    MULTILIB_FLAGS "--target=armv7-none-unknown-eabihf -mfpu=vfpv3-d16"
+    MULTILIB_FLAGS "--target=armv7-unknown-none-eabihf -mfpu=vfpv3-d16"
     QEMU_MACHINE "none"
     QEMU_CPU "cortex-a8"
     QEMU_PARAMS "-m 1G"
@@ -1392,7 +1392,7 @@ add_library_variants_for_cpu(
     armv7r
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7r -mfpu=none"
-    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=armv7r-unknown-none-eabi -mfpu=none"
     QEMU_MACHINE "none"
     QEMU_CPU "cortex-r5f"
     QEMU_PARAMS "-m 1G"
@@ -1408,7 +1408,7 @@ add_library_variants_for_cpu(
     armv7r
     SUFFIX hard_vfpv3_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3-d16"
-    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabihf -mfpu=vfpv3-d16"
+    MULTILIB_FLAGS "--target=armv7r-unknown-none-eabihf -mfpu=vfpv3-d16"
     QEMU_MACHINE "none"
     QEMU_CPU "cortex-r5f"
     QEMU_PARAMS "-m 1G"
@@ -1424,7 +1424,7 @@ add_library_variants_for_cpu(
     armv7m
     SUFFIX soft_fpv4_sp_d16
     COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7m -mfpu=fpv4-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=fpv4-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv7m-unknown-none-eabi -mfpu=fpv4-sp-d16"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -1439,7 +1439,7 @@ add_library_variants_for_cpu(
     armv7m
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7m-unknown-none-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an385"
     QEMU_CPU "cortex-m3"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -1454,7 +1454,7 @@ add_library_variants_for_cpu(
     armv7em
     SUFFIX hard_fpv4_sp_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv4-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv7em-unknown-none-eabihf -mfpu=fpv4-sp-d16"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -1469,7 +1469,7 @@ add_library_variants_for_cpu(
     armv7em
     SUFFIX hard_fpv5_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv5-d16"
+    MULTILIB_FLAGS "--target=thumbv7em-unknown-none-eabihf -mfpu=fpv5-d16"
     QEMU_MACHINE "mps2-an500"
     QEMU_CPU "cortex-m7"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -1490,7 +1490,7 @@ add_library_variants_for_cpu(
     armv7em
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7em-unknown-none-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -1505,7 +1505,7 @@ add_library_variants_for_cpu(
     armv8m.main
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv8m.main -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv8m.main-unknown-none-eabi -mfpu=none"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
     BOOT_FLASH_ADDRESS 0x10000000
@@ -1520,7 +1520,7 @@ add_library_variants_for_cpu(
     armv8m.main
     SUFFIX hard_fp
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8m.main -mfpu=fpv5-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv8m.main-unknown-none-eabihf -mfpu=fpv5-sp-d16"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
     BOOT_FLASH_ADDRESS 0x10000000
@@ -1535,7 +1535,7 @@ add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX soft_nofp_nomve
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nomve -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabi -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -1550,7 +1550,7 @@ add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_fp_nomve
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -1565,7 +1565,7 @@ add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_fpdp_nomve
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-d16"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -1580,7 +1580,7 @@ add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_nofp_mve
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+mve -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+mve -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+mve -mfpu=none"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
     BOOT_FLASH_ADDRESS 0x00000000
