@@ -4,7 +4,9 @@
 
 LLVM Embedded Toolchain for Arm is built and tested on Ubuntu 18.04 LTS.
 
-The Windows version is built on Windows Server 2019 and lightly tested on Windows 10.
+The Windows version of LLVM tools is built on Windows Server 2019
+and lightly tested on Windows 10. Windows package provides runtime libraries
+built on Linux, because of their limited Windows support.
 
 Building and testing on macOS is functional but experimental.
 
