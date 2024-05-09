@@ -107,6 +107,15 @@ Mappings:
 - Match: --target=thumbv7em-unknown-none-eabihf
   Flags:
   - --target=thumbv7m-unknown-none-eabihf
+- Match: --target=thumbv7r-unknown-none-eabi
+  Flags:
+  - --target=armv7r-unknown-none-eabi
+- Match: --target=thumbv4t-unknown-none-eabi
+  Flags:
+  - --target=armv4t-unknown-none-eabi
+- Match: --target=thumbv5e-unknown-none-eabi
+  Flags:
+  - --target=armv5e-unknown-none-eabi
 
 # Higher versions of v8-A, and v9-A, are all supersets of v8-A. (And
 # of each other, in the obvious way, but we don't have any libraries
