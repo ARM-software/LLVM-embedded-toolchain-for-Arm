@@ -1279,7 +1279,7 @@ function(add_library_variants_for_cpu target_arch)
             list(APPEND SUFFIXES "rtti")
         endif()
         list(JOIN SUFFIXES "_" COMBINED_SUFFIX)
-        
+
         add_library_variant(
             "${target_arch}"
             SUFFIX "${COMBINED_SUFFIX}"
