@@ -1897,3 +1897,14 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
         mingw-llvm
     )
 endif()
+
+add_custom_target(check-all-embedded-toolchain)
+
+add_dependencies(
+    check-all-embedded-toolchain
+    check-all
+    check-llvm-toolchain
+    check-package-llvm-toolchain
+    check-cxxabi
+    check-unwind
+)
