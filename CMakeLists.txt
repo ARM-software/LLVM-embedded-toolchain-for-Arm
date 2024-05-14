@@ -487,7 +487,6 @@ add_custom_target(check-cxx)
 
 add_dependencies(
     check-llvm-toolchain-runtimes
-    check-compiler-rt
     check-cxxabi
     check-unwind
     check-cxx
@@ -1931,3 +1930,12 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
         mingw-llvm
     )
 endif()
+
+add_custom_target(check-all-llvm-toolchain)
+
+add_dependencies(
+    check-all-llvm-toolchain
+    check-all
+    check-llvm-toolchain
+    check-llvm-toolchain-runtimes
+)
