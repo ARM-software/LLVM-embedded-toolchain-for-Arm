@@ -487,6 +487,7 @@ add_custom_target(check-cxx)
 
 add_dependencies(
     check-llvm-toolchain-runtimes
+    check-${LLVM_TOOLCHAIN_C_LIBRARY}
     check-compiler-rt
     check-cxxabi
     check-unwind
@@ -1799,8 +1800,6 @@ add_dependencies(
 
 
 add_custom_target(check-llvm-toolchain)
-add_dependencies(check-llvm-toolchain check-${LLVM_TOOLCHAIN_C_LIBRARY})
-add_dependencies(check-llvm-toolchain check-compiler-rt)
 add_subdirectory(test)
 add_dependencies(check-llvm-toolchain check-llvm-toolchain-lit)
 add_subdirectory(packagetest)
@@ -1904,7 +1903,6 @@ add_dependencies(
     check-all-embedded-toolchain
     check-all
     check-llvm-toolchain
+    check-llvm-toolchain-runtimes
     check-package-llvm-toolchain
-    check-cxxabi
-    check-unwind
 )
