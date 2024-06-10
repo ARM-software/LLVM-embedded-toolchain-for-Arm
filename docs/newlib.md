@@ -1,17 +1,17 @@
 # Experimental newlib support
 
-LLVM Embedded Toolchain for Arm uses [`picolibc`](https://github.com/picolibc/picolibc)
+LLVM Embedded Toolchain uses [`picolibc`](https://github.com/picolibc/picolibc)
 as the standard C library. For compatibility with existing projects using
 [`newlib`](https://sourceware.org/newlib/), a separate package of `newlib`-based
 library variants is provided.
 
-> **NOTE:**  `newlib` support in LLVM Embedded Toolchain for Arm is experimental
+> **NOTE:**  `newlib` support in LLVM Embedded Toolchain is experimental
 > and may change in following releases.
 
 ## Using pre-built `newlib` library package
 
 1. Install LLVM Embedded Toolchain for Arm
-1. Download corresponding `LLVMEmbeddedToolchainForArm-newlib-overlay` package
+1. Download corresponding `LLVMEmbeddedToolchain-newlib-overlay` package
 and extract it on top of the main toolchain folder.
 
     * Note: The overlay package copies all the `newlib` library variants into the

@@ -28,7 +28,7 @@ list(APPEND LLVM_TOOLCHAIN_PACKAGE_TEST_DEPS
 )
 
 add_lit_testsuite(check-package-llvm-toolchain
-  "Running LLVM Embedded Toolchain for Arm package tests"
+  "Running LLVM Embedded Toolchain package tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${LLVM_TOOLCHAIN_PACKAGE_TEST_DEPS}
 )

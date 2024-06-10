@@ -20,7 +20,7 @@ The build scripts support four different environments:
 ## Prerequisites
 
 In order to compile the samples you will need the following tools:
-* LLVM Embedded Toolchain for Arm
+* LLVM Embedded Toolchain
 * GNU Make (Linux, macOS and MSYS2)
 
 To run the samples you will need a QEMU emulator to be installed on your

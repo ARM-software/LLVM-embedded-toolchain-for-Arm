@@ -20,7 +20,7 @@ def main():
     parser.add_argument(
         "--distribution-file",
         required=True,
-        help="""Copy from this LLVM Embedded Toolchain for Arm distribution
+        help="""Copy from this LLVM Embedded Toolchain distribution
         tarfile. This is a glob to make things easier on Windows.""",
     )
     parser.add_argument(

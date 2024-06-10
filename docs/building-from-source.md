@@ -2,7 +2,7 @@
 
 ## Host platforms
 
-LLVM Embedded Toolchain for Arm is built and tested on Ubuntu 18.04 LTS.
+LLVM Embedded Toolchain is built and tested on Ubuntu 18.04 LTS.
 
 The Windows version of LLVM tools is built on Windows Server 2019
 and lightly tested on Windows 10. Windows package provides runtime libraries
@@ -87,7 +87,7 @@ ninja package-llvm-toolchain
 
 ### Cross-compiling the toolchain for Windows
 
-The LLVM Embedded Toolchain for Arm can be cross-compiled to run on Windows.
+The LLVM Embedded Toolchain can be cross-compiled to run on Windows.
 The compilation itself still happens on Linux. In addition to the prerequisites
 mentioned in the [Installing prerequisites](#installing-prerequisites) section
 you will also need a Mingw-w64 toolchain based on GCC 7.1.0 or above installed.
@@ -122,5 +122,5 @@ The same build directory can be used for both native and MinGW toolchains.
 
 ## Divergences from upstream
 
-See [patches](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/tree/main/patches)
+See [patches](https://github.com/32bitmicro/LLVM-Embedded-Toolchain/tree/main/patches)
 directory for the current set of differences from upstream.

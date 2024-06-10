@@ -8,7 +8,7 @@ from lit.llvm import llvm_config
 
 # Configuration file for the 'lit' test runner.
 
-config.name = 'LLVM Embedded Toolchain for Arm'
+config.name = 'LLVM Embedded Toolchain'
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 config.suffixes = ['.c', '.cpp', '.test']
 config.excludes = ['CMakeLists.txt']
