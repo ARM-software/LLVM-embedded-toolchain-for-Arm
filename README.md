@@ -147,7 +147,7 @@ relying on the GNU Toolchain.
 
 > *Note:* `picolibc` provides excellent
 > [support GNU Toolchain](https://github.com/picolibc/picolibc/blob/main/doc/using.md),
-> so projects that require using both GNU Toolchain and LLVM Embedded Toolchain for Arm
+> so projects that require using both GNU Toolchain and LLVM Embedded Toolchain
 > can choose either `picolibc` or `newlib`.
 
 ## Building from source

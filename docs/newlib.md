@@ -10,7 +10,7 @@ library variants is provided.
 
 ## Using pre-built `newlib` library package
 
-1. Install LLVM Embedded Toolchain for Arm
+1. Install LLVM Embedded Toolchain
 1. Download corresponding `LLVMEmbeddedToolchain-newlib-overlay` package
 and extract it on top of the main toolchain folder.
 

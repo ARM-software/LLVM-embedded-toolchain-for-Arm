@@ -1,6 +1,6 @@
 LLVM Embedded Toolchain ${LLVMEmbeddedToolchain_VERSION}
 
 Sources:
-* LLVM Embedded Toolchain for Arm: https://github.com/32bitmicro/LLVM-Embedded-Toolchain (commit ${LLVMEmbeddedToolchain_COMMIT})
+* LLVM Embedded Toolchain: https://github.com/32bitmicro/LLVM-Embedded-Toolchain (commit ${LLVMEmbeddedToolchain_COMMIT})
 * LLVM: https://github.com/llvm/llvm-project.git (commit ${llvmproject_COMMIT})
 * Picolibc: https://github.com/picolibc/picolibc.git (commit ${picolibc_COMMIT})

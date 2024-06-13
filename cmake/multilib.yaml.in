@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2023, Arm Limited and affiliates.
+# Copyright (c) 2024, Pawel Wodnicki 32bitmicro.com
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +17,7 @@
 #
 
 # If you're reading this file under the name 'multilib.yaml.in' in the
-# LLVM-embedded-toolchain-for-Arm source tree, then it's not valid
+# LLVM-embedded-toolchain source tree, then it's not valid
 # YAML in its own right: it's a template that CMakeLists.txt will
 # expand into a real 'multilib.yaml' containing a list of library
 # variants and the flags that will select them.
@@ -138,3 +139,9 @@ Mappings:
 - Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+lob(\+[^\+]+)*
   Flags:
   - -march=thumbv8.1m.main+lob
+
+# RISC-Variants
+# riscv32
+- Match: --target=riscv32\.base-unknown-none-eabi
+  Flags:
+  - --target=riscv32-unknown-none-eabi

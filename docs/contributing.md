@@ -1,6 +1,6 @@
 # Contribution Guide
 
-*LLVM Embedded Toolchain for Arm* integrates
+*LLVM Embedded Toolchain* integrates
 [llvm-project](https://github.com/llvm/llvm-project)
 and [picolibc](https://github.com/picolibc/picolibc).
 Contributions are welcome that improve the project in areas including but not
@@ -14,7 +14,7 @@ Where an issue is encountered that originates within `llvm-project`
 or `picolibc`, it is strongly preferred that the issue is reported
 and addressed directly within that project.
 This benefits all users of the upstream projects and makes it easier to
-support *LLVM Embedded Toolchain for Arm* going forward.
+support *LLVM Embedded Toolchain* going forward.
 
 For guidance on how to contribute to the upstream projects see:
 * `llvm-project` [Contributing to LLVM](https://llvm.org/docs/Contributing.html)
@@ -25,7 +25,7 @@ For guidance on how to contribute to the upstream projects see:
 
 ### Report an issue
 
-Please create a Github issue in the *LLVM Embedded Toolchain for Arm* project
+Please create a Github issue in the *LLVM Embedded Toolchain* project
 [Issues](https://github.com/32bitmicro/LLVM-Embedded-Toolchain/issues)
 list and label is as a `bug`.
 
@@ -37,7 +37,7 @@ _How to submit a change_ section below.
 ### Suggest a feature or bigger change
 
 For a bigger change, please create an issue in the
-*LLVM Embedded Toolchain for Arm* project
+*LLVM Embedded Toolchain* project
 [Issues](https://github.com/32bitmicro/LLVM-Embedded-Toolchain/issues)
 list and label is as an `rfc` (Request for Comments) to initiate the discussion
 first, before submitting the change itself.

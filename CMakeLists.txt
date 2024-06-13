@@ -1,6 +1,6 @@
 #
 # Copyright (c) 2022, Arm Limited and affiliates.
-# Copyright (c) 2024, Pawel Wodnicki 32bitmicro.
+# Copyright (c) 2024, Pawel Wodnicki 32bitmicro.com
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@
 
 # How to use this file
 #
-# This file is used to build LLVM Embedded Toolchain for Arm.
+# This file is used to build LLVM Embedded Toolchain.
 # Recent versions of the following tools are pre-requisites:
 # * A toolchain such as gcc & binutils
 # * cmake
@@ -76,7 +76,7 @@
 # If cross-building, there will be two toolchains built:
 # 1. The "build" toolchain. This is used to build the libraries.
 # 2. The "host" toolchain. This is the toolchain that will be packaged
-#    up into "LLVM Embedded Toolchain for Arm".
+#    up into "LLVM Embedded Toolchain".
 # For "native" builds the "build" toolchain is also used as the "host"
 # toolchain.
 #
@@ -151,6 +151,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
     clang
     dsymutil
     lld
+    lldb
     llvm-ar
     llvm-config
     llvm-cov
@@ -178,8 +179,8 @@ set(LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS
     CACHE STRING "Components defined by this CMakeLists that should be
 installed by the install-llvm-toolchain target"
 )
-set(LLVM_ENABLE_PROJECTS clang;lld CACHE STRING "")
-set(LLVM_TARGETS_TO_BUILD AArch64;ARM CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS clang;lld;lldb CACHE STRING "")
+set(LLVM_TARGETS_TO_BUILD AArch64;ARM;RISCV CACHE STRING "")
 set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-linux-gnu CACHE STRING "")
 set(LLVM_APPEND_VC_REV OFF CACHE BOOL "")
 set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
@@ -338,12 +339,12 @@ get_directory_property(LLVM_VERSION_PATCH DIRECTORY ${llvmproject_SOURCE_DIR}/ll
 project(
     LLVMEmbeddedToolchain
     VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
-    DESCRIPTION "LLVM Embedded Toolchain for Arm"
+    DESCRIPTION "LLVM Embedded Toolchain"
     HOMEPAGE_URL "https://github.com/32bitmicro/LLVM-Embedded-Toolchain"
 )
 
 # Set package name for shorter archive file name
-set(SHORT_PACKAGE_NAME "LLVM-ET-Arm")
+set(SHORT_PACKAGE_NAME "LLVM-ETOOL")
 
 # Set package name and version.
 if(DEFINED LLVM_TOOLCHAIN_PACKAGE_NAME)
@@ -514,6 +515,7 @@ if(LIBS_DEPEND_ON_TOOLS)
     set(lib_tool_dependencies
         clang
         lld
+        lldb
         llvm-ar
         llvm-config
         llvm-nm
@@ -567,6 +569,8 @@ add_custom_target(check-newlib) # FIXME: put things in this
 function(get_test_executor_params target_triple qemu_machine qemu_cpu qemu_params)
     if(target_triple MATCHES "^aarch64")
         set(qemu_command "qemu-system-aarch64")
+    elseif(target_triple MATCHES "^riscv32")
+        set(qemu_command "qemu-system-riscv32")
     else()
         set(qemu_command "qemu-system-arm")
     endif()
@@ -611,6 +615,9 @@ function(
     if(target_triple MATCHES "^aarch64")
         set(cpu_family aarch64)
         set(enable_long_double_test false)
+    elseif(target_triple MATCHES "^riscv32")
+        set(cpu_family riscv32)
+        set(enable_long_double_test true)
     else()
         set(cpu_family arm)
         set(enable_long_double_test true)
@@ -707,6 +714,8 @@ function(
 )
     if(target_triple MATCHES "^aarch64")
         set(cpu_family aarch64)
+    elseif(target_triple MATCHES "^riscv32")
+        set(cpu_family riscv32)
     else()
         set(cpu_family arm)
     endif()
@@ -870,7 +879,7 @@ function(
     # Exceptions are architectures pre-armv7, which compiler-rt expects to
     # see in the triple because that's where it looks to decide whether to
     # use specific assembly sources.
-    if(NOT target_triple MATCHES "^(aarch64-none-elf|arm-none-eabi|armv[4-6])")
+    if(NOT target_triple MATCHES "^(aarch64-none-elf|arm-none-eabi|armv[4-6]|riscv32)")
         message(FATAL_ERROR "\
 Target triple name \"${target_triple}\" not compatible with compiler-rt.
 Use -march to specify the architecture.")
@@ -1094,6 +1103,10 @@ endfunction()
 function(get_compiler_rt_target_triple target_arch flags)
     if(target_arch STREQUAL "aarch64")
         set(target_triple "aarch64-none-elf")
+    elseif(target_arch MATCHES "^riscv32")
+        if(target_arch STREQUAL "riscv32")
+            set(target_triple "riscv32-none-elf")
+        endif()
     else()
         # Choose the target triple so that compiler-rt will do the
         # right thing. We can't always put the exact target
@@ -1165,11 +1178,15 @@ function(add_library_variant target_arch)
 
     if(target_arch STREQUAL "aarch64")
         set(parent_dir_name aarch64-none-elf)
+    elseif(target_arch MATCHES "^riscv32")
+        set(parent_dir_name riscv32-none-elf)
     else()
         set(parent_dir_name arm-none-eabi)
     endif()
 
     get_compiler_rt_target_triple("${target_arch}" "${VARIANT_COMPILE_FLAGS}")
+
+    message("add_library_variant for ${target_arch} -> ${TARGET_LIBRARIES_DIR} : ${library_subdir} : ${parent_dir_name} : ${variant} ")
 
     set(directory "${TARGET_LIBRARIES_DIR}${library_subdir}/${parent_dir_name}/${variant}")
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
@@ -1305,6 +1322,24 @@ function(add_library_variants_for_cpu target_arch)
 endfunction()
 
 set(multilib_yaml_content "")
+
+# RISC-V
+add_library_variants_for_cpu(
+    riscv32
+    SUFFIX soft_nofp
+    COMPILE_FLAGS ""
+    MULTILIB_FLAGS "--target=riscv32-unknown-elf"
+    PICOLIBC_BUILD_TYPE "release"
+    QEMU_MACHINE "sifive_e"
+    QEMU_CPU "sifive-e31"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 128k
+    FLASH_ADDRESS 0x00001000
+    FLASH_SIZE 0x3ff000
+    RAM_ADDRESS 0x20000000
+    RAM_SIZE 16k
+    STACK_SIZE 256
+)
 
 # Define which library variants to build and which flags to use.
 # For most variants, the "flash" memory is placed in address range, where
@@ -1625,7 +1660,6 @@ add_library_variants_for_cpu(
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
 )
-
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/multilib.yaml.in
