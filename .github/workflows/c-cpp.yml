@@ -13,6 +13,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: install packages
+      run: |
+        sudo apt-get -y install cmake ninja-build meson
+    - name: configure
+      run: |
+       git config --global user.email "pawel.wodnicki@live.com"
+       git config --global user.name "Pawel Wodnicki"
     - name: build
       run: |
         mkdir build
