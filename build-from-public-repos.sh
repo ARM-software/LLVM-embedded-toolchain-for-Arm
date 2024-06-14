@@ -1,5 +1,8 @@
 #!/bin/bash
 
+git config --global user.email "pawel@32bitmicro.com"
+git config --global user.name "Pawel Wodnicki"
+
 mkdir repos
 git -C repos clone https://github.com/32bitmicro/llvm-project.git
 git -C repos/llvm-project am -k "$PWD"/patches/llvm-project/*.patch
