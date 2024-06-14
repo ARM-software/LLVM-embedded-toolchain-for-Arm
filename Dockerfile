@@ -17,5 +17,5 @@ RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=t
     software-properties-common
 
 ADD build-from-public-repos.sh  /tmp
-
+WORKDIR /tmp
 RUN /tmp/build-from-public-repos.sh
