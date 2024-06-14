@@ -2,8 +2,8 @@
 
 ## Overview
 
-[GNU Toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain)
-is the GNU Toolchain for the Architecture released by Arm and traditionally
+[Arm GNU Toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain)
+is the GNU Toolchain for the Arm Architecture released by Arm and traditionally
 used for embedded development.
 
 Generally the LLVM Embedded toolchain tries to be a drop in replacement for the GNU toolchain,
