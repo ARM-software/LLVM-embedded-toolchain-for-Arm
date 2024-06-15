@@ -29,9 +29,9 @@ jobs:
         cmake .. -GNinja -DFETCHCONTENT_QUIET=OFF
         ninja package-llvm-toolchain
     - name: upload
-    uses: actions/upload-artifact@v4
-    with:
-      name: my-artifact
-      path: build/LLVM-ETOOL*.tar.xz
-      retention-days: 5
+      uses: actions/upload-artifact@v4
+      with:
+        name: LLVM-ETOOL
+        path: build/LLVM-ETOOL*.tar.xz
+        retention-days: 5
 
