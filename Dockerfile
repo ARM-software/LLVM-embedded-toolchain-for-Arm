@@ -8,9 +8,10 @@ LABEL org.opencontainers.image.licenses=Apache
 RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y \
     build-essential \
     git \
+    make \
     cmake \
     ninja-build \
-    make \
+    meson \
     python3-minimal python3-pip\
     wget \
     software-properties-common
