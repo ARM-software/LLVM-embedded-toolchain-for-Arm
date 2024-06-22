@@ -880,7 +880,7 @@ function(
     # Exceptions are architectures pre-armv7, which compiler-rt expects to
     # see in the triple because that's where it looks to decide whether to
     # use specific assembly sources.
-    if(NOT target_triple MATCHES "^(aarch64-none-elf|arm-none-eabi|armv[4-6]|riscv32)")
+    if(NOT target_triple MATCHES "^(aarch64-none-elf|arm-none-eabi|armv[4-6]|riscv32-none-elf)")
         message(FATAL_ERROR "\
 Target triple name \"${target_triple}\" not compatible with compiler-rt.
 Use -march to specify the architecture.")
@@ -892,7 +892,7 @@ Use -march to specify the architecture.")
 Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\"")
     endif()
     if(target_triple MATCHES "^riscv32")
-        #string(REPLACE "-none-" "-unknown-unknown-" normalized_target_triple ${target_triple})
+        #string(REPLACE "-none-" "-unknown-none-" normalized_target_triple ${target_triple})
         set(normalized_target_triple ${target_triple})
     else()
         # ARM
@@ -1349,7 +1349,7 @@ add_library_variants_for_cpu(
     riscv32
     SUFFIX soft_nofp
     COMPILE_FLAGS ""
-    MULTILIB_FLAGS "--target=riscv32-none-unknown-elf"
+    MULTILIB_FLAGS "--target=riscv32-unknown-none-elf"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "sifive_e"
     QEMU_CPU "sifive-e31"

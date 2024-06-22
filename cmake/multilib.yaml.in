@@ -140,8 +140,8 @@ Mappings:
   Flags:
   - -march=thumbv8.1m.main+lob
 
-# RISC-Variants
+# RISC-Variants - TBR
 # riscv32
-- Match: --target=riscv32\.base-unknown-none-eabi
-  Flags:
-  - --target=riscv32-unknown-none-eabi
+#- Match: --target=riscv32\.base-unknown-none-elf
+#  Flags:
+#  - --target=riscv32-unknown-none-elf
