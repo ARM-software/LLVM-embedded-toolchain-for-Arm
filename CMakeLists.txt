@@ -181,7 +181,8 @@ installed by the install-llvm-toolchain target"
 )
 set(LLVM_ENABLE_PROJECTS clang;lld;lldb CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD AArch64;ARM;RISCV CACHE STRING "")
-set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-linux-gnu CACHE STRING "")
+set(LLVM_DEFAULT_TARGET_TRIPLE thumbv7m-none-unknown-eabi CACHE STRING "")
+#set(LLVM_DEFAULT_TARGET_TRIPLE aarch64-linux-gnu CACHE STRING "")
 set(LLVM_APPEND_VC_REV OFF CACHE BOOL "")
 set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
 set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
@@ -890,9 +891,20 @@ Use -march to specify the architecture.")
         message(FATAL_ERROR "\
 Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\"")
     endif()
-    string(REPLACE "-none-" "-unknown-none-" normalized_target_triple ${target_triple})
+    if(target_triple MATCHES "^riscv32")
+        #string(REPLACE "-none-" "-unknown-unknown-" normalized_target_triple ${target_triple})
+        set(normalized_target_triple ${target_triple})
+    else()
+        # ARM
+        #string(REPLACE "-none-" "-unknown-none-" normalized_target_triple ${target_triple})
+        set(normalized_target_triple ${target_triple})
+    endif()
+
+    message("target_triple ${target_triple}")
+    message("normalized_target_triple ${normalized_target_triple}")
 
     get_runtimes_flags("${directory}" "${flags}")
+    message("compiler_rt runtimes_flags ${runtimes_flags}")
 
     set(compiler_rt_test_flags "${runtimes_flags} -fno-exceptions -fno-rtti -lcrt0-semihost -lsemihost -T picolibcpp.ld")
     if(variant STREQUAL "armv6m_soft_nofp")
@@ -974,6 +986,8 @@ function(
     enable_rtti
 )
     get_runtimes_flags("${directory}" "${flags}")
+    set(runtimes_flags "${runtimes_flags} -D_GNU_SOURCE")
+    message("runtimes_flags for libcxx_libcxxabi_libunwind  ${runtimes_flags}")
     set(target_name "libcxx_libcxxabi_libunwind_${variant}")
     set(prefix "libcxx_libcxxabi_libunwind/${variant}")
     set(instal_dir "${LLVM_BINARY_DIR}/${directory}")
@@ -1180,6 +1194,13 @@ function(add_library_variant target_arch)
         set(parent_dir_name aarch64-none-elf)
     elseif(target_arch MATCHES "^riscv32")
         set(parent_dir_name riscv32-none-elf)
+        if(VARIANT_ENABLE_EXCEPTIONS)
+            set(VARIANT_MULTILIB_FLAGS "${VARIANT_MULTILIB_FLAGS} -fexceptions")
+        endif()
+
+        if(VARIANT_ENABLE_RTTI)
+            set(VARIANT_MULTILIB_FLAGS "${VARIANT_MULTILIB_FLAGS} -frtti")
+        endif()
     else()
         set(parent_dir_name arm-none-eabi)
     endif()
@@ -1328,7 +1349,7 @@ add_library_variants_for_cpu(
     riscv32
     SUFFIX soft_nofp
     COMPILE_FLAGS ""
-    MULTILIB_FLAGS "--target=riscv32-unknown-elf"
+    MULTILIB_FLAGS "--target=riscv32-none-unknown-elf"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "sifive_e"
     QEMU_CPU "sifive-e31"
@@ -1345,28 +1366,28 @@ add_library_variants_for_cpu(
 # For most variants, the "flash" memory is placed in address range, where
 # simulated boards have RAM. This is because code for some tests does not fit
 # the real flash.
-add_library_variants_for_cpu(
-    aarch64
-    COMPILE_FLAGS "-march=armv8-a"
-    MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
-    PICOLIBC_BUILD_TYPE "release"
-    QEMU_MACHINE "virt"
-    QEMU_CPU "cortex-a57"
-    BOOT_FLASH_ADDRESS 0x40000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x40001000
-    FLASH_SIZE 0xfff000
-    RAM_ADDRESS 0x41000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 8K
-)
+# add_library_variants_for_cpu(
+#     aarch64
+#     COMPILE_FLAGS "-march=armv8-a"
+#     MULTILIB_FLAGS "--target=aarch64-none-unknown-elf"
+#     PICOLIBC_BUILD_TYPE "release"
+#     QEMU_MACHINE "virt"
+#     QEMU_CPU "cortex-a57"
+#     BOOT_FLASH_ADDRESS 0x40000000
+#     BOOT_FLASH_SIZE 0x1000
+#     FLASH_ADDRESS 0x40001000
+#     FLASH_SIZE 0xfff000
+#     RAM_ADDRESS 0x41000000
+#     RAM_SIZE 0x1000000
+#     STACK_SIZE 8K
+# )
 # For AArch32, clang uses different defaults for FPU selection than GCC, both
 # when "+fp" or "+fp.dp" are used and when no FPU specifier is provided in
 # "-march=". Using "-mfpu=" explicitly.
 add_library_variants_for_cpu(
     armv4t
     COMPILE_FLAGS "-march=armv4t -mfpu=none"
-    MULTILIB_FLAGS "--target=armv4t-unknown-none-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=armv4t-none-unknown-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "none"
     QEMU_CPU "ti925t"
@@ -1382,7 +1403,7 @@ add_library_variants_for_cpu(
 add_library_variants_for_cpu(
     armv5te
     COMPILE_FLAGS "-march=armv5te -mfpu=none"
-    MULTILIB_FLAGS "--target=armv5e-unknown-none-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=armv5e-none-unknown-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "none"
     QEMU_CPU "arm926"
@@ -1399,7 +1420,7 @@ add_library_variants_for_cpu(
     armv6m
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv6m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv6m-unknown-none-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv6m-none-unknown-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "mps2-an385"
     BOOT_FLASH_ADDRESS 0x00000000
@@ -1414,7 +1435,7 @@ add_library_variants_for_cpu(
     armv7a
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7a -mfpu=none"
-    MULTILIB_FLAGS "--target=armv7-unknown-none-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=armv7-none-unknown-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "none"
     QEMU_CPU "cortex-a7"
@@ -1431,7 +1452,7 @@ add_library_variants_for_cpu(
     armv7a
     SUFFIX hard_vfpv3_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7a -mfpu=vfpv3-d16"
-    MULTILIB_FLAGS "--target=armv7-unknown-none-eabihf -mfpu=vfpv3-d16"
+    MULTILIB_FLAGS "--target=armv7-none-unknown-eabihf -mfpu=vfpv3-d16"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "none"
     QEMU_CPU "cortex-a8"
@@ -1448,7 +1469,7 @@ add_library_variants_for_cpu(
     armv7r
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7r -mfpu=none"
-    MULTILIB_FLAGS "--target=armv7r-unknown-none-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "none"
     QEMU_CPU "cortex-r5f"
@@ -1465,7 +1486,7 @@ add_library_variants_for_cpu(
     armv7r
     SUFFIX hard_vfpv3_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3-d16"
-    MULTILIB_FLAGS "--target=armv7r-unknown-none-eabihf -mfpu=vfpv3-d16"
+    MULTILIB_FLAGS "--target=armv7r-none-unknown-eabihf -mfpu=vfpv3-d16"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "none"
     QEMU_CPU "cortex-r5f"
@@ -1482,7 +1503,7 @@ add_library_variants_for_cpu(
     armv7m
     SUFFIX soft_fpv4_sp_d16
     COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7m -mfpu=fpv4-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv7m-unknown-none-eabi -mfpu=fpv4-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=fpv4-sp-d16"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
@@ -1498,7 +1519,7 @@ add_library_variants_for_cpu(
     armv7m
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7m-unknown-none-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7m-none-unknown-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "mps2-an385"
     QEMU_CPU "cortex-m3"
@@ -1514,7 +1535,7 @@ add_library_variants_for_cpu(
     armv7em
     SUFFIX hard_fpv4_sp_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv7em-unknown-none-eabihf -mfpu=fpv4-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv4-sp-d16"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
@@ -1530,7 +1551,7 @@ add_library_variants_for_cpu(
     armv7em
     SUFFIX hard_fpv5_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"
-    MULTILIB_FLAGS "--target=thumbv7em-unknown-none-eabihf -mfpu=fpv5-d16"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabihf -mfpu=fpv5-d16"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "mps2-an500"
     QEMU_CPU "cortex-m7"
@@ -1552,7 +1573,7 @@ add_library_variants_for_cpu(
     armv7em
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7em-unknown-none-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7em-none-unknown-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
@@ -1568,7 +1589,7 @@ add_library_variants_for_cpu(
     armv8m.main
     SUFFIX soft_nofp
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv8m.main -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv8m.main-unknown-none-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
@@ -1584,7 +1605,7 @@ add_library_variants_for_cpu(
     armv8m.main
     SUFFIX hard_fp
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8m.main -mfpu=fpv5-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv8m.main-unknown-none-eabihf -mfpu=fpv5-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv8m.main-none-unknown-eabihf -mfpu=fpv5-sp-d16"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps2-an505"
     QEMU_CPU "cortex-m33"
@@ -1600,7 +1621,7 @@ add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX soft_nofp_nomve
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nomve -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabi -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
@@ -1616,7 +1637,7 @@ add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_fp_nomve
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
@@ -1632,7 +1653,7 @@ add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_fpdp_nomve
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-d16"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
@@ -1648,7 +1669,7 @@ add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_nofp_mve
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+mve -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+mve -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-none-unknown-eabihf -march=thumbv8.1m.main+mve -mfpu=none"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps3-an547"
     QEMU_CPU "cortex-m55"
