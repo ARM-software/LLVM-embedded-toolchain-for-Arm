@@ -2,7 +2,7 @@
 
 ## Host platforms
 
-LLVM Embedded Toolchain is built and tested on Ubuntu 18.04 LTS.
+LLVM Embedded Toolchain is built and tested on Ubuntu 20.04 LTS.
 
 The Windows version of LLVM tools is built on Windows Server 2019
 and lightly tested on Windows 10. Windows package provides runtime libraries

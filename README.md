@@ -1,19 +1,21 @@
 # LLVM Embedded Toolchain
 
 This repository contains build scripts and auxiliary material for building a
-bare-metal LLVM based toolchain targeting Arm based on:
+bare-metal LLVM based toolchain targeting Arm and RISCV based on:
 * clang + llvm
 * lld
+* lldb
 * libc++abi
 * libc++
 * compiler-rt
-* picolibc, or optionally newlib
+* picolibc
+* newlib or newlib-nano
 
 ## Goal
 
 The goal is to provide an LLVM based bare-metal toolchain that can target the
-Arm architecture family from Armv6-M and newer. The toolchain follows the ABI
-for the Arm Architecture and attempts to provide typical features needed for
+Arm and RISCV architectures from Armv6-M and newer and riscv32. The toolchain follows the ABI
+for the Arm and RISCV Architectures and attempts to provide typical features needed for
 embedded and realtime operating systems.
 
 ## Supported architectures
@@ -26,7 +28,7 @@ embedded and realtime operating systems.
 - Armv4T (experimental)
 - Armv5TE (experimental)
 - Armv6 (experimental, using the Armv5TE library variant)
-- AArch64 armv8.0 (experimental)
+- RISCV32 (experimental)
 
 ## C++ support
 
