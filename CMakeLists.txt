@@ -326,6 +326,13 @@ if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
     )
 endif()
 
+install(
+    FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/Omax.cfg
+    DESTINATION bin
+    COMPONENT llvm-toolchain-omax-cfg
+)
+
 add_subdirectory(
     ${llvmproject_SOURCE_DIR}/llvm llvm
 )
