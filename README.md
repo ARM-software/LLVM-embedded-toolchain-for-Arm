@@ -7,7 +7,7 @@ bare-metal LLVM based toolchain targeting Arm based on:
 * libc++abi
 * libc++
 * compiler-rt
-* picolibc, or optionally newlib
+* picolibc, or optionally newlib or LLVM's libc
 
 ## Goal
 
