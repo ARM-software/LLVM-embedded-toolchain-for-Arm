@@ -1,4 +1,4 @@
-From dded2dbf8fe8eb9dc306bf26259d4e72893ffd67 Mon Sep 17 00:00:00 2001
+From 80000ddfade0f706ad1ebb488a51132a88cbe61d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Wed, 15 Nov 2023 12:18:35 +0100
 Subject: [libc++] tests with picolibc: disable large tests
@@ -41,11 +41,11 @@ index b5f9089308d2..0a83e75ceceb 100644
  set(LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
  find_program(QEMU_SYSTEM_ARM qemu-system-arm REQUIRED)
 diff --git a/libcxxabi/test/test_demangle.pass.cpp b/libcxxabi/test/test_demangle.pass.cpp
-index 88637b84de01..a3fe75edafea 100644
+index fe5598991b83..65d30a352814 100644
 --- a/libcxxabi/test/test_demangle.pass.cpp
 +++ b/libcxxabi/test/test_demangle.pass.cpp
-@@ -10,7 +10,7 @@
- // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+@@ -7,7 +7,7 @@
+ //===----------------------------------------------------------------------===//
  
  // This test is too big for most embedded devices.
 -// XFAIL: LIBCXX-PICOLIBC-FIXME
