@@ -141,8 +141,25 @@ set(LLVM_TOOLCHAIN_C_LIBRARY
 )
 set_property(CACHE LLVM_TOOLCHAIN_C_LIBRARY
     PROPERTY STRINGS picolibc newlib)
-option(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL
-    "Make cpack build an overlay package that can be unpacked over the main toolchain to install a secondary set of libraries based on newlib.")
+
+# Previously, the LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL option was
+# called LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL. Detect a setting of
+# that name, in case it's in an existing CMakeCache.txt or command
+# line, and use it to set the default for the more general option
+# name.
+if(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+  set(overlay_install_default ON)
+else()
+  set(overlay_install_default OFF)
+endif()
+option(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL
+    "Make cpack build an overlay package that can be unpacked over the main toolchain to install a secondary set of libraries based on newlib."
+    ${overlay_install_default})
+if(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
+  if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL "picolibc")
+    message(FATAL_ERROR "LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL is only permitted for C libraries other than the default picolibc")
+  endif()
+endif()
 
 set(BUG_REPORT_URL "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/issues" CACHE STRING "")
 set(LLVM_DISTRIBUTION_COMPONENTS
@@ -364,10 +381,10 @@ if(DEFINED LLVM_TOOLCHAIN_VERSION_SUFFIX)
 endif()
 
 # Restrict which LLVM components are installed.
-if(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+if(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
     set(CPACK_COMPONENTS_ALL
         llvm-toolchain-libs
-        llvm-toolchain-newlib-configs
+        llvm-toolchain-${LLVM_TOOLCHAIN_C_LIBRARY}-configs
         llvm-toolchain-third-party-licenses)
 elseif(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
     set(CPACK_COMPONENTS_ALL ${LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS} llvm-toolchain-mingw)
@@ -382,7 +399,7 @@ set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
 # Exception: the newlib overlay package does not do this, because it has
 # to be able to unpack over the top of an existing installation on all
 # platforms, and each platform has a different top-level directory name.
-if(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+if(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
     set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY FALSE)
 else()
     set(CPACK_COMPONENT_INCLUDE_TOPLEVEL_DIRECTORY TRUE)
@@ -425,8 +442,8 @@ endif()
 
 set(CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
 
-if(LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
-    set(PACKAGE_FILE_NAME ${PACKAGE_NAME}-newlib-overlay-${PACKAGE_VERSION})
+if(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
+    set(PACKAGE_FILE_NAME ${PACKAGE_NAME}-${LLVM_TOOLCHAIN_C_LIBRARY}-overlay-${PACKAGE_VERSION})
 else()
     set(PACKAGE_FILE_NAME ${PACKAGE_NAME}-${PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
 endif()
@@ -550,14 +567,14 @@ set(newlib_specific_runtimes_options
     -DLIBUNWIND_ENABLE_THREADS=OFF
 )
 
-if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib AND
-        LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
-    # If we're building newlib with the intention of installing it as
-    # an overlay on the main package archive, then all of newlib's
-    # includes, libraries and multilib.yaml go in a subdirectory of
-    # lib/clang-runtimes. Configuration files in the bin directory
-    # will make it easy to reset the sysroot to point at that subdir.
-    set(library_subdir "/newlib")
+if(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
+    # If we're building a non-default libc with the intention of
+    # installing it as an overlay on the main package archive, then
+    # all of its includes, libraries and multilib.yaml go in a
+    # subdirectory of lib/clang-runtimes. Configuration files in the
+    # bin directory will make it easy to reset the sysroot to point at
+    # that subdir.
+    set(library_subdir "/${LLVM_TOOLCHAIN_C_LIBRARY}")
 else()
     set(library_subdir "")
 endif()
@@ -1687,18 +1704,18 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
 endif()
 configure_file(cmake/THIRD-PARTY-LICENSES.txt.in THIRD-PARTY-LICENSES.txt)
 
-if(NOT LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+if(NOT LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
     set(third_party_license_summary_install_dir .)
     set(third_party_license_files_install_dir third-party-licenses)
 else()
     # If we're building an overlay archive, put all the license files
-    # one level down in third-party-licenses/newlib, so that
+    # one level down in third-party-licenses/<library type>, so that
     # COPYING.NEWLIB doesn't collide with the file of the same name
     # from picolibc, and the LLVM license files are also duplicated
     # (in case the overlay archive is used with a non-matching version
     # of the main toolchain).
-    set(third_party_license_summary_install_dir third-party-licenses/newlib)
-    set(third_party_license_files_install_dir third-party-licenses/newlib)
+    set(third_party_license_summary_install_dir third-party-licenses/${LLVM_TOOLCHAIN_C_LIBRARY})
+    set(third_party_license_files_install_dir third-party-licenses/${LLVM_TOOLCHAIN_C_LIBRARY})
 endif()
 
 install(
@@ -1799,7 +1816,7 @@ if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW OR WIN32)
     set(cpack_generator ZIP)
     set(package_filename_extension ".zip")
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin"
-        AND NOT LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL)
+        AND NOT LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
     set(cpack_generator DragNDrop)
     set(package_filename_extension ".dmg")
 else()
