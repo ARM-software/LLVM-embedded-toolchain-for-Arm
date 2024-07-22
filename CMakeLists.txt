@@ -140,7 +140,7 @@ set(LLVM_TOOLCHAIN_C_LIBRARY
     "Which C library to use."
 )
 set_property(CACHE LLVM_TOOLCHAIN_C_LIBRARY
-    PROPERTY STRINGS picolibc newlib)
+    PROPERTY STRINGS picolibc newlib llvmlibc)
 
 # Previously, the LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL option was
 # called LLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL. Detect a setting of
@@ -153,7 +153,7 @@ else()
   set(overlay_install_default OFF)
 endif()
 option(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL
-    "Make cpack build an overlay package that can be unpacked over the main toolchain to install a secondary set of libraries based on newlib."
+    "Make cpack build an overlay package that can be unpacked over the main toolchain to install a secondary set of libraries based on newlib or llvm-libc."
     ${overlay_install_default})
 if(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
   if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL "picolibc")
@@ -268,7 +268,9 @@ function(read_repo_version output_variable_prefix repo)
     set(${output_variable_prefix}_SHALLOW "${shallow}" PARENT_SCOPE)
 endfunction()
 read_repo_version(llvmproject llvm-project)
-read_repo_version(${LLVM_TOOLCHAIN_C_LIBRARY} ${LLVM_TOOLCHAIN_C_LIBRARY})
+if(NOT (LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)) # libc in a separate repo?
+  read_repo_version(${LLVM_TOOLCHAIN_C_LIBRARY} ${LLVM_TOOLCHAIN_C_LIBRARY})
+endif()
 
 # The patches are generated from custom branch, with followin command:
 #   git format-patch -k origin/main
@@ -319,7 +321,9 @@ FetchContent_Declare(newlib
 )
 
 FetchContent_MakeAvailable(llvmproject)
-FetchContent_MakeAvailable(${LLVM_TOOLCHAIN_C_LIBRARY})
+if(NOT (LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)) # libc in a separate repo?
+  FetchContent_MakeAvailable(${LLVM_TOOLCHAIN_C_LIBRARY})
+endif()
 
 # We generally want to install to a local directory to see what the
 # output will look like rather than install into the system, so change
@@ -333,6 +337,10 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
         CACHE PATH "" FORCE
     )
 endif()
+
+# Whether to try to build C++ libraries. (We can't currently do this
+# for all choices of C library.)
+set(CXX_LIBS ON)
 
 if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
     install(
@@ -349,6 +357,42 @@ install(
     DESTINATION bin
     COMPONENT llvm-toolchain-omax-cfg
 )
+
+if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)
+    install(
+        FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/llvmlibc.cfg
+        DESTINATION bin
+        COMPONENT llvm-toolchain-llvmlibc-configs
+    )
+
+    # We aren't yet able to build C++ libraries to go with llvm-libc
+    set(CXX_LIBS OFF)
+
+    # We need to build libc-hdrgen
+    ExternalProject_Add(
+        libc_hdrgen
+        SOURCE_DIR ${llvmproject_SOURCE_DIR}/llvm
+        DEPENDS ${lib_tool_dependencies}
+        CMAKE_ARGS
+            -DLLVM_ENABLE_RUNTIMES=libc
+            -DLLVM_LIBC_FULL_BUILD=ON
+            -DCMAKE_BUILD_TYPE=Debug
+        STEP_TARGETS build install
+        BUILD_COMMAND ${CMAKE_COMMAND} --build . --target libc-hdrgen
+        INSTALL_COMMAND ${CMAKE_COMMAND} -E true
+        # Always run the build command so that incremental builds are correct.
+        BUILD_ALWAYS TRUE
+        CONFIGURE_HANDLED_BY_BUILD TRUE
+    )
+    ExternalProject_Get_property(libc_hdrgen BINARY_DIR)
+    set(LIBC_HDRGEN ${BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
+
+    # Add an empty check target, to simplify the logic below that expects to
+    # find one for every libc type. We have no current setup to run the LLVM
+    # libc test suite.
+    add_custom_target(check-llvmlibc)
+endif()
 
 add_subdirectory(
     ${llvmproject_SOURCE_DIR}/llvm llvm
@@ -396,7 +440,7 @@ set(CPACK_ARCHIVE_COMPONENT_INSTALL TRUE)
 # Don't create a separate archive for each component.
 set(CPACK_COMPONENTS_GROUPING ALL_COMPONENTS_IN_ONE)
 # When extracting the files put them in an ArmCompiler-.../ directory.
-# Exception: the newlib overlay package does not do this, because it has
+# Exception: the overlay packages do not do this, because they have
 # to be able to unpack over the top of an existing installation on all
 # platforms, and each platform has a different top-level directory name.
 if(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
@@ -479,7 +523,7 @@ add_custom_target(
     -DLLVMEmbeddedToolchainForArm_VERSION=${LLVMEmbeddedToolchainForArm_VERSION}
     -DLLVMEmbeddedToolchainForArm_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
     -Dllvmproject_SOURCE_DIR=${llvmproject_SOURCE_DIR}
-    # only one of picolibc and newlib source dirs is needed, but easiest to
+    # at most one of picolibc and newlib source dirs is needed, but easiest to
     # specify both definitions
     -Dpicolibc_SOURCE_DIR=${picolibc_SOURCE_DIR}
     -Dnewlib_SOURCE_DIR=${newlib_SOURCE_DIR}
@@ -817,6 +861,112 @@ function(
     )
 endfunction()
 
+function(
+    add_llvmlibc
+    directory
+    variant
+    target_triple
+    flags
+    test_executor_params
+    default_boot_flash_addr
+    default_boot_flash_size
+    default_flash_addr
+    default_flash_size
+    default_ram_addr
+    default_ram_size
+    default_stack_size
+)
+    get_runtimes_flags("${directory}" "${flags}")
+
+    set(runtimes_flags "${runtimes_flags} -Wno-error=atomic-alignment")
+
+    set(common_cmake_args
+        -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
+        -DCMAKE_ASM_COMPILER=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}
+        -DCMAKE_ASM_COMPILER_TARGET=${target_triple}
+        -DCMAKE_ASM_FLAGS=${runtimes_flags}
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_CXX_COMPILER=${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}
+        -DCMAKE_CXX_COMPILER_TARGET=${target_triple}
+        -DCMAKE_CXX_FLAGS=${runtimes_flags}
+        -DCMAKE_C_COMPILER=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}
+        -DCMAKE_C_COMPILER_TARGET=${target_triple}
+        -DCMAKE_C_FLAGS=${runtimes_flags}
+        -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_NM=${LLVM_BINARY_DIR}/bin/llvm-nm${CMAKE_EXECUTABLE_SUFFIX}
+        -DCMAKE_RANLIB=${LLVM_BINARY_DIR}/bin/llvm-ranlib${CMAKE_EXECUTABLE_SUFFIX}
+        # Let CMake know we're cross-compiling
+        -DCMAKE_SYSTEM_NAME=Generic
+        -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+    )
+
+    ExternalProject_Add(
+        llvmlibc_${variant}
+        SOURCE_DIR ${llvmproject_SOURCE_DIR}/runtimes
+        PREFIX llvmlibc/${variant}
+        INSTALL_DIR llvmlibc/${variant}/install
+        DEPENDS ${lib_tool_dependencies} ${libc_target} libc_hdrgen
+        CMAKE_ARGS
+        ${common_cmake_args}
+        -DLIBC_TARGET_TRIPLE=${target_triple}
+        -DLIBC_HDRGEN_EXE=${LIBC_HDRGEN}
+        -DLIBC_TARGET_OS=baremetal
+        -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm
+        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
+        -DLLVM_ENABLE_RUNTIMES=libc
+        -DLLVM_INCLUDE_TESTS=OFF # I haven't yet got the tests to build
+        -DLLVM_LIBC_FULL_BUILD=ON
+        STEP_TARGETS build install
+        USES_TERMINAL_CONFIGURE FALSE
+        USES_TERMINAL_BUILD TRUE
+        USES_TERMINAL_INSTALL TRUE
+        USES_TERMINAL_TEST TRUE
+        LIST_SEPARATOR ,
+        # Always run the build command so that incremental builds are correct.
+        BUILD_ALWAYS TRUE
+        CONFIGURE_HANDLED_BY_BUILD TRUE
+        INSTALL_COMMAND ${CMAKE_COMMAND} --install .
+        # Copy llvm-libc lib directory, moving libraries out of their
+        # target-specific subdirectory.
+        COMMAND
+            ${CMAKE_COMMAND}
+            -E copy_directory
+            <INSTALL_DIR>/lib/${target_triple}
+            "${LLVM_BINARY_DIR}/${directory}/lib"
+        # And copy the include directory, which is already arranged right.
+        COMMAND
+            ${CMAKE_COMMAND}
+            -E copy_directory
+            <INSTALL_DIR>/include
+            "${LLVM_BINARY_DIR}/${directory}/include"
+    )
+
+    ExternalProject_Add(
+        llvmlibc-support_${variant}
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/llvmlibc-support
+        PREFIX llvmlibc-support/${variant}
+        INSTALL_DIR "${LLVM_BINARY_DIR}/${directory}"
+        DEPENDS ${lib_tool_dependencies} llvmlibc_${variant}-install
+        CMAKE_ARGS ${common_cmake_args}
+        STEP_TARGETS build install
+        USES_TERMINAL_CONFIGURE FALSE
+        USES_TERMINAL_BUILD TRUE
+        USES_TERMINAL_INSTALL TRUE
+        USES_TERMINAL_TEST TRUE
+        LIST_SEPARATOR ,
+        # Always run the build command so that incremental builds are correct.
+        BUILD_ALWAYS TRUE
+        CONFIGURE_HANDLED_BY_BUILD TRUE
+    )
+
+    add_dependencies(
+        llvm-toolchain-runtimes
+        llvmlibc_${variant}
+        llvmlibc-support_${variant}
+    )
+endfunction()
+
 macro(
     add_libc
     directory
@@ -856,6 +1006,21 @@ macro(
         )
     elseif(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
         add_newlib(
+            "${directory}"
+            "${variant}"
+            "${target_triple}"
+            "${flags}"
+            "${test_executor_params}"
+            "${default_boot_flash_addr}"
+            "${default_boot_flash_size}"
+            "${default_flash_addr}"
+            "${default_flash_size}"
+            "${default_ram_addr}"
+            "${default_ram_size}"
+            "${default_stack_size}"
+        )
+    elseif(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)
+        add_llvmlibc(
             "${directory}"
             "${variant}"
             "${target_triple}"
@@ -1231,25 +1396,29 @@ function(add_library_variant target_arch)
             "${VARIANT_COMPILE_FLAGS}"
             "${lit_test_executor}"
             "${LLVM_TOOLCHAIN_C_LIBRARY}_${variant}-install"
-        )
-        add_libcxx_libcxxabi_libunwind(
-            "${directory}"
-            "${variant}"
-            "${target_triple}"
-            "${VARIANT_COMPILE_FLAGS}"
-            "${lit_test_executor}"
-            "${LLVM_TOOLCHAIN_C_LIBRARY}_${variant}-install"
-            "${${LLVM_TOOLCHAIN_C_LIBRARY}_specific_runtimes_options}"
-            ${VARIANT_ENABLE_EXCEPTIONS}
-            ${VARIANT_ENABLE_RTTI}
-        )
+            )
+        if(CXX_LIBS)
+            add_libcxx_libcxxabi_libunwind(
+                "${directory}"
+                "${variant}"
+                "${target_triple}"
+                "${VARIANT_COMPILE_FLAGS}"
+                "${lit_test_executor}"
+                "${LLVM_TOOLCHAIN_C_LIBRARY}_${variant}-install"
+                "${${LLVM_TOOLCHAIN_C_LIBRARY}_specific_runtimes_options}"
+                ${VARIANT_ENABLE_EXCEPTIONS}
+                ${VARIANT_ENABLE_RTTI}
+            )
+        endif()
         if(VARIANT_COMPILE_FLAGS MATCHES "-march=armv8")
             message("C++ runtime libraries tests disabled for ${variant}")
         else()
             add_custom_target(check-llvm-toolchain-runtimes-${variant})
             add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
             add_compiler_rt_tests("${variant}")
-            add_libcxx_libcxxabi_libunwind_tests("${variant}")
+            if(CXX_LIBS)
+                add_libcxx_libcxxabi_libunwind_tests("${variant}")
+            endif()
         endif()
     endif()
 
@@ -1333,21 +1502,25 @@ set(multilib_yaml_content "")
 # For most variants, the "flash" memory is placed in address range, where
 # simulated boards have RAM. This is because code for some tests does not fit
 # the real flash.
-add_library_variants_for_cpu(
-    aarch64
-    COMPILE_FLAGS "-march=armv8-a"
-    MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
-    PICOLIBC_BUILD_TYPE "release"
-    QEMU_MACHINE "virt"
-    QEMU_CPU "cortex-a57"
-    BOOT_FLASH_ADDRESS 0x40000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x40001000
-    FLASH_SIZE 0xfff000
-    RAM_ADDRESS 0x41000000
-    RAM_SIZE 0x1000000
-    STACK_SIZE 8K
-)
+if(NOT (LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc))
+    # llvm-libc doesn't have a bare-metal configuration for AArch64, so we
+    # leave out the AArch64 library if we're building that libc.
+    add_library_variants_for_cpu(
+        aarch64
+        COMPILE_FLAGS "-march=armv8-a"
+        MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
+        PICOLIBC_BUILD_TYPE "release"
+        QEMU_MACHINE "virt"
+        QEMU_CPU "cortex-a57"
+        BOOT_FLASH_ADDRESS 0x40000000
+        BOOT_FLASH_SIZE 0x1000
+        FLASH_ADDRESS 0x40001000
+        FLASH_SIZE 0xfff000
+        RAM_ADDRESS 0x41000000
+        RAM_SIZE 0x1000000
+        STACK_SIZE 8K
+    )
+endif()
 # For AArch32, clang uses different defaults for FPU selection than GCC, both
 # when "+fp" or "+fp.dp" are used and when no FPU specifier is provided in
 # "-march=". Using "-mfpu=" explicitly.
