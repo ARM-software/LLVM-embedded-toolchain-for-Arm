@@ -36,9 +36,14 @@ $ clang --config=newlib.cfg --target=arm-none-eabi -march=armv7m -T redboot.ld -
 
 > **NOTE:**  Building `newlib` package is only supported on Linux and macOS.
 
-Add the `-DLLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL=on` CMake option for the
-`package-llvm-toolchain` CMake target to generate the `newlib` overlay package.
+Configure the toolchain with the CMake setting
+`-DLLVM_TOOLCHAIN_C_LIBRARY=newlib` to build a newlib-based version of
+the toolchain.
 
-Note that the `-DLLVM_TOOLCHAIN_NEWLIB_OVERLAY_INSTALL=on` option only generates
-the `newlib` package, but does not install it as part of the `install` CMake
-target.
+If you also add `-DLLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL=on` then the
+`package-llvm-toolchain` CMake target will generate the `newlib`
+overlay package.
+
+Note that the `-DLLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL=on` option
+only generates the `newlib` package, but does not install it as part
+of the `install` CMake target.
