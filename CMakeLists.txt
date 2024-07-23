@@ -1918,6 +1918,11 @@ if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
         ${newlib_SOURCE_DIR}/COPYING.LIBGLOSS           COPYING.LIBGLOSS
     )
 endif()
+if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)
+    list(APPEND third_party_license_files
+        ${llvmproject_SOURCE_DIR}/libc/LICENSE.TXT      LIBC-LICENSE.TXT
+    )
+endif()
 
 while(third_party_license_files)
     list(POP_FRONT third_party_license_files source_file destination_name)
