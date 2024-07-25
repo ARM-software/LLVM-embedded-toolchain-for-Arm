@@ -1,21 +1,20 @@
-From ac480df06d78bd7457d2a6333be8578cda88c240 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
-Date: Thu, 9 Nov 2023 14:14:30 +0100
-Subject: [libc++] tests with picolibc: mark sort test as long one
+From 7071eeaeafa681f281434d38223618165560efee Mon Sep 17 00:00:00 2001
+From: vrupan01 <vrukesh.panse@arm.com>
+Date: Thu, 25 Jul 2024 15:44:04 +0100
+Subject: [PATCH] [libc++] tests with picolibc: mark sort test as long one
 
 ---
- .../std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp     | 3 +--
- 1 file changed, 1 insertion(+), 2 deletions(-)
+ .../test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp b/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
-index e2581fbf2fa6..99a9e1775513 100644
+index da7794e8c85d..a904b2ee3f78 100644
 --- a/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
 +++ b/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
-@@ -6,8 +6,7 @@
- //
- //===----------------------------------------------------------------------===//
+@@ -8,7 +8,7 @@
  
--// This test appears to hang with picolibc & qemu.
+ // This test did pass but is very slow when run using qemu. ~7 minutes on a
+ // Neoverse N1 (AArch64) server core.
 -// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 +// REQUIRES: long_test
  
