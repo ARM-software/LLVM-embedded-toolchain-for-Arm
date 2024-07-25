@@ -354,6 +354,7 @@ endif()
 install(
     FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Omax.cfg
+    ${CMAKE_CURRENT_SOURCE_DIR}/OmaxLTO.cfg
     DESTINATION bin
     COMPONENT llvm-toolchain-config-files
 )
