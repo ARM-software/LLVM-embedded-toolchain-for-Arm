@@ -15,6 +15,8 @@
 // limitations under the License.
 //
 
+#include <stddef.h>
+
 #include "semihost.h"
 
 void __llvm_libc_exit(int status) {
@@ -22,7 +24,7 @@ void __llvm_libc_exit(int status) {
 #if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
   size_t block[2];
   block[0] = ADP_Stopped_ApplicationExit;
-  block[1] = code;
+  block[1] = status;
   semihosting_call(SYS_EXIT, block);
 #else
   semihosting_call(SYS_EXIT, (const void *)ADP_Stopped_ApplicationExit);
