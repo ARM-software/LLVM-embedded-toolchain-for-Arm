@@ -911,7 +911,7 @@ function(
         ${common_cmake_args}
         -DLIBC_TARGET_TRIPLE=${target_triple}
         -DLIBC_HDRGEN_EXE=${LIBC_HDRGEN}
-        -DLIBC_TARGET_OS=baremetal
+        -DLIBC_CONFIG_PATH=${llvmproject_SOURCE_DIR}/libc/config/baremetal/arm # llvmlibc has no AArch64 bare-metal configuration, but the AArch32 one is fine
         -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         -DLLVM_ENABLE_RUNTIMES=libc
@@ -1502,25 +1502,21 @@ set(multilib_yaml_content "")
 # For most variants, the "flash" memory is placed in address range, where
 # simulated boards have RAM. This is because code for some tests does not fit
 # the real flash.
-if(NOT (LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc))
-    # llvm-libc doesn't have a bare-metal configuration for AArch64, so we
-    # leave out the AArch64 library if we're building that libc.
-    add_library_variants_for_cpu(
-        aarch64
-        COMPILE_FLAGS "-march=armv8-a"
-        MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
-        PICOLIBC_BUILD_TYPE "release"
-        QEMU_MACHINE "virt"
-        QEMU_CPU "cortex-a57"
-        BOOT_FLASH_ADDRESS 0x40000000
-        BOOT_FLASH_SIZE 0x1000
-        FLASH_ADDRESS 0x40001000
-        FLASH_SIZE 0xfff000
-        RAM_ADDRESS 0x41000000
-        RAM_SIZE 0x1000000
-        STACK_SIZE 8K
-    )
-endif()
+add_library_variants_for_cpu(
+    aarch64
+    COMPILE_FLAGS "-march=armv8-a"
+    MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
+    PICOLIBC_BUILD_TYPE "release"
+    QEMU_MACHINE "virt"
+    QEMU_CPU "cortex-a57"
+    BOOT_FLASH_ADDRESS 0x40000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x40001000
+    FLASH_SIZE 0xfff000
+    RAM_ADDRESS 0x41000000
+    RAM_SIZE 0x1000000
+    STACK_SIZE 8K
+)
 # For AArch32, clang uses different defaults for FPU selection than GCC, both
 # when "+fp" or "+fp.dp" are used and when no FPU specifier is provided in
 # "-march=". Using "-mfpu=" explicitly.
