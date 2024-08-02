@@ -73,9 +73,9 @@ Download a release of the toolchain for your platform from [Github
 releases](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases)
 and extract the archive into an arbitrary directory.
 
-### Pre-requisite to use toolchain in Windows 10 and Windows 11
+### Pre-requisite for using toolchain on Windows
 
-Install appropriate latest supported Microsoft Visual C++ Redistributable package, such as from [Microsoft Visual C++ Redistributable latest supported downloads](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)
+Install appropriate latest supported Microsoft Visual C++ Redistributable package, such as from [Microsoft Visual C++ Redistributable latest supported downloads](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
 
 ### Using the toolchain
 
