@@ -73,6 +73,10 @@ Download a release of the toolchain for your platform from [Github
 releases](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases)
 and extract the archive into an arbitrary directory.
 
+### Pre-requisite for using toolchain on Windows
+
+Install appropriate latest supported Microsoft Visual C++ Redistributable package, such as from [Microsoft Visual C++ Redistributable latest supported downloads](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
+
 ### Using the toolchain
 
 > *Note:* If you are using the toolchain in a shared environment with untrusted input,
