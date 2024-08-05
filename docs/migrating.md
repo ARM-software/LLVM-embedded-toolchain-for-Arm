@@ -88,8 +88,8 @@ however uses different command line options to control selection of semihosting.
 
 |Use case|GNU options|LLVM options|
 |--------|-----------|------------|
-|No semihosting|`--specs=nosys.specs`|`-lcrt0`|
-|Semihosting|`--specs=rdimon.specs`|`-lcrt0-semihost -lsemihost`|
+|No semihosting|`--specs=nosys.specs`|
+|Semihosting|`--specs=rdimon.specs`|`-nostartfiles -lcrt0-semihost -lsemihost`|
 |Newlib-nano|`--specs=nano.specs`|Not available: `picolibc` is an equivalent of `newlib-nano`.
 
 ## Linker
