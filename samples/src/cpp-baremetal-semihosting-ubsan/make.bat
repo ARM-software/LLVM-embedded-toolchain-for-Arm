@@ -55,11 +55,11 @@ if exist hello.hex del /q hello.hex
 @exit /B 1
 
 :build_fn
-%BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti --std=c++17 -fsanitize=undefined -fsanitize-minimal-runtime -g -T ../../ldscripts/microbit.ld -o hello.elf *.cpp
+%BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -nostartfiles -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti --std=c++17 -fsanitize=undefined -fsanitize-minimal-runtime -g -T ../../ldscripts/microbit.ld -o hello.elf *.cpp
 %BIN_PATH%\llvm-objcopy.exe -O ihex hello.elf hello.hex
 @exit /B
 
 :build_trap_fn
-%BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti --std=c++17 -fsanitize=undefined -fsanitize-trap=all -g -T ../../ldscripts/microbit.ld -o hello.elf *.cpp
+%BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -nostartfiles -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti --std=c++17 -fsanitize=undefined -fsanitize-trap=all -g -T ../../ldscripts/microbit.ld -o hello.elf *.cpp
 %BIN_PATH%\llvm-objcopy.exe -O ihex hello.elf hello.hex
 @exit /B

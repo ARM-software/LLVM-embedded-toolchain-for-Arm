@@ -57,12 +57,12 @@ if exist hello.hex del /q hello.hex
 
 :build_fn
 %BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -fno-exceptions -fno-rtti -flto -fsanitize=cfi -fvisibility=hidden -fno-sanitize-ignorelist -g -c hello.cpp
-%BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti -flto -T ..\..\ldscripts\microbit.ld -g -o hello.elf hello.o
+%BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -nostartfiles -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti -flto -T ..\..\ldscripts\microbit.ld -g -o hello.elf hello.o
 %BIN_PATH%\llvm-objcopy.exe -O ihex hello.elf hello.hex
 @exit /B
 
 :build_no_cfi_fn
 %BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -fno-exceptions -fno-rtti -flto -g -c hello.cpp
-%BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti -flto -T ..\..\ldscripts\microbit.ld -g -o hello.elf hello.o
+%BIN_PATH%\clang++.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -nostartfiles -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti -flto -T ..\..\ldscripts\microbit.ld -g -o hello.elf hello.o
 %BIN_PATH%\llvm-objcopy.exe -O ihex hello.elf hello.hex
 @exit /B
