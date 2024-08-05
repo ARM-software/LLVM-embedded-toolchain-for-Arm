@@ -171,4 +171,3 @@ Please raise an issue via [Github issues](https://github.com/ARM-software/LLVM-e
 ## Contributions and Pull Requests
 
 Please see the [Contribution Guide](docs/contributing.md) for details.
-
