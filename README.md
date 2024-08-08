@@ -143,6 +143,29 @@ $ clang \
 The FPU selection can be skipped, but it is not recommended to as the defaults
 are different to GCC ones.
 
+
+The builds of the toolchain come packaged with two config files, Omax.cfg and OmaxLTO.cfg.
+When used, these config files enable several build optimisation flags to achieve highest performance on typical embedded benchmarks. OmaxLTO.cfg enables link-time optimisation (LTO) specific flags.
+These configs can be optionally passed using the `--config` flag. For example:
+
+```
+$ clang \
+example.c \
+...
+--config=Omax.cfg \
+--config=OmaxLTO.cfg \
+-o example
+```
+
+Users should be warned that Omax.cfg enables `-ffast-math` which breaks IEEE compliance and
+enables maths optimisations which can affect code correctness.  LTOs are
+kept seperately in OmaxLTO.cfg as users may not want LTOs due to potential increase in link time
+and/or increased memory usage during linking. The flags used in these configs are used internally by
+us at Arm, information on what they do can be found at
+[llvm.org](https://clang.llvm.org/docs/CommandGuide/clang.html).
+Users are also encouraged to create their own configs and tune their own flag parameters.
+
+
 Binary releases of the LLVM Embedded Toolchain for Arm are based on release
 branches of the upstream LLVM Project, thus can safely be used with all tools
 provided by LLVM [releases](https://github.com/llvm/llvm-project/releases)
