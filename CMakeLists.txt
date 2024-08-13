@@ -916,7 +916,7 @@ function(
         -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         -DLLVM_ENABLE_RUNTIMES=libc
-        -DLLVM_INCLUDE_TESTS=OFF # I haven't yet got the tests to build
+        -DLLVM_INCLUDE_TESTS=OFF # llvmlibc's tests require C++, so can't be built until llvmlibc can support libc++
         -DLLVM_LIBC_FULL_BUILD=ON
         STEP_TARGETS build install
         USES_TERMINAL_CONFIGURE FALSE
