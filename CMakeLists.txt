@@ -912,6 +912,7 @@ function(
         -DLIBC_TARGET_TRIPLE=${target_triple}
         -DLIBC_HDRGEN_EXE=${LIBC_HDRGEN}
         -DLIBC_CONFIG_PATH=${llvmproject_SOURCE_DIR}/libc/config/baremetal/arm # llvmlibc has no AArch64 bare-metal configuration, but the AArch32 one is fine
+        -DLIBC_CONF_TIME_64BIT=ON
         -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         -DLLVM_ENABLE_RUNTIMES=libc
