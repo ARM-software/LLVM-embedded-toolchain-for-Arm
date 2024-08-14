@@ -100,6 +100,9 @@ however there are some known differences to take into account, see:
 in the LLD documentation.
 * The [LLD and GNU linker incompatibilities](https://maskray.me/blog/2020-12-19-lld-and-gnu-linker-incompatibilities)
 blog post.
+* When selecting the printf/scanf library variant with `--defsym from=to`, lld includes not only the specified
+printf/scanf library variant through defsym but also the PICOLIBC_DOUBLE_PRINTF_SCANF variant. To avoid linking
+them into the application, you must include the --gc-sections linker flag.
 
 ## Startup code
 
