@@ -100,6 +100,11 @@ however there are some known differences to take into account, see:
 in the LLD documentation.
 * The [LLD and GNU linker incompatibilities](https://maskray.me/blog/2020-12-19-lld-and-gnu-linker-incompatibilities)
 blog post.
+* When selecting the printf/scanf picolibc implementation variant with `--defsym from=to`, see
+[Printf and Scanf levels in Picolibc](https://github.com/picolibc/picolibc/blob/main/doc/printf.md#printf-and-scanf-levels-in-picolibc),
+LLD includes not only the printf/scanf implementation variant from picolibc specified through `--defsym`, but
+also the default PICOLIBC_DOUBLE_PRINTF_SCANF variant. To avoid linking the default variant into the application, you
+must include the `--gc-sections` linker flag.
 
 ## Startup code
 
