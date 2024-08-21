@@ -1281,7 +1281,7 @@ function(add_libcxx_libcxxabi_libunwind_tests variant)
 endfunction()
 
 function(get_compiler_rt_target_triple target_arch flags)
-    if(target_arch STREQUAL "aarch64")
+    if(target_arch MATCHES "^aarch64")
         set(target_triple "aarch64-none-elf")
     else()
         # Choose the target triple so that compiler-rt will do the
@@ -1352,7 +1352,7 @@ function(add_library_variant target_arch)
         endif()
     endif()
 
-    if(target_arch STREQUAL "aarch64")
+    if(target_arch MATCHES "^aarch64")
         set(parent_dir_name aarch64-none-elf)
     else()
         set(parent_dir_name arm-none-eabi)
@@ -1504,7 +1504,7 @@ set(multilib_yaml_content "")
 # simulated boards have RAM. This is because code for some tests does not fit
 # the real flash.
 add_library_variants_for_cpu(
-    aarch64
+    aarch64a
     COMPILE_FLAGS "-march=armv8-a"
     MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
     PICOLIBC_BUILD_TYPE "release"
