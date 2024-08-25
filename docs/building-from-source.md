@@ -50,6 +50,8 @@ tools to the `LLVM_DISTRIBUTION_COMPONENTS` CMake list.
 The toolchain can be built directly with CMake.
 
 ```
+export CC=clang
+export CXX=clang++
 mkdir build
 cd build
 cmake .. -GNinja -DFETCHCONTENT_QUIET=OFF
