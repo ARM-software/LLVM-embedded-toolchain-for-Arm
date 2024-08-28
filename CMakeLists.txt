@@ -1820,7 +1820,7 @@ add_library_variants_for_cpu(
 )
 # FIXME: qemu currently has no support for PACBTI-M, so the branch protection
 # variants below can't be fully tested in runtime. Since PACBTI-M instructions
-# are NOP-compatible we can use the cortext-m55 CPU for now, but these should be
+# are NOP-compatible we can use the cortex-m55 CPU for now, but these should be
 # updated to use a PACBTI-M enabled CPU once this is available.
 add_library_variants_for_cpu(
     armv8.1m.main
