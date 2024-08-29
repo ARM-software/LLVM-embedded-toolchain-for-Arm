@@ -66,9 +66,9 @@ If you check out repos manually then it is your responsibility to ensure that th
 export CC=clang
 export CXX=clang++
 mkdir repos
-git -C repos clone https://github.com/llvm/llvm-project.git --depth=1
+git -C repos clone https://github.com/llvm/llvm-project.git
 git -C repos/llvm-project am -k "$PWD"/patches/llvm-project/*.patch
-git -C repos clone https://github.com/picolibc/picolibc.git --depth=1
+git -C repos clone https://github.com/picolibc/picolibc.git
 git -C repos/picolibc apply "$PWD"/patches/picolibc.patch
 mkdir build
 cd build
