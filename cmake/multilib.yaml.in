@@ -138,3 +138,8 @@ Mappings:
 - Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+lob(\+[^\+]+)*
   Flags:
   - -march=thumbv8.1m.main+lob
+
+# -mbranch-protection options
+- Match: -mbranch-protection=(standard|pac-ret(\+leaf)?\+bti|bti\+pac-ret(\+leaf)?)
+  Flags:
+  - -mbranch-protection=pac-ret+bti
