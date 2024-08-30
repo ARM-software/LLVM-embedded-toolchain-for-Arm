@@ -50,6 +50,8 @@ tools to the `LLVM_DISTRIBUTION_COMPONENTS` CMake list.
 The toolchain can be built directly with CMake.
 
 ```
+export CC=clang
+export CXX=clang++
 mkdir build
 cd build
 cmake .. -GNinja -DFETCHCONTENT_QUIET=OFF
@@ -61,6 +63,8 @@ If you prefer you can check out and patch the repos manually and use those.
 If you check out repos manually then it is your responsibility to ensure that the correct revisions are checked out - see `versions.json` to identify these.
 
 ```
+export CC=clang
+export CXX=clang++
 mkdir repos
 git -C repos clone https://github.com/llvm/llvm-project.git
 git -C repos/llvm-project am -k "$PWD"/patches/llvm-project/*.patch
