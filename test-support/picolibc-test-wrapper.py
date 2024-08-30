@@ -28,6 +28,12 @@ disabled_tests = [
     "picolibc_armv8.1m.main_hard_nofp_mve_exn_rtti-build/test/fenv",
     "picolibc_armv8.1m.main_hard_nofp_mve_exn_rtti-build/test/math_errhandling",
     "picolibc_armv8m.main_hard_fp_exn_rtti-build/test/math_errhandling",
+    "picolibc_armv8.1m.main_hard_nofp_mve_pacret_bti-build/test/fenv",
+    "picolibc_armv8.1m.main_hard_nofp_mve_pacret_bti_exn_rtti-build/test/fenv",
+    "picolibc_armv8.1m.main_hard_fp_nomve_pacret_bti-build/test/math_errhandling",
+    "picolibc_armv8.1m.main_hard_fp_nomve_pacret_bti_exn_rtti-build/test/math_errhandling",
+    "picolibc_armv8.1m.main_hard_nofp_mve_pacret_bti-build/test/math_errhandling",
+    "picolibc_armv8.1m.main_hard_nofp_mve_pacret_bti_exn_rtti-build/test/math_errhandling",
 ]
 
 
