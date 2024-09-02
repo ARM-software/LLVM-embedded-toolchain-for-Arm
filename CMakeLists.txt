@@ -278,7 +278,7 @@ endif()
 # ed551e0778a35f00ab60f1c80d83ea8274d8d400.
 set(
     llvm_project_patches
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-libc-tests-with-picolibc-xfail-two-remaining-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-libc-tests-with-picolibc-xfail-one-remaining-test.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0002-libc-tests-with-picolibc-disable-large-tests.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0003-Disable-failing-compiler-rt-test.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
