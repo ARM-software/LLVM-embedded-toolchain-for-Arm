@@ -107,15 +107,33 @@ Mappings:
 - Match: --target=thumbv7em-unknown-none-eabihf
   Flags:
   - --target=thumbv7m-unknown-none-eabihf
+
+# v7-A and v7-R include the ISA in the triple, but that doesn't matter for
+# library selection, so canonicalise Thumb triples to ARM ones.
 - Match: --target=thumbv7r-unknown-none-eabi
   Flags:
   - --target=armv7r-unknown-none-eabi
+- Match: --target=thumbv7r-unknown-none-eabihf
+  Flags:
+  - --target=armv7r-unknown-none-eabihf
+- Match: --target=thumbv7-unknown-none-eabi
+  Flags:
+  - --target=armv7-unknown-none-eabi
+- Match: --target=thumbv7-unknown-none-eabihf
+  Flags:
+  - --target=armv7-unknown-none-eabihf
 - Match: --target=thumbv4t-unknown-none-eabi
   Flags:
   - --target=armv4t-unknown-none-eabi
+- Match: --target=thumbv4t-unknown-none-eabihf
+  Flags:
+  - --target=armv4t-unknown-none-eabihf
 - Match: --target=thumbv5e-unknown-none-eabi
   Flags:
   - --target=armv5e-unknown-none-eabi
+- Match: --target=thumbv5e-unknown-none-eabihf
+  Flags:
+  - --target=armv5e-unknown-none-eabihf
 
 # Higher versions of v8-A, and v9-A, are all supersets of v8-A. (And
 # of each other, in the obvious way, but we don't have any libraries
