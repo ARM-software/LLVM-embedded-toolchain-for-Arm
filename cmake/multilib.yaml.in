@@ -135,6 +135,15 @@ Mappings:
   Flags:
   - --target=armv5e-unknown-none-eabihf
 
+# armv7ve is a GCC name for v7-A with the virtualisation extension, for library
+# selection we treat it the same as v7-A.
+- Match: --target=(arm|thumb)v7ve-unknown-none-eabi
+  Flags:
+  - --target=armv7-unknown-none-eabi
+- Match: --target=(arm|thumb)v7ve-unknown-none-eabihf
+  Flags:
+  - --target=armv7-unknown-none-eabihf
+
 # Higher versions of v8-A, and v9-A, are all supersets of v8-A. (And
 # of each other, in the obvious way, but we don't have any libraries
 # for those at present, so there's no need to generate all their
