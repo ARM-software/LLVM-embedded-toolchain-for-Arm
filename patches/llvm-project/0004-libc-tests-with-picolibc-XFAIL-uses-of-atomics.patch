@@ -39,7 +39,7 @@ index 000000000000..5ecc58f3e385
 +if "has-no-atomics" in config.available_features:
 +    config.unsupported = True
 diff --git a/libcxx/test/libcxx/thread/thread.stoptoken/intrusive_shared_ptr.pass.cpp b/libcxx/test/libcxx/thread/thread.stoptoken/intrusive_shared_ptr.pass.cpp
-index 47440015f2c5..4350de3dfa65 100644
+index 99d4226662a0..243aa21c87b4 100644
 --- a/libcxx/test/libcxx/thread/thread.stoptoken/intrusive_shared_ptr.pass.cpp
 +++ b/libcxx/test/libcxx/thread/thread.stoptoken/intrusive_shared_ptr.pass.cpp
 @@ -7,6 +7,8 @@
@@ -49,8 +49,8 @@ index 47440015f2c5..4350de3dfa65 100644
 +// XFAIL: has-no-atomics
 +
  // UNSUPPORTED: c++03, c++11, c++14, c++17
+ // ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
  
- #include <__stop_token/intrusive_shared_ptr.h>
 diff --git a/libcxx/test/std/atomics/lit.local.cfg b/libcxx/test/std/atomics/lit.local.cfg
 new file mode 100644
 index 000000000000..5ecc58f3e385
