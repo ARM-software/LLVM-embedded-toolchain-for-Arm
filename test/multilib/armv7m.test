@@ -1,9 +1,28 @@
-# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none | FileCheck %s
-# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -mfloat-abi=softfp | FileCheck %s
-# CHECK: arm-none-eabi/armv7m_soft_nofp_exn_rtti{{$}}
-# CHECK-EMPTY:
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none | FileCheck %s --check-prefix=NONE
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -mfloat-abi=softfp | FileCheck %s --check-prefix=NONE
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=none -mfloat-abi=softfp | FileCheck %s --check-prefix=NONE
+# NONE: arm-none-eabi/armv7m_soft_nofp_exn_rtti{{$}}
+# NONE-EMPTY:
 
 # RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4 %s
 # RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4 %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4 %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4 %s
 # SOFT-FPV4: arm-none-eabi/armv7m_soft_fpv4_sp_d16_exn_rtti{{$}}
 # SOFT-FPV4-EMPTY:
+#
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabihf -mfpu=fpv4-sp-d16 | FileCheck --check-prefix=FPV4 %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabihf -mfpu=fpv4-sp-d16 | FileCheck --check-prefix=FPV4 %s
+# FPV4: arm-none-eabi/armv7m_hard_fpv4_sp_d16_exn_rtti{{$}}
+# FPV4-EMPTY:
+#
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabihf -mfpu=fpv5-d16 | FileCheck --check-prefix=FPV5 %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabihf -mfpu=fpv5-d16 | FileCheck --check-prefix=FPV5 %s
+# FPV5: arm-none-eabi/armv7m_hard_fpv5_d16_exn_rtti{{$}}
+# FPV5-EMPTY:
+
+# %clang -print-multi-directory --target=arm-none-eabi   -mcpu=cortex-m3 | FileCheck %s --check-prefix=NONE
+# %clang -print-multi-directory --target=arm-none-eabi   -mcpu=cortex-m4 | FileCheck %s --check-prefix=SOFT-FPV4
+# %clang -print-multi-directory --target=arm-none-eabihf -mcpu=cortex-m4 | FileCheck %s --check-prefix=FPV4
+# %clang -print-multi-directory --target=arm-none-eabi   -mcpu=cortex-m7 | FileCheck %s --check-prefix=SOFT-FPV4
+# %clang -print-multi-directory --target=arm-none-eabihf -mcpu=cortex-m7 | FileCheck %s --check-prefix=FPV4

@@ -1654,25 +1654,9 @@ add_library_variants_for_cpu(
 )
 add_library_variants_for_cpu(
     armv7m
-    SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7m-unknown-none-eabi -mfpu=none"
-    PICOLIBC_BUILD_TYPE "minsize"
-    QEMU_MACHINE "mps2-an385"
-    QEMU_CPU "cortex-m3"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x21000000
-    FLASH_SIZE 0x600000
-    RAM_ADDRESS 0x21600000
-    RAM_SIZE 0xa00000
-    STACK_SIZE 4K
-)
-add_library_variants_for_cpu(
-    armv7em
     SUFFIX hard_fpv4_sp_d16
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv4-sp-d16"
-    MULTILIB_FLAGS "--target=thumbv7em-unknown-none-eabihf -mfpu=fpv4-sp-d16"
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7m -mfpu=fpv4-sp-d16"
+    MULTILIB_FLAGS "--target=thumbv7m-unknown-none-eabihf -mfpu=fpv4-sp-d16"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
@@ -1685,10 +1669,10 @@ add_library_variants_for_cpu(
     STACK_SIZE 4K
 )
 add_library_variants_for_cpu(
-    armv7em
+    armv7m
     SUFFIX hard_fpv5_d16
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7em -mfpu=fpv5-d16"
-    MULTILIB_FLAGS "--target=thumbv7em-unknown-none-eabihf -mfpu=fpv5-d16"
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7m -mfpu=fpv5-d16"
+    MULTILIB_FLAGS "--target=thumbv7m-unknown-none-eabihf -mfpu=fpv5-d16"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "mps2-an500"
     QEMU_CPU "cortex-m7"
@@ -1705,12 +1689,12 @@ add_library_variants_for_cpu(
 # no-fpu variant to win, it has to be in multilab.yaml after all other
 # fpu variants. The order of variants in multilab.yaml depends on the order
 # of the add_library_variant calls. So the add_library_variant that adds
-# the soft_nofp for armv7em is placed after all other armv7em variants.
+# the soft_nofp for armv7m is placed after all other armv7m variants.
 add_library_variants_for_cpu(
-    armv7em
+    armv7m
     SUFFIX soft_nofp
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7em -mfpu=none"
-    MULTILIB_FLAGS "--target=thumbv7em-unknown-none-eabi -mfpu=none"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7m -mfpu=none"
+    MULTILIB_FLAGS "--target=thumbv7m-unknown-none-eabi -mfpu=none"
     PICOLIBC_BUILD_TYPE "minsize"
     QEMU_MACHINE "mps2-an386"
     QEMU_CPU "cortex-m4"
