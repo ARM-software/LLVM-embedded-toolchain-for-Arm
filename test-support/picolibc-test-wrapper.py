@@ -18,6 +18,8 @@ disabled_tests = [
     # https://github.com/picolibc/picolibc/pull/500
     "picolibc_armv7m_soft_fpv4_sp_d16-build/test/math_errhandling",
     "picolibc_armv7m_hard_fpv4_sp_d16-build/test/math_errhandling",
+    "picolibc_armv7r_hard_vfpv3xd-build/test/math_errhandling",
+    "picolibc_armv7r_hard_vfpv3xd_exn_rtti-build/test/math_errhandling",
     "picolibc_armv8.1m.main_hard_fp_nomve-build/test/math_errhandling",
     "picolibc_armv7m_soft_fpv4_sp_d16_exn_rtti-build/test/math_errhandling",
     "picolibc_armv7m_hard_fpv4_sp_d16_exn_rtti-build/test/math_errhandling",
