@@ -1605,7 +1605,7 @@ add_library_variants_for_cpu(
 )
 add_library_variants_for_cpu(
     armv7a
-    SUFFIX softfp_vfpv3_d16
+    SUFFIX soft_vfpv3_d16
     COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7a -mfpu=vfpv3-d16"
     MULTILIB_FLAGS "--target=armv7-unknown-none-eabi -mfpu=vfpv3-d16"
     PICOLIBC_BUILD_TYPE "release"
@@ -1656,9 +1656,9 @@ add_library_variants_for_cpu(
 )
 add_library_variants_for_cpu(
     armv7r
-    SUFFIX soft_vfpv3_d16
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7r -mfpu=vfpv3-d16"
-    MULTILIB_FLAGS "--target=armv7r-unknown-none-eabihf -mfpu=vfpv3-d16"
+    SUFFIX hard_vfpv3xd
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3xd"
+    MULTILIB_FLAGS "--target=armv7r-unknown-none-eabihf -mfpu=vfpv3xd"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "none"
     QEMU_CPU "cortex-r5f"
