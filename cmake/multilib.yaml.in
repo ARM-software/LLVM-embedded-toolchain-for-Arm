@@ -148,9 +148,18 @@ Mappings:
 # of each other, in the obvious way, but we don't have any libraries
 # for those at present, so there's no need to generate all their
 # flags.)
-- Match: --target=armv(8\.[1-9]|9|9\.[1-9])a-unknown-none-eabi
+- Match: --target=armv(8|8\.[1-9]|9|9\.[1-9])a-unknown-none-eabi
   Flags:
-  - --target=armv8a-unknown-none-eabi
+  - --target=armv7-unknown-none-eabi
+- Match: --target=armv(8|8\.[1-9]|9|9\.[1-9])a-unknown-none-eabihf
+  Flags:
+  - --target=armv7-unknown-none-eabihf
+- Match: --target=thumbv(8|8\.[1-9]|9|9\.[1-9])a-unknown-none-eabi
+  Flags:
+  - --target=armv7-unknown-none-eabi
+- Match: --target=thumbv(8|8\.[1-9]|9|9\.[1-9])a-unknown-none-eabihf
+  Flags:
+  - --target=armv7-unknown-none-eabihf
 
 # -march extensions
 - Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+fp16(\+[^\+]+)*
