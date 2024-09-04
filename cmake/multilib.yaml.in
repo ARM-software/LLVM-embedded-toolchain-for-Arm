@@ -144,13 +144,14 @@ Mappings:
   Flags:
   - --target=armv7-unknown-none-eabihf
 
-# Higher versions of v8-A, and v9-A, are all supersets of v8-A. (And
-# of each other, in the obvious way, but we don't have any libraries
-# for those at present, so there's no need to generate all their
-# flags.)
-- Match: --target=armv(8\.[1-9]|9|9\.[1-9])a-unknown-none-eabi
+# Higher versions of the architecture such as v8-A and v9-A are a superset of
+# v7-A.
+- Match: --target=(arm|thumb)v(8|8\.[1-9]|9|9\.[1-9])a-unknown-none-eabi
   Flags:
-  - --target=armv8a-unknown-none-eabi
+  - --target=armv7-unknown-none-eabi
+- Match: --target=(arm|thumb)v(8|8\.[1-9]|9|9\.[1-9])a-unknown-none-eabihf
+  Flags:
+  - --target=armv7-unknown-none-eabihf
 
 # -march extensions
 - Match: -march=thumbv8\.[1-9]m\.main(\+[^\+]+)*\+fp16(\+[^\+]+)*
