@@ -10,8 +10,8 @@
 # VFPV3: arm-none-eabi/armv7r_hard_vfpv3_d16_exn_rtti{{$}}
 # VFPV3-EMPTY:
 
-# RUN: %clang -print-multi-directory --target=armv7r-none-eabihf -mfpu=vfpv3xd         | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7r-none-eabihf -mfpu=vfpv3xd -marm   | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7r-none-eabihf -mfpu=vfpv3xd -mthumb | FileCheck --check-prefix=VFPV3 %s
-# VFPV3: arm-none-eabi/armv7r_hard_vfpv3xd_exn_rtti{{$}}
-# VFPV3-EMPTY:
+# RUN: %clang -print-multi-directory --target=armv7r-none-eabihf -mfpu=vfpv3xd         | FileCheck --check-prefix=VFPV3XD %s
+# RUN: %clang -print-multi-directory --target=armv7r-none-eabihf -mfpu=vfpv3xd -marm   | FileCheck --check-prefix=VFPV3XD %s
+# RUN: %clang -print-multi-directory --target=armv7r-none-eabihf -mfpu=vfpv3xd -mthumb | FileCheck --check-prefix=VFPV3XD %s
+# VFPV3XD: arm-none-eabi/armv7r_hard_vfpv3xd_exn_rtti{{$}}
+# VFPV3XD-EMPTY:
