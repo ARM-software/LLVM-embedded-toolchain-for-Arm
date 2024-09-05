@@ -23,21 +23,21 @@
 # VFPV3: arm-none-eabi/armv7a_hard_vfpv3_d16_exn_rtti{{$}}
 # VFPV3-EMPTY:
 
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=vfpv3-d16 -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=neon-vfpv3 -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=vfpv3 -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=vfpv3-d16-fp16 -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=vfpv3-fp16 -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=vfpv4-d16 -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=vfpv4 -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=neon-fp16 -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=neon-vfpv4 -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=vfpv3-d16 -marm -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=vfpv3-d16 -mthumb -mfloat-abi=softfp | FileCheck --check-prefix=VFPV3 %s
-# VFPV3: arm-none-eabi/armv7a_soft_vfpv3_d16_exn_rtti{{$}}
-# VFPV3-EMPTY:
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv3-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=neon-vfpv3 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv3 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv3-d16-fp16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv3-fp16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv4-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv4 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=neon-fp16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=neon-vfpv4 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv3-d16 -marm -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv3-d16 -mthumb -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# SOFT-VFPV3: arm-none-eabi/armv7a_soft_vfpv3_d16_exn_rtti{{$}}
+# SOFT-VFPV3-EMPTY:
 
 # We have no valid variant for this configuration, yet.
-# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv3-d16 2>&1 | FileCheck --check-prefix=NOT-FOUND %s
+# RUN: %clang -print-multi-directory --target=armv7a-none-eabi -mfpu=vfpv3xd 2>&1 | FileCheck --check-prefix=NOT-FOUND %s
 
 # NOT-FOUND: warning: no multilib found matching flags
