@@ -1672,6 +1672,23 @@ add_library_variants_for_cpu(
     STACK_SIZE 4K
 )
 add_library_variants_for_cpu(
+    armv7r
+    SUFFIX soft_vfpv3_d16
+    COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7r -mfpu=vfpv3-d16"
+    MULTILIB_FLAGS "--target=armv7r-unknown-none-eabi -mfpu=vfpv3-d16"
+    PICOLIBC_BUILD_TYPE "release"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-r5f"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x20000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x21000000
+    RAM_SIZE 0x1000000
+    STACK_SIZE 4K
+)
+add_library_variants_for_cpu(
     armv7m
     SUFFIX soft_fpv4_sp_d16
     COMPILE_FLAGS "-mfloat-abi=softfp -march=armv7m -mfpu=fpv4-sp-d16"
