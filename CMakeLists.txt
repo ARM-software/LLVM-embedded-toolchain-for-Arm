@@ -285,6 +285,7 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0006-libc-tests-with-picolibc-mark-two-more-large-tests.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0007-Remove-ctime.timespec.compile.pass.cpp-xfail.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0008-libc-AArch64-Add-an-AArch64-setjmp-longjmp-101177.patch
 )
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
@@ -928,6 +929,7 @@ function(
         -DLIBC_HDRGEN_EXE=${LIBC_HDRGEN}
         -DLIBC_CONFIG_PATH=${LIBC_CFG_DIR}
         -DLIBC_CONF_TIME_64BIT=ON
+        -DLIBC_NAMESPACE=__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH} # The default namespace generated for release candidates is invalid
         -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
         -DLLVM_ENABLE_RUNTIMES=libc
