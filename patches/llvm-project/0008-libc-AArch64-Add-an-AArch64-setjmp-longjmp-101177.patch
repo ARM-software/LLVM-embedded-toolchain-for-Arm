@@ -1,0 +1,333 @@
+From cf044b4ec3224d65603bb1805d870a3c111bc297 Mon Sep 17 00:00:00 2001
+From: Simon Tatham <simon.tatham@arm.com>
+Date: Wed, 31 Jul 2024 17:09:52 +0100
+Subject: [PATCH] [libc][AArch64] Add an AArch64 setjmp/longjmp. (#101177)
+
+Previously, building libc for AArch64 in `LLVM_LIBC_FULL_BUILD` mode
+would fail because no implementation of setjmp/longjmp was available.
+This was the only obstacle, so now a full AArch64 build of libc is
+possible.
+
+This implementation automatically supports PAC and BTI if compiled with
+the appropriate options. I would have liked to do the same for MTE stack
+tagging, but as far as I can see there's currently no predefined macro
+that allows detection of `-fsanitize=memtag-stack`, so I've left that
+one as a TODO.
+
+AAPCS64 delegates the x18 register to individual platform ABIs, and
+allows them to choose what it's used for, which may or may not require
+setjmp and longjmp to save and restore it. To accommodate this, I've
+introduced a libc configuration option. The default is on, because the
+only use of x18 I've so far encountered uses it to store information
+specific to the current stack frame (so longjmp does need to restore
+it), and this is also safe behavior in the default situation where the
+platform ABI specifies no use of x18 and it becomes a temporary register
+(restoring it to its previous value is no worse than any _other_ way for
+a function call to clobber it). But if a platform ABI needs to use x18
+in a way that requires longjmp to leave it alone, they can turn the
+option off.
+---
+ libc/config/config.json                   |  6 ++
+ libc/config/linux/aarch64/entrypoints.txt |  4 +
+ libc/docs/configure.rst                   |  2 +
+ libc/include/llvm-libc-types/jmp_buf.h    |  5 ++
+ libc/src/setjmp/aarch64/CMakeLists.txt    | 28 +++++++
+ libc/src/setjmp/aarch64/longjmp.cpp       | 90 ++++++++++++++++++++++
+ libc/src/setjmp/aarch64/setjmp.cpp        | 93 +++++++++++++++++++++++
+ 7 files changed, 228 insertions(+)
+ create mode 100644 libc/src/setjmp/aarch64/CMakeLists.txt
+ create mode 100644 libc/src/setjmp/aarch64/longjmp.cpp
+ create mode 100644 libc/src/setjmp/aarch64/setjmp.cpp
+
+diff --git a/libc/config/config.json b/libc/config/config.json
+index 2005f4297bfc..85297cd3fcb0 100644
+--- a/libc/config/config.json
++++ b/libc/config/config.json
+@@ -98,5 +98,11 @@
+       "value": "LIBC_QSORT_QUICK_SORT",
+       "doc": "Configures sorting algorithm for qsort and qsort_r. Values accepted are LIBC_QSORT_QUICK_SORT, LIBC_QSORT_HEAP_SORT."
+     }
++  },
++  "setjmp": {
++    "LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER": {
++      "value": true,
++      "doc": "Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved."
++    }
+   }
+ }
+diff --git a/libc/config/linux/aarch64/entrypoints.txt b/libc/config/linux/aarch64/entrypoints.txt
+index 0be6f884f036..d311878a8e34 100644
+--- a/libc/config/linux/aarch64/entrypoints.txt
++++ b/libc/config/linux/aarch64/entrypoints.txt
+@@ -710,6 +710,10 @@ if(LLVM_LIBC_FULL_BUILD)
+     # sched.h entrypoints
+     libc.src.sched.__sched_getcpucount
+ 
++    # setjmp.h entrypoints
++    libc.src.setjmp.longjmp
++    libc.src.setjmp.setjmp
++
+     # stdio.h entrypoints
+     libc.src.stdio.clearerr
+     libc.src.stdio.clearerr_unlocked
+diff --git a/libc/docs/configure.rst b/libc/docs/configure.rst
+index 5c55e4ab0f18..d23ba477b372 100644
+--- a/libc/docs/configure.rst
++++ b/libc/docs/configure.rst
+@@ -49,6 +49,8 @@ to learn about the defaults for your platform and target.
+ * **"scanf" options**
+     - ``LIBC_CONF_SCANF_DISABLE_FLOAT``: Disable parsing floating point values in scanf and friends.
+     - ``LIBC_CONF_SCANF_DISABLE_INDEX_MODE``: Disable index mode in the scanf format string.
++* **"setjmp" options**
++    - ``LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER``: Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved.
+ * **"string" options**
+     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
+     - ``LIBC_CONF_STRING_UNSAFE_WIDE_READ``: Read more than a byte at a time to perform byte-string operations like strlen.
+diff --git a/libc/include/llvm-libc-types/jmp_buf.h b/libc/include/llvm-libc-types/jmp_buf.h
+index 8949be9fa0ab..60e033c6c65a 100644
+--- a/libc/include/llvm-libc-types/jmp_buf.h
++++ b/libc/include/llvm-libc-types/jmp_buf.h
+@@ -35,6 +35,11 @@ typedef struct {
+ #elif defined(__arm__)
+   // r4, r5, r6, r7, r8, r9, r10, r11, r12, lr
+   long opaque[10];
++#elif defined(__aarch64__)
++  long opaque[14]; // x19-x29, lr, sp, optional x18
++#if __ARM_FP
++  long fopaque[8]; // d8-d15
++#endif
+ #else
+ #error "__jmp_buf not available for your target architecture."
+ #endif
+diff --git a/libc/src/setjmp/aarch64/CMakeLists.txt b/libc/src/setjmp/aarch64/CMakeLists.txt
+new file mode 100644
+index 000000000000..47eeb1a5c0ea
+--- /dev/null
++++ b/libc/src/setjmp/aarch64/CMakeLists.txt
+@@ -0,0 +1,28 @@
++if(LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER)
++  list(APPEND setjmp_config_options "-DLIBC_COPT_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER")
++endif()
++if(setjmp_config_options)
++  list(PREPEND setjmp_config_options "COMPILE_OPTIONS")
++endif()
++
++add_entrypoint_object(
++  setjmp
++  SRCS
++    setjmp.cpp
++  HDRS
++    ../setjmp_impl.h
++  DEPENDS
++    libc.include.setjmp
++  ${setjmp_config_options}
++)
++
++add_entrypoint_object(
++  longjmp
++  SRCS
++    longjmp.cpp
++  HDRS
++    ../longjmp.h
++  DEPENDS
++    libc.include.setjmp
++  ${setjmp_config_options}
++)
+diff --git a/libc/src/setjmp/aarch64/longjmp.cpp b/libc/src/setjmp/aarch64/longjmp.cpp
+new file mode 100644
+index 000000000000..3207cf40368c
+--- /dev/null
++++ b/libc/src/setjmp/aarch64/longjmp.cpp
+@@ -0,0 +1,90 @@
++//===-- Implementation of longjmp for AArch64 -----------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "src/setjmp/longjmp.h"
++#include "src/__support/common.h"
++#include "src/__support/macros/config.h"
++
++namespace LIBC_NAMESPACE_DECL {
++
++// TODO: if MTE stack tagging is in use (-fsanitize=memtag-stack), we need to
++// iterate over the region between the old and new values of sp, using STG or
++// ST2G instructions to clear the memory tags on the invalidated region of the
++// stack. But this requires a means of finding out that we're in that mode, and
++// as far as I can see there isn't currently a predefined macro for that.
++//
++// (__ARM_FEATURE_MEMORY_TAGGING only indicates whether the target architecture
++// supports the MTE instructions, not whether the compiler is configured to use
++// them.)
++
++[[gnu::naked]] LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
++  // If BTI branch protection is in use, the compiler will automatically insert
++  // a BTI here, so we don't need to make any extra effort to do so.
++
++  // If PAC branch protection is in use, there's no need to sign the return
++  // address at the start of longjmp, because we're not going to use it anyway!
++
++  asm(
++      // Reload the callee-saved GPRs, including fp and lr.
++      R"(
++        ldp x19, x20, [x0,  #0*16]
++        ldp x21, x22, [x0,  #1*16]
++        ldp x23, x24, [x0,  #2*16]
++        ldp x25, x26, [x0,  #3*16]
++        ldp x27, x28, [x0,  #4*16]
++        ldp x29, x30, [x0,  #5*16]
++      )"
++
++#if LIBC_COPT_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER
++      // Reload the stack pointer, and the platform register x18.
++      R"(
++        ldp x2,  x18, [x0,  #6*16]
++        mov sp, x2
++      )"
++#else
++      // Reload just the stack pointer.
++      R"(
++        ldr x2,       [x0,  #6*16]
++        mov sp, x2
++      )"
++#endif
++
++#if __ARM_FP
++      // Reload the callee-saved FP registers.
++      R"(
++        ldp d8,  d9,  [x0,  #7*16]
++        ldp d10, d11, [x0,  #8*16]
++        ldp d12, d13, [x0,  #9*16]
++        ldp d14, d15, [x0, #10*16]
++      )"
++#endif
++
++      // Calculate the return value.
++      R"(
++        cmp w1, #0
++        cinc w0, w1, eq
++      )"
++
++#if __ARM_FEATURE_PAC_DEFAULT & 1
++      // Authenticate the return address using the PAC A key.
++      R"(
++        autiasp
++      )"
++#elif __ARM_FEATURE_PAC_DEFAULT & 2
++      // Authenticate the return address using the PAC B key.
++      R"(
++        autibsp
++      )"
++#endif
++
++      R"(
++        ret
++      )");
++}
++
++} // namespace LIBC_NAMESPACE_DECL
+diff --git a/libc/src/setjmp/aarch64/setjmp.cpp b/libc/src/setjmp/aarch64/setjmp.cpp
+new file mode 100644
+index 000000000000..ba4dd645eaaa
+--- /dev/null
++++ b/libc/src/setjmp/aarch64/setjmp.cpp
+@@ -0,0 +1,93 @@
++//===-- Implementation of setjmp for AArch64 ------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "src/__support/common.h"
++#include "src/__support/macros/config.h"
++#include "src/setjmp/setjmp_impl.h"
++
++namespace LIBC_NAMESPACE_DECL {
++
++[[gnu::naked]] LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
++  // If BTI branch protection is in use, the compiler will automatically insert
++  // a BTI here, so we don't need to make any extra effort to do so.
++
++  asm(
++#if __ARM_FEATURE_PAC_DEFAULT & 1
++      // Sign the return address using the PAC A key.
++      R"(
++        paciasp
++      )"
++#elif __ARM_FEATURE_PAC_DEFAULT & 2
++      // Sign the return address using the PAC B key.
++      R"(
++        pacibsp
++      )"
++#endif
++
++      // Store all the callee-saved GPRs, including fp (x29) and also lr (x30).
++      // Of course lr isn't normally callee-saved (the call instruction itself
++      // can't help clobbering it), but we certainly need to save it for this
++      // purpose.
++      R"(
++        stp x19, x20, [x0,  #0*16]
++        stp x21, x22, [x0,  #1*16]
++        stp x23, x24, [x0,  #2*16]
++        stp x25, x26, [x0,  #3*16]
++        stp x27, x28, [x0,  #4*16]
++        stp x29, x30, [x0,  #5*16]
++      )"
++
++#if LIBC_COPT_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER
++      // Store the stack pointer, and the platform register x18.
++      R"(
++        add x1, sp, #0
++        stp x1, x18,  [x0,  #6*16]
++      )"
++#else
++      // Store just the stack pointer.
++      R"(
++        add x1, sp, #0
++        str x1,       [x0,  #6*16]
++      )"
++#endif
++
++#if __ARM_FP
++      // Store the callee-saved FP registers. AAPCS64 only requires the low 64
++      // bits of v8-v15 to be preserved, i.e. each of d8,...,d15.
++      R"(
++        stp d8,  d9,  [x0,  #7*16]
++        stp d10, d11, [x0,  #8*16]
++        stp d12, d13, [x0,  #9*16]
++        stp d14, d15, [x0, #10*16]
++      )"
++#endif
++
++      // Set up return value of zero.
++      R"(
++        mov x0, #0
++      )"
++
++#if (__ARM_FEATURE_PAC_DEFAULT & 7) == 5
++      // Authenticate the return address using the PAC A key, since the
++      // compilation options ask for PAC protection even on leaf functions.
++      R"(
++        autiasp
++      )"
++#elif (__ARM_FEATURE_PAC_DEFAULT & 7) == 6
++      // Same, but using the PAC B key.
++      R"(
++        autibsp
++      )"
++#endif
++
++      R"(
++        ret
++      )");
++}
++
++} // namespace LIBC_NAMESPACE_DECL
+-- 
+2.34.1
+
