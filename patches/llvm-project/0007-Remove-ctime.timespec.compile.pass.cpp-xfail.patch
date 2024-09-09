@@ -1,0 +1,28 @@
+From 062e640b82615fff780781e9d7d58a11a970e85f Mon Sep 17 00:00:00 2001
+From: David Candler <david.candler@arm.com>
+Date: Mon, 9 Sep 2024 13:55:35 +0100
+Subject: [PATCH] Remove ctime.timespec.compile.pass.cpp xfail
+
+This test was failing because picolibc did not define TIME_UTC, but more
+recent versions do now do this.
+---
+ .../support.runtime/ctime.timespec.compile.pass.cpp            | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp b/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp
+index b7fd892003e2..194262bb42e3 100644
+--- a/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp
++++ b/libcxx/test/std/language.support/support.runtime/ctime.timespec.compile.pass.cpp
+@@ -11,9 +11,6 @@
+ 
+ // UNSUPPORTED: c++03, c++11, c++14
+ 
+-// picolibc doesn't define TIME_UTC.
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
+-
+ // ::timespec_get is provided by the C library, but it's marked as
+ // unavailable until macOS 10.15
+ // XFAIL: target={{.+}}-apple-macosx10.{{13|14}}
+-- 
+2.34.1
+
