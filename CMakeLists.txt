@@ -278,11 +278,12 @@ endif()
 # ed551e0778a35f00ab60f1c80d83ea8274d8d400.
 set(
     llvm_project_patches
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-libc-tests-with-picolibc-xfail-one-remaining-test.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-libc-tests-with-picolibc-xfail-two-remaining-tests.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0002-libc-tests-with-picolibc-disable-large-tests.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0003-Disable-failing-compiler-rt-test.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-libc-tests-with-picolibc-mark-two-more-large-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-libc-tests-with-picolibc-mark-sort-test-as-long-one.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0006-libc-tests-with-picolibc-mark-two-more-large-tests.patch
 )
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
@@ -1087,7 +1088,7 @@ Hard-float library with target triple \"${target_triple}\" must end \"-eabihf\""
 
     get_runtimes_flags("${directory}" "${flags}")
 
-    set(compiler_rt_test_flags "${runtimes_flags} -fno-exceptions -fno-rtti -nostartfiles -lcrt0-semihost -lsemihost -T picolibcpp.ld")
+    set(compiler_rt_test_flags "${runtimes_flags} -fno-exceptions -fno-rtti -lcrt0-semihost -lsemihost -T picolibcpp.ld")
     if(variant STREQUAL "armv6m_soft_nofp")
         set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
     endif()
@@ -1214,7 +1215,6 @@ function(
         -DLIBCXXABI_TEST_PARAMS=executor=${test_executor}
         -DLIBCXX_ABI_UNSTABLE=ON
         -DLIBCXX_CXX_ABI=libcxxabi
-        -DLIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY=ON
         -DLIBCXX_ENABLE_FILESYSTEM=OFF
         -DLIBCXX_ENABLE_SHARED=OFF
         -DLIBCXX_ENABLE_STATIC=ON

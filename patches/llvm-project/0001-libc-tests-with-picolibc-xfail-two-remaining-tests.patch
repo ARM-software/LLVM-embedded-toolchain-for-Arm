@@ -1,0 +1,43 @@
+From cb6cfe0e5fc29d3867f523900f0d46a4ef5dff1b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Mon, 16 Oct 2023 11:35:48 +0200
+Subject: [libc++] tests with picolibc: xfail two remaining tests
+
+---
+ .../cmp/cmp.alg/strong_order_long_double.verify.cpp          | 5 +++++
+ .../language.support/support.start.term/quick_exit.pass.cpp  | 3 +++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/libcxx/test/std/language.support/cmp/cmp.alg/strong_order_long_double.verify.cpp b/libcxx/test/std/language.support/cmp/cmp.alg/strong_order_long_double.verify.cpp
+index c9c2ba200214..4898a9a06e09 100644
+--- a/libcxx/test/std/language.support/cmp/cmp.alg/strong_order_long_double.verify.cpp
++++ b/libcxx/test/std/language.support/cmp/cmp.alg/strong_order_long_double.verify.cpp
+@@ -12,6 +12,11 @@
+ // This test does apply to aarch64 where Arm's AAPCS64 is followed. There they are different sizes.
+ // XFAIL: target={{arm64|arm64e|armv(7|8)(l|m)?|powerpc|powerpc64}}-{{.+}}
+ 
++// In internal LLVM arm BMT tests the target is fixed to "arm-none-eabi", so the
++// "unsupported" cluase above does not work. TODO: find more generic way to
++// detect equal sizes of double and long double
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ // MSVC configurations have long double equal to regular double on all
+ // architectures.
+ // XFAIL: target={{.+}}-pc-windows-msvc
+diff --git a/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp b/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp
+index 5a70ea5bd570..92dfbe8eb1ab 100644
+--- a/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp
++++ b/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp
+@@ -16,6 +16,9 @@
+ 
+ // test quick_exit and at_quick_exit
+ 
++// TODO: Find out why the at_quick_exit symbol is not found.
++// XFAIL: LIBCXX-PICOLIBC-FIXME
++
+ #include <cstdlib>
+ 
+ void f() {}
+-- 
+2.34.1
+

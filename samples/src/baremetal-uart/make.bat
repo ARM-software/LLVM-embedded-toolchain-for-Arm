@@ -49,6 +49,6 @@ if exist hello.hex del /q hello.hex
 @exit /B 1
 
 :build_fn
-%BIN_PATH%\clang.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -g -T ..\..\ldscripts\microbit.ld -o hello.elf hello.c
+%BIN_PATH%\clang.exe --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -lcrt0 -g -T ..\..\ldscripts\microbit.ld -o hello.elf hello.c
 %BIN_PATH%\llvm-objcopy.exe -O ihex hello.elf hello.hex
 @exit /B
