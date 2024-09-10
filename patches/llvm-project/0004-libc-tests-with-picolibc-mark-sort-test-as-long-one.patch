@@ -1,0 +1,26 @@
+From ac480df06d78bd7457d2a6333be8578cda88c240 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
+Date: Thu, 9 Nov 2023 14:14:30 +0100
+Subject: [libc++] tests with picolibc: mark sort test as long one
+
+---
+ .../std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp     | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp b/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
+index e2581fbf2fa6..99a9e1775513 100644
+--- a/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
++++ b/libcxx/test/std/algorithms/alg.sorting/alg.sort/sort/sort.pass.cpp
+@@ -6,8 +6,7 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// This test appears to hang with picolibc & qemu.
+-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
++// REQUIRES: long_test
+ 
+ // <algorithm>
+ 
+-- 
+2.34.1
+

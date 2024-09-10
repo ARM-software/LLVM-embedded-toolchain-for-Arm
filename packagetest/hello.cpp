@@ -1,4 +1,4 @@
-// RUN: %clangxx --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -nostartfiles -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti -T %S/Inputs/microbit.ld %s -o %t.out
+// RUN: %clangxx --target=armv6m-none-eabi -mfloat-abi=soft -march=armv6m -mfpu=none -lcrt0-semihost -lsemihost -fno-exceptions -fno-rtti -T %S/Inputs/microbit.ld %s -o %t.out
 // RUN: qemu-system-arm -M microbit -semihosting -nographic -device loader,file=%t.out 2>&1 | FileCheck %s
 
 // Include as many C++17 headers as possible.

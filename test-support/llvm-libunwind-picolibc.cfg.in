@@ -32,7 +32,7 @@ config.substitutions.append(('%{link_flags}',
     ' -nostdlib++ -L %{lib}'
     ' -lc++ -lc++abi -lunwind'
     ' -nostdlib -L %{libc-lib}'
-    ' -lc -lm -lclang_rt.builtins -lsemihost -nostartfiles -lcrt0-semihost'
+    ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost'
     ' -T %{libc-linker-script}'
 ))
 config.substitutions.append(('%{exec}',
