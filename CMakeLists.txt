@@ -392,6 +392,19 @@ if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)
     # find one for every libc type. We have no current setup to run the LLVM
     # libc test suite.
     add_custom_target(check-llvmlibc)
+
+    # LLVM libc lacks a configuration for AArch64, but the AArch32 one works
+    # fine. However, setting the configuration for both architectures to the
+    # arm config directory means the baremetal config.json is never loaded,
+    # as it resides in the directory above. To ensure both are used, copy
+    # them to the same location and point libc to that.
+    set(LIBC_CFG_DIR ${CMAKE_BINARY_DIR}/llvmlibc-config)
+    file(COPY
+        ${llvmproject_SOURCE_DIR}/libc/config/baremetal/config.json
+        ${llvmproject_SOURCE_DIR}/libc/config/baremetal/arm/.
+        DESTINATION
+        ${LIBC_CFG_DIR}
+    )
 endif()
 
 add_subdirectory(
@@ -911,7 +924,7 @@ function(
         ${common_cmake_args}
         -DLIBC_TARGET_TRIPLE=${target_triple}
         -DLIBC_HDRGEN_EXE=${LIBC_HDRGEN}
-        -DLIBC_CONFIG_PATH=${llvmproject_SOURCE_DIR}/libc/config/baremetal/arm # llvmlibc has no AArch64 bare-metal configuration, but the AArch32 one is fine
+        -DLIBC_CONFIG_PATH=${LIBC_CFG_DIR}
         -DLIBC_CONF_TIME_64BIT=ON
         -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm
         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
