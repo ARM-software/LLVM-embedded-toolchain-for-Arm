@@ -20,12 +20,15 @@
 # MVE: arm-none-eabi/armv8.1m.main_hard_nofp_mve_exn_rtti{{$}}
 # MVE-EMPTY:
 
-# TODO: We need to find a way to make this fail. For now it fallbacks to
-# arm-none-eabi/armv8.1m.main_soft_nofp, which will not initilize the
-# coprocessor nor will save/restore its registers in setjmp/longjmp.
-# DONT-RUN-YET: %clang -print-multi-directory --target=armv8.1m.main-none-eabi -march=armv8.1m.main+mve -mfpu=none | FileCheck --check-prefix=SOFTFP_MVE %s
-# SOFTFP_MVE: ?
-# SOFTFP_MVE-EMPTY:
+## This combination is not supported at all, because we don't provide any
+## MVE libraries with the soft-float ABI, and we can't fall back to Armv7-M
+## soft-float libraries because they won't initialize the FPSCR correctly
+## for MVE, or save and restore the vector registers in setjmp/longjmp.
+## So we expect this to fail, with a custom error message.
+# RUN: not %clang -print-multi-directory --target=armv8.1m.main-none-eabi -march=armv8.1m.main+mve -mfpu=none 2>%t | FileCheck --check-prefix=SOFTFP_MVE --allow-empty %s
+# RUN: FileCheck --check-prefix=SOFTFP_MVE_ERR %s < %t
+# SOFTFP_MVE-NOT: arm-none-eabi
+# SOFTFP_MVE_ERR: clang: error: multilib configuration error: No library available for MVE with soft-float ABI. Try -mfloat-abi=hard.
 
 # RUN: %clang -print-multi-flags-experimental --target=arm-none-eabihf -mcpu=cortex-m55 | FileCheck --check-prefix=CORTEXM55 %s
 # CORTEXM55: -march=thumbv8.1m.main+fp16
