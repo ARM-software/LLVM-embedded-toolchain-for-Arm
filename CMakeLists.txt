@@ -1441,6 +1441,26 @@ function(add_library_variant target_arch)
     set(multilib_yaml_content "${multilib_yaml_content}" PARENT_SCOPE)
 endfunction()
 
+function(add_nonexistent_library_variant)
+    set(
+        one_value_args
+        MULTILIB_FLAGS
+        ERROR_MESSAGE
+    )
+    cmake_parse_arguments(ERR "" "${one_value_args}" "" ${ARGN})
+
+    string(APPEND multilib_yaml_content "- FatalError: \"${ERR_ERROR_MESSAGE}\"\n")
+
+    string(APPEND multilib_yaml_content "  Flags:\n")
+    string(REPLACE " " ";" multilib_flags_list ${ERR_MULTILIB_FLAGS})
+    foreach(flag ${multilib_flags_list})
+        string(APPEND multilib_yaml_content "  - ${flag}\n")
+    endforeach()
+    string(APPEND multilib_yaml_content "  Group: stdlibs\n")
+
+    set(multilib_yaml_content "${multilib_yaml_content}" PARENT_SCOPE)
+endfunction()
+
 function(add_library_variants_for_cpu target_arch)
     set(
         one_value_args
@@ -1853,6 +1873,17 @@ add_library_variants_for_cpu(
     RAM_ADDRESS 0x61000000
     RAM_SIZE 0x1000000
     STACK_SIZE 4K
+)
+add_nonexistent_library_variant(
+    # We don't build any MVE-capable libraries with the soft-float ABI.
+    # We do have Armv7-M soft-float libraries, but you can't fall back to
+    # using those, because MVE requires the FPSCR to be set up specially
+    # at startup time, and our v7-M soft-float libraries don't do that.
+    #
+    # So, rather than select one of those libraries and silently generate
+    # wrong MVE code, we force an error report instead.
+    MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabi -march=thumbv8.1m.main+mve"
+    ERROR_MESSAGE "No library available for MVE with soft-float ABI. Try -mfloat-abi=hard."
 )
 # FIXME: qemu currently has no support for PACBTI-M, so the branch protection
 # variants below can't be fully tested in runtime. Since PACBTI-M instructions
