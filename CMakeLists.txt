@@ -1861,7 +1861,7 @@ add_library_variants_for_cpu(
 add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX soft_nofp_nomve_pacret_bti
-    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nomve -mfpu=none -mbranch-protection=standard"
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nomve+pacbti -mfpu=none -mbranch-protection=standard"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabi -mfpu=none -mbranch-protection=standard"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps3-an547"
@@ -1877,7 +1877,7 @@ add_library_variants_for_cpu(
 add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_fp_nomve_pacret_bti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-sp-d16 -mbranch-protection=standard"
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve+pacbti -mfpu=fp-armv8-fullfp16-sp-d16 -mbranch-protection=standard"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16 -mbranch-protection=standard"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps3-an547"
@@ -1893,7 +1893,7 @@ add_library_variants_for_cpu(
 add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_fpdp_nomve_pacret_bti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-d16 -mbranch-protection=standard"
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve+pacbti -mfpu=fp-armv8-fullfp16-d16 -mbranch-protection=standard"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16 -mbranch-protection=standard"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps3-an547"
@@ -1909,7 +1909,7 @@ add_library_variants_for_cpu(
 add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX hard_nofp_mve_pacret_bti
-    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+mve -mfpu=none -mbranch-protection=standard"
+    COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+mve+pacbti -mfpu=none -mbranch-protection=standard"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+mve -mfpu=none -mbranch-protection=standard"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "mps3-an547"
