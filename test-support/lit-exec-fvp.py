@@ -17,8 +17,13 @@ def main():
         description="Run a single test using qemu"
     )
     parser.add_argument(
-        "--fvp-root-dir",
+        "--fvp-install-dir",
         help="Directory in which FVP models are installed",
+        required=True,
+    )
+    parser.add_argument(
+        "--fvp-config-dir",
+        help="Directory containing FVP config files",
         required=True,
     )
     main_arg_group.add_argument(
@@ -73,7 +78,8 @@ def main():
     )
     args = parser.parse_args()
     return run_fvp(
-        args.fvp_root_dir,
+        args.fvp_install_dir,
+        args.fvp_config_dir,
         args.fvp_model,
         args.fvp_config,
         args.image,

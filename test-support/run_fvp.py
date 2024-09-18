@@ -34,7 +34,8 @@ MODELS = {
 
 
 def run_fvp(
-    fvp_root_dir,
+    fvp_install_dir,
+    fvp_config_dir,
     fvp_model,
     fvp_configs,
     image,
@@ -49,16 +50,16 @@ def run_fvp(
         raise Exception(f"{fvp_model} is not a recognised model name")
     model = MODELS[fvp_model]
 
-    command = [path.join(fvp_root_dir, model.model_exe)]
+    command = [path.join(fvp_install_dir, model.model_exe)]
     command.extend(["--quiet"])
     for config in fvp_configs:
-        command.extend(["--config-file", path.join(fvp_root_dir, "config", config + ".cfg")])
+        command.extend(["--config-file", path.join(fvp_config_dir, config + ".cfg")])
     command.extend(["--application", image])
     command.extend(["--parameter", f"{model.cmdline_param}={shlex.join(arguments)}"])
     if tarmac_file is not None:
         command.extend([
             "--plugin",
-            path.join(fvp_root_dir, model.tarmac_plugin),
+            path.join(fvp_install_dir, model.tarmac_plugin),
             "--parameter",
             "TRACE.TarmacTrace.trace-file=" + tarmac_file,
         ])

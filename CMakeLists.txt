@@ -136,11 +136,12 @@ option(
 )
 set(
     FVP_INSTALL_DIR
-    "${CMAKE_CURRENT_SOURCE_DIR}/fvp" CACHE STRING
+    "${CMAKE_CURRENT_SOURCE_DIR}/fvp/install" CACHE STRING
     "The directory in which the FVP models are installed. These are not
     included in this repository, but can be downloaded by the script
     fvp/get_fvps.sh"
 )
+set(FVP_CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fvp/config")
 set(LLVM_TOOLCHAIN_C_LIBRARY
     "picolibc" CACHE STRING
     "Which C library to use."
@@ -677,7 +678,8 @@ endfunction()
 function(get_fvp_params fvp_model fvp_config)
     set(
         test_executor_params
-        --fvp-root-dir ${FVP_INSTALL_DIR}
+        --fvp-install-dir ${FVP_INSTALL_DIR}
+        --fvp-config-dir ${FVP_CONFIG_DIR}
         --fvp-model ${fvp_model}
     )
     string(REPLACE " " ";" fvp_config_list ${fvp_config})
@@ -1404,7 +1406,7 @@ function(add_library_variant target_arch)
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
 
     if(VARIANT_EXECUTOR STREQUAL "fvp")
-      if(EXISTS "${FVP_INSTALL_DIR}/complete")
+      if(EXISTS "${FVP_INSTALL_DIR}")
             get_fvp_params(
               "${VARIANT_FVP_MODEL}"
               "${VARIANT_FVP_CONFIG}"

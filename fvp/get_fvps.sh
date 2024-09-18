@@ -8,7 +8,7 @@ set -euxo pipefail
 # that you agree to these EULAs. If run without that option, the installers for
 # some of the packages will present you with the license before installing. The
 # AEMv8A and AEMv8R packages do not have installers, instead they place their
-# license into the `fvps/license_terms' directory.
+# license into the `fvp/install/license_terms' directory.
 
 args=$(getopt --options "" --longoptions "non-interactive" -- "${@}") || exit
 eval "set -- ${args}"
@@ -48,6 +48,9 @@ wget --content-disposition --no-clobber "${URL_BASE_AEM_R}"
 wget --content-disposition --no-clobber "${URL_CRYPTO}"
 popd
 
+mkdir -p install
+pushd install
+
 if [ ! -d "Corstone-310" ]; then
 tar -xf ${DOWNLOAD_DIR}/FVP_Corstone_SSE-310_11.24_13_Linux64.tgz
 ./FVP_Corstone_SSE-310.sh --destination ./Corstone-310 $INSTALLER_FLAGS_CORSTONE
@@ -73,6 +76,4 @@ pushd FastModels_crypto_11.26.011_Linux64
 popd
 fi
 
-# Create a marker file the CMakeLists.txt can use to check if it can use the
-# FVPs or not.
-touch complete
+popd

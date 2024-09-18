@@ -79,7 +79,8 @@ def run(args):
         )
     else:
         return run_fvp(
-            args.fvp_root_dir,
+            args.fvp_install_dir,
+            args.fvp_config_dir,
             args.fvp_model,
             args.fvp_config,
             args.image,
@@ -100,7 +101,7 @@ def main():
         "--qemu-command", help="qemu-system-<arch> path"
     )
     main_arg_group.add_argument(
-        "--fvp-root-dir", help="Directory in which FVP models are installed"
+        "--fvp-install-dir", help="Directory in which FVP models are installed"
     )
     parser.add_argument(
         "--qemu-machine",
@@ -112,6 +113,9 @@ def main():
     parser.add_argument(
         "--qemu-params",
         help='list of arguments to pass to qemu, separated with ":"',
+    )
+    parser.add_argument(
+        "--fvp-config-dir", help="Directory in which FVP models are installed"
     )
     parser.add_argument(
         "--fvp-model",
