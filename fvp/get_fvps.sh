@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euxo pipefail
+# SPDX-FileCopyrightText: Copyright 2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
 
 # This script downloads the FVP models which we use for testing the toolchain.
 # These are available at no cost, but come with EULAs which must be agreed to
@@ -9,6 +9,8 @@ set -euxo pipefail
 # some of the packages will present you with the license before installing. The
 # AEMv8A and AEMv8R packages do not have installers, instead they place their
 # license into the `fvp/install/license_terms' directory.
+
+set -euxo pipefail
 
 args=$(getopt --options "" --longoptions "non-interactive" -- "${@}") || exit
 eval "set -- ${args}"

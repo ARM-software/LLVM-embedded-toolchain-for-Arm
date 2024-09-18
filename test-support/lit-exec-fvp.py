@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2023-2024, Arm Limited and affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
 
 # This script is a bridge between lit-based tests of LLVM C++ runtime libraries
 # (libc++abi, libunwind, libc++) and FVP models. It must handle the same
