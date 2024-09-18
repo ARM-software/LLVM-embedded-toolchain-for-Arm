@@ -1,4 +1,4 @@
-From 3b7ada947d511fe0edb7cca0dbdb640d8e1ecd2b Mon Sep 17 00:00:00 2001
+From 46019866b66f8859e7dff666c519c35d5b921291 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Thu, 9 Nov 2023 15:25:14 +0100
 Subject: [libc++] tests with picolibc: XFAIL uses of atomics
@@ -88,10 +88,10 @@ index 000000000000..5ecc58f3e385
 +if "has-no-atomics" in config.available_features:
 +    config.unsupported = True
 diff --git a/libcxx/utils/libcxx/test/features.py b/libcxx/utils/libcxx/test/features.py
-index 6ef40755c59d..6c2960260189 100644
+index 15456171b548..ddd44a63c618 100644
 --- a/libcxx/utils/libcxx/test/features.py
 +++ b/libcxx/utils/libcxx/test/features.py
-@@ -206,6 +206,21 @@ DEFAULT_FEATURES = [
+@@ -215,6 +215,21 @@ DEFAULT_FEATURES = [
            """,
          ),
      ),
@@ -114,5 +114,5 @@ index 6ef40755c59d..6c2960260189 100644
      Feature(
          name="32-bit-pointer",
 -- 
-2.34.1
+2.39.5 (Apple Git-154)
 

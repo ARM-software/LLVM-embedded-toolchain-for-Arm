@@ -1,14 +1,14 @@
-From 1db48238bfbc5324dadf828532a4c67524dc471b Mon Sep 17 00:00:00 2001
+From fd26b5fd6a882677062a7c495660f22ca2b13cd5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Mon, 16 Oct 2023 11:35:48 +0200
-Subject: [PATCH] [libc++] tests with picolibc: xfail one remaining test
+Subject: [libc++] tests with picolibc: xfail one remaining test
 
 ---
  .../language.support/support.start.term/quick_exit.pass.cpp    | 3 +++
  1 file changed, 3 insertions(+)
 
 diff --git a/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp b/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp
-index d8eff69cb5..e16048df72 100644
+index d8eff69cb53f..e16048df722e 100644
 --- a/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp
 +++ b/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp
 @@ -17,6 +17,9 @@
@@ -22,5 +22,5 @@ index d8eff69cb5..e16048df72 100644
  
  void f() {}
 -- 
-2.34.1
+2.39.5 (Apple Git-154)
 
