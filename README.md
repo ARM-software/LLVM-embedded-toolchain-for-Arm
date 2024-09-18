@@ -26,7 +26,11 @@ embedded and realtime operating systems.
 - Armv4T (experimental)
 - Armv5TE (experimental)
 - Armv6 (experimental, using the Armv5TE library variant)
-- AArch64 armv8.0 (experimental)
+- Armv7-A
+- Armv7-R
+- AArch32 Armv8-A
+- AArch32 Armv8-R
+- AArch64 Armv8-A
 
 ## C++ support
 
