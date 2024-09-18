@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 - Use unstable libc++ ABI (#294).
 - Merge v7-M and v7E-M library variants (#482).
-- AArch64 A profile library made distinct (#468).
+- AArch64 A-profile library made distinct (#468).
 
 ## [18.0.0]
 
