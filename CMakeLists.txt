@@ -1404,7 +1404,7 @@ function(add_library_variant target_arch)
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
 
     if(VARIANT_EXECUTOR STREQUAL "fvp")
-      if (EXISTS "${FVP_INSTALL_DIR}/complete")
+      if(EXISTS "${FVP_INSTALL_DIR}/complete")
             get_fvp_params(
               "${VARIANT_FVP_MODEL}"
               "${VARIANT_FVP_CONFIG}"
