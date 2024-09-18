@@ -11,3 +11,14 @@ __pycache__
 # IDEs
 .vscode
 compile_commands.json
+
+# Downloaded FVPs
+/fvp/AEMv8R_base_pkg/
+/fvp/Base_RevC_AEMvA_pkg/
+/fvp/Corstone-310/
+/fvp/FVP_Corstone_SSE-310.sh
+/fvp/FastModelsPortfolio_11.26/
+/fvp/FastModels_crypto_11.26.011_Linux64/
+/fvp/complete
+/fvp/download/
+/fvp/license_terms/
