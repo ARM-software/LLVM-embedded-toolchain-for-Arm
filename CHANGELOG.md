@@ -6,8 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [19.0.0]
+
+### Added
+- AArch32 v8-A and v8-R can now be targeted (#484) (#486).
+- Experimental support for building llvm-libc overlay package (#452).
+- Additional library variants for Armv7 (#464) (#491) (#494).
+- Additional multilib mappings for v7ve and Thumb target triples (#479) (#481).
+- Omax and OmaxLTO config files (#454).
+
 ### Changed
 - Use unstable libc++ ABI (#294).
+- Merge v7-M and v7E-M library variants (#482).
+- AArch64 A-profile library made distinct (#468).
+
+## [18.0.0]
+
+### Added
+
+- Documentation for the newlib overlay package (#399).
+- Support for C++ exceptions and RTTI added in the standard libraries (#339).
 
 ## [17.0.0]
 
