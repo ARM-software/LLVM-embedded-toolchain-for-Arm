@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2023, Arm Limited and affiliates.
+# SPDX-FileCopyrightText: Copyright 2023-2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
 
-# This is a wrapper script to run picolibc tests with QEMU.
+# This is a wrapper script to run picolibc tests with QEMU or FVPs.
 
 from run_qemu import run_qemu
+from run_fvp import run_fvp
 import argparse
 import pathlib
 import sys
@@ -38,37 +39,72 @@ disabled_tests = [
     "picolibc_armv8.1m.main_hard_nofp_mve_pacret_bti_exn_rtti-build/test/math_errhandling",
 ]
 
+disabled_tests_fvp = [
+    # SDDKW-53824: ":semihosting-features" pseudo-file not implemented.
+    "test/semihost/semihost-exit-extended",
+    # SDDKW-25808: SYS_SEEK returns wrong value.
+    "test/semihost/semihost-seek",
+    "test/test-fread-fwrite",
+    "test/posix-io",
+    # SDDKW-94045: rateInHz port not connected in Corstone-310 FVP.
+    "test/semihost/semihost-gettimeofday",
+]
 
-def is_disabled(image):
-    return any([image.endswith(t) for t in disabled_tests])
+
+def is_disabled(image, use_fvp):
+    if any([image.endswith(t) for t in disabled_tests]):
+        return True
+    if use_fvp and any([image.endswith(t) for t in disabled_tests_fvp]):
+        return True
+    return False
 
 
 def run(args):
-    if is_disabled(args.image):
+    if is_disabled(args.image, args.qemu_command is None):
         return EXIT_CODE_SKIP
-    return run_qemu(
-        args.qemu_command,
-        args.qemu_machine,
-        args.qemu_cpu,
-        args.qemu_params.split(":") if args.qemu_params else [],
-        args.image,
-        ["program-name"] + args.arguments,
-        None,
-        pathlib.Path.cwd(),
-        args.verbose,
-    )
+    # Some picolibc tests expect argv[0] to be literally "program-name", not
+    # the actual program name.
+    argv = ["program-name"] + args.arguments
+    if args.qemu_command:
+        return run_qemu(
+            args.qemu_command,
+            args.qemu_machine,
+            args.qemu_cpu,
+            args.qemu_params.split(":") if args.qemu_params else [],
+            args.image,
+            argv,
+            None,
+            pathlib.Path.cwd(),
+            args.verbose,
+        )
+    else:
+        return run_fvp(
+            args.fvp_install_dir,
+            args.fvp_config_dir,
+            args.fvp_model,
+            args.fvp_config,
+            args.image,
+            argv,
+            None,
+            pathlib.Path.cwd(),
+            args.verbose,
+            args.tarmac,
+        )
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run a single test using qemu"
+        description="Run a single test using either qemu or an FVP"
     )
-    parser.add_argument(
-        "--qemu-command", required=True, help="qemu-system-<arch> path"
+    main_arg_group = parser.add_mutually_exclusive_group(required=True)
+    main_arg_group.add_argument(
+        "--qemu-command", help="qemu-system-<arch> path"
+    )
+    main_arg_group.add_argument(
+        "--fvp-install-dir", help="Directory in which FVP models are installed"
     )
     parser.add_argument(
         "--qemu-machine",
-        required=True,
         help="name of the machine to pass to QEMU",
     )
     parser.add_argument(
@@ -76,8 +112,23 @@ def main():
     )
     parser.add_argument(
         "--qemu-params",
-        required=False,
         help='list of arguments to pass to qemu, separated with ":"',
+    )
+    parser.add_argument(
+        "--fvp-config-dir", help="Directory in which FVP models are installed"
+    )
+    parser.add_argument(
+        "--fvp-model",
+        help="model name for FVP",
+    )
+    parser.add_argument(
+        "--fvp-config",
+        action="append",
+        help="FVP config file(s) to use",
+    )
+    parser.add_argument(
+        "--tarmac",
+        help="file to wrote tarmac trace to (FVP only)",
     )
     parser.add_argument(
         "--verbose",

@@ -134,7 +134,14 @@ option(
     the tools every time you update llvm-project."
     ON
 )
-
+set(
+    FVP_INSTALL_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/fvp/install" CACHE STRING
+    "The directory in which the FVP models are installed. These are not
+    included in this repository, but can be downloaded by the script
+    fvp/get_fvps.sh"
+)
+set(FVP_CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fvp/config")
 set(LLVM_TOOLCHAIN_C_LIBRARY
     "picolibc" CACHE STRING
     "Which C library to use."
@@ -644,7 +651,7 @@ set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
 
 add_custom_target(check-newlib) # FIXME: put things in this
 
-function(get_test_executor_params target_triple qemu_machine qemu_cpu qemu_params)
+function(get_qemu_params target_triple qemu_machine qemu_cpu qemu_params)
     if(target_triple MATCHES "^aarch64")
         set(qemu_command "qemu-system-aarch64")
     else()
@@ -665,6 +672,24 @@ function(get_test_executor_params target_triple qemu_machine qemu_cpu qemu_param
     if(qemu_params_list)
         list(APPEND test_executor_params "--qemu-params=${qemu_params_list}")
     endif()
+    set(test_executor_params "${test_executor_params}" PARENT_SCOPE)
+endfunction()
+
+function(get_fvp_params fvp_model fvp_config)
+    set(
+        test_executor_params
+        --fvp-install-dir ${FVP_INSTALL_DIR}
+        --fvp-config-dir ${FVP_CONFIG_DIR}
+        --fvp-model ${fvp_model}
+    )
+    string(REPLACE " " ";" fvp_config_list ${fvp_config})
+    foreach(cfg ${fvp_config_list})
+          set(
+              test_executor_params
+              ${test_executor_params}
+              --fvp-config ${cfg}
+          )
+    endforeach()
     set(test_executor_params "${test_executor_params}" PARENT_SCOPE)
 endfunction()
 
@@ -1328,9 +1353,12 @@ function(add_library_variant target_arch)
         COMPILE_FLAGS
         MULTILIB_FLAGS
         PICOLIBC_BUILD_TYPE
+        EXECUTOR
         QEMU_MACHINE
         QEMU_CPU
         QEMU_PARAMS
+        FVP_MODEL
+        FVP_CONFIG
         BOOT_FLASH_ADDRESS
         BOOT_FLASH_SIZE
         FLASH_ADDRESS
@@ -1376,19 +1404,40 @@ function(add_library_variant target_arch)
 
     set(directory "${TARGET_LIBRARIES_DIR}${library_subdir}/${parent_dir_name}/${variant}")
     set(VARIANT_COMPILE_FLAGS "--target=${target_triple} ${VARIANT_COMPILE_FLAGS}")
-    get_test_executor_params(
-        "${target_triple}"
-        "${VARIANT_QEMU_MACHINE}"
-        "${VARIANT_QEMU_CPU}"
-        "${VARIANT_QEMU_PARAMS}"
-    )
-    set(
-        lit_test_executor
-        ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
-        ${test_executor_params}
-    )
+
+    if(VARIANT_EXECUTOR STREQUAL "fvp")
+      if(EXISTS "${FVP_INSTALL_DIR}")
+            get_fvp_params(
+              "${VARIANT_FVP_MODEL}"
+              "${VARIANT_FVP_CONFIG}"
+            )
+            set(
+                lit_test_executor
+                ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-fvp.py
+                ${test_executor_params}
+            )
+            set(have_executor TRUE)
+        else()
+            set(have_executor FALSE)
+        endif()
+    else()
+        get_qemu_params(
+            "${target_triple}"
+            "${VARIANT_QEMU_MACHINE}"
+            "${VARIANT_QEMU_CPU}"
+            "${VARIANT_QEMU_PARAMS}"
+        )
+        set(
+            lit_test_executor
+            ${CMAKE_CURRENT_SOURCE_DIR}/test-support/lit-exec-qemu.py
+            ${test_executor_params}
+        )
+        set(have_executor TRUE)
+    endif()
     list(JOIN lit_test_executor " " lit_test_executor)
-    if(NOT PREBUILT_TARGET_LIBRARIES)
+    if(NOT have_executor)
+        message("All library tests disabled for ${variant}, due to missing executor")
+    elseif(NOT PREBUILT_TARGET_LIBRARIES)
         add_libc(
             "${directory}"
             "${variant}"
@@ -1481,9 +1530,12 @@ function(add_library_variants_for_cpu target_arch)
         COMPILE_FLAGS
         MULTILIB_FLAGS
         PICOLIBC_BUILD_TYPE
+        EXECUTOR
         QEMU_MACHINE
         QEMU_CPU
         QEMU_PARAMS
+        FVP_MODEL
+        FVP_CONFIG
         BOOT_FLASH_ADDRESS
         BOOT_FLASH_SIZE
         FLASH_ADDRESS
@@ -1513,9 +1565,12 @@ function(add_library_variants_for_cpu target_arch)
             COMPILE_FLAGS "${VARIANT_COMPILE_FLAGS}"
             MULTILIB_FLAGS "${VARIANT_MULTILIB_FLAGS}"
             PICOLIBC_BUILD_TYPE "${VARIANT_PICOLIBC_BUILD_TYPE}"
+            EXECUTOR "${VARIANT_EXECUTOR}"
             QEMU_MACHINE "${VARIANT_QEMU_MACHINE}"
             QEMU_CPU "${VARIANT_QEMU_CPU}"
             QEMU_PARAMS "${VARIANT_QEMU_PARAMS}"
+            FVP_MODEL "${VARIANT_FVP_MODEL}"
+            FVP_CONFIG "${VARIANT_FVP_CONFIG}"
             BOOT_FLASH_ADDRESS "${VARIANT_BOOT_FLASH_ADDRESS}"
             BOOT_FLASH_SIZE "${VARIANT_BOOT_FLASH_SIZE}"
             FLASH_ADDRESS "${VARIANT_FLASH_ADDRESS}"
@@ -1898,20 +1953,17 @@ add_nonexistent_library_variant(
     MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabi -march=thumbv8.1m.main+mve"
     ERROR_MESSAGE "No library available for MVE with soft-float ABI. Try -mfloat-abi=hard."
 )
-# FIXME: qemu currently has no support for PACBTI-M, so the branch protection
-# variants below can't be fully tested in runtime. Since PACBTI-M instructions
-# are NOP-compatible we can use the cortex-m55 CPU for now, but these should be
-# updated to use a PACBTI-M enabled CPU once this is available.
 add_library_variants_for_cpu(
     armv8.1m.main
     SUFFIX soft_nofp_nomve_pacret_bti
     COMPILE_FLAGS "-mfloat-abi=soft -march=armv8.1m.main+nomve+pacbti -mfpu=none -mbranch-protection=pac-ret+bti"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabi -mfpu=none -mbranch-protection=pac-ret+bti"
     PICOLIBC_BUILD_TYPE "release"
-    QEMU_MACHINE "mps3-an547"
-    QEMU_CPU "cortex-m55"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 512K
+    EXECUTOR fvp
+    FVP_MODEL corstone-310
+    FVP_CONFIG "cortex-m85 m-pacbti m-nofp mve-none"
+    BOOT_FLASH_ADDRESS 0x01000000
+    BOOT_FLASH_SIZE 2M
     FLASH_ADDRESS 0x60000000
     FLASH_SIZE 0x1000000
     RAM_ADDRESS 0x61000000
@@ -1924,10 +1976,11 @@ add_library_variants_for_cpu(
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve+pacbti -mfpu=fp-armv8-fullfp16-sp-d16 -mbranch-protection=pac-ret+bti"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16 -mbranch-protection=pac-ret+bti"
     PICOLIBC_BUILD_TYPE "release"
-    QEMU_MACHINE "mps3-an547"
-    QEMU_CPU "cortex-m55"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 512K
+    EXECUTOR fvp
+    FVP_MODEL corstone-310
+    FVP_CONFIG "cortex-m85 m-pacbti m-fp mve-none"
+    BOOT_FLASH_ADDRESS 0x01000000
+    BOOT_FLASH_SIZE 2M
     FLASH_ADDRESS 0x60000000
     FLASH_SIZE 0x1000000
     RAM_ADDRESS 0x61000000
@@ -1940,10 +1993,11 @@ add_library_variants_for_cpu(
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+nomve+pacbti -mfpu=fp-armv8-fullfp16-d16 -mbranch-protection=pac-ret+bti"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16 -mbranch-protection=pac-ret+bti"
     PICOLIBC_BUILD_TYPE "release"
-    QEMU_MACHINE "mps3-an547"
-    QEMU_CPU "cortex-m55"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 512K
+    EXECUTOR fvp
+    FVP_MODEL corstone-310
+    FVP_CONFIG "cortex-m85 m-pacbti m-fp mve-none"
+    BOOT_FLASH_ADDRESS 0x01000000
+    BOOT_FLASH_SIZE 2M
     FLASH_ADDRESS 0x60000000
     FLASH_SIZE 0x1000000
     RAM_ADDRESS 0x61000000
@@ -1956,10 +2010,11 @@ add_library_variants_for_cpu(
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv8.1m.main+mve+pacbti -mfpu=none -mbranch-protection=pac-ret+bti"
     MULTILIB_FLAGS "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+mve -mfpu=none -mbranch-protection=pac-ret+bti"
     PICOLIBC_BUILD_TYPE "release"
-    QEMU_MACHINE "mps3-an547"
-    QEMU_CPU "cortex-m55"
-    BOOT_FLASH_ADDRESS 0x00000000
-    BOOT_FLASH_SIZE 512K
+    EXECUTOR fvp
+    FVP_MODEL corstone-310
+    FVP_CONFIG "cortex-m85 m-pacbti m-nofp mve-int"
+    BOOT_FLASH_ADDRESS 0x01000000
+    BOOT_FLASH_SIZE 2M
     FLASH_ADDRESS 0x60000000
     FLASH_SIZE 0x1000000
     RAM_ADDRESS 0x61000000

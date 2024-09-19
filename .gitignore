@@ -11,3 +11,7 @@ __pycache__
 # IDEs
 .vscode
 compile_commands.json
+
+# Downloaded FVPs
+/fvp/download/
+/fvp/install/
