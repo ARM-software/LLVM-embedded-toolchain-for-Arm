@@ -790,7 +790,7 @@ function(
     # only in tests step, otherwise, they would be built before install.
     ExternalProject_Add_StepDependencies(picolibc_${variant} test compiler_rt_${variant}-install)
 
-    if (run_tests)
+    if(run_tests)
         add_custom_target(check-picolibc-${variant})
         add_dependencies(check-picolibc-${variant} picolibc_${variant}-test)
         add_dependencies(check-picolibc check-picolibc-${variant})
