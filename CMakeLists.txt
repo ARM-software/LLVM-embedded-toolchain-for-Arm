@@ -708,6 +708,7 @@ function(
     default_ram_addr
     default_ram_size
     default_stack_size
+    run_tests
 )
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
         set(MESON_INSTALL_QUIET "--quiet")
@@ -789,10 +790,12 @@ function(
     # only in tests step, otherwise, they would be built before install.
     ExternalProject_Add_StepDependencies(picolibc_${variant} test compiler_rt_${variant}-install)
 
-    add_custom_target(check-picolibc-${variant})
-    add_dependencies(check-picolibc-${variant} picolibc_${variant}-test)
-    add_dependencies(check-picolibc check-picolibc-${variant})
-    add_dependencies(llvm-toolchain-runtimes picolibc_${variant})
+    if(run_tests)
+        add_custom_target(check-picolibc-${variant})
+        add_dependencies(check-picolibc-${variant} picolibc_${variant}-test)
+        add_dependencies(check-picolibc check-picolibc-${variant})
+        add_dependencies(llvm-toolchain-runtimes picolibc_${variant})
+    endif()
 endfunction()
 
 function(
@@ -1021,6 +1024,7 @@ macro(
     default_ram_addr
     default_ram_size
     default_stack_size
+    run_tests
 )
     # It would be nice to just pass ${ARGN} to both the underlying functions,
     # but that has the side effect of expanding any list arguments (e.g.
@@ -1042,6 +1046,7 @@ macro(
             "${default_ram_addr}"
             "${default_ram_size}"
             "${default_stack_size}"
+            "${run_tests}"
         )
     elseif(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
         add_newlib(
@@ -1435,9 +1440,7 @@ function(add_library_variant target_arch)
         set(have_executor TRUE)
     endif()
     list(JOIN lit_test_executor " " lit_test_executor)
-    if(NOT have_executor)
-        message("All library tests disabled for ${variant}, due to missing executor")
-    elseif(NOT PREBUILT_TARGET_LIBRARIES)
+    if(NOT PREBUILT_TARGET_LIBRARIES)
         add_libc(
             "${directory}"
             "${variant}"
@@ -1452,6 +1455,7 @@ function(add_library_variant target_arch)
             "${VARIANT_RAM_ADDRESS}"
             "${VARIANT_RAM_SIZE}"
             "${VARIANT_STACK_SIZE}"
+            "${have_executor}"
         )
         add_compiler_rt(
             "${directory}"
@@ -1474,7 +1478,9 @@ function(add_library_variant target_arch)
                 ${VARIANT_ENABLE_RTTI}
             )
         endif()
-        if(VARIANT_COMPILE_FLAGS MATCHES "-march=armv8")
+        if(NOT have_executor)
+            message("All library tests disabled for ${variant}, due to missing executor")
+        elseif(VARIANT_COMPILE_FLAGS MATCHES "-march=armv8")
             message("C++ runtime libraries tests disabled for ${variant}")
         else()
             add_custom_target(check-llvm-toolchain-runtimes-${variant})
