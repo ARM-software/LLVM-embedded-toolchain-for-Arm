@@ -165,6 +165,7 @@ set(BUG_REPORT_URL "https://github.com/ARM-software/LLVM-embedded-toolchain-for-
 set(LLVM_DISTRIBUTION_COMPONENTS
     clang-resource-headers
     clang
+    clang-cpp
     dsymutil
     lld
     llvm-ar
@@ -180,6 +181,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
     llvm-readelf
     llvm-readobj
     llvm-size
+    llvm-strings
     llvm-strip
     llvm-symbolizer
     LTO
