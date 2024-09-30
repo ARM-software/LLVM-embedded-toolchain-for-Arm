@@ -180,6 +180,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
     llvm-readelf
     llvm-readobj
     llvm-size
+    llvm-strings
     llvm-strip
     llvm-symbolizer
     LTO
