@@ -172,7 +172,6 @@ set(BUG_REPORT_URL "https://github.com/ARM-software/LLVM-embedded-toolchain-for-
 set(LLVM_DISTRIBUTION_COMPONENTS
     clang-resource-headers
     clang
-    clang-cpp
     dsymutil
     lld
     llvm-ar
