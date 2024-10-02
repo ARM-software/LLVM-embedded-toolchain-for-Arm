@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-"""Auto-generate implications between -mfpu options for multilib.yaml.in.
+"""Auto-generate implications between command-line options options for
+multilib.yaml.in.
 
 Each FPU name that clang knows about is mapped to all the FPU names
 that clang considers to be a subset of it (determined by extracting
@@ -21,6 +22,20 @@ However, it's fine for ABI purposes to mix code compiled for 16 and 32
 d-registers, because the extra 16 d-registers are caller-saved, so
 setjmp and exceptions need not preserve them. Interrupt handlers would
 have to preserve them, but our libraries don't define any.
+
+For architecture extension modifiers on the -march option, we expand these into
+options of the form -march=armvX+[no]feature, for each feature which is listed
+as enabled or disabled in the input options. Each of these new options has
+exactly one feature, so the multilib file can mark a library as depending on
+any set of by matching multiple options. The "armvX" architecture version isn't
+a valid option, but that doesn't matter to multilib, and means that we don't
+need to repeat the matching for every minor version.
+
+For architecture versions, we expand -march=armvX.Y-a+features to include every
+lower or equal architecture version, so that if, for example, a library
+requires armv8.3-a, then a link command targeting any later version will be
+able to select it. These generated options don't include the feature modifiers,
+which can be matched separately if a library requires them.
 """
 
 import argparse
@@ -28,6 +43,7 @@ import json
 import os
 import shlex
 import subprocess
+from dataclasses import dataclass
 
 
 def get_fpu_list(args):
@@ -164,21 +180,7 @@ def get_target_features(args, fpu):
     return features
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "--clang", required=True, help="Path to clang executable."
-    )
-    parser.add_argument(
-        "--llvm-source",
-        required=True,
-        help="Path to root of llvm-project source tree.",
-    )
-    args = parser.parse_args()
-
+def generate_fpus(args):
     # Collect all the data: make the list of FPU names, and the set of
     # features that LLVM maps each one to.
     fpu_features = {
@@ -208,7 +210,109 @@ def main():
             print("  Flags:")
             for sub_fpu in subsets:
                 print("  - -mfpu=" + sub_fpu)
+    print()
 
+
+def get_extension_list(clang, triple):
+    """Extract the list of architecture extension flags from clang, by running
+    it with the --print-supported-extensions option."""
+
+    command = [
+        clang,
+        "--target=" + triple,
+        "--print-supported-extensions",
+    ]
+
+    output = subprocess.check_output(
+        command, stderr=subprocess.STDOUT
+    ).decode()
+
+    for line in output.split("\n"):
+        parts = line.split(maxsplit=1)
+        # The feature lines will look like this, ignore everything else:
+        #   aes    FEAT_AES, FEAT_PMULL    Enable AES support
+        if len(parts) == 2 and parts[1].startswith("FEAT_"):
+            yield parts[0]
+
+
+def generate_extensions(args):
+    aarch64_features = get_extension_list(args.clang, "aarch64-none-eabi")
+    aarch32_features = get_extension_list(args.clang, "arm-none-eabi")
+    all_features = set(aarch64_features) | set(aarch32_features)
+
+    print("# Expand -march=...+[no]feature... into individual options we can match")
+    print("# on. We use 'armvX' to represent a feature applied to any architecture, so")
+    print("# that these don't need to be repeated for every version. Libraries which")
+    print("# require a particular architecture version or profile should also match on the")
+    print("# original option to check that.")
+
+    for feature in all_features:
+        print(f"- Match: -march=armv.*\\+{feature}($|\+.*)")
+        print(f"  Flags:")
+        print(f"  - -march=armvX+{feature}")
+        print(f"- Match: -march=armv.*\\+no{feature}($|\+.*)")
+        print(f"  Flags:")
+        print(f"  - -march=armvX+no{feature}")
+    print()
+
+
+@dataclass
+class Version:
+    major: int
+    minor: int
+    profile: int
+
+    def __str__(self):
+        if self.minor == 0:
+            return f"armv{self.major}-{self.profile}"
+        else:
+            return f"armv{self.major}.{self.minor}-{self.profile}"
+
+    @property
+    def all_compatible(self):
+        yield self
+        for compat_minor in range(self.minor):
+            yield Version(self.major, compat_minor, self.profile)
+        if self.major == 9:
+            for compat_minor in range(self.minor + 5 + 1):
+                yield Version(self.major - 1, compat_minor, self.profile)
+
+def generate_versions(args):
+    """Generate match blocks which allow selecting a library build for a
+    lower-version architecture, for the v8.x-A and v9.x-A minor versions."""
+    versions = (
+        [Version(8, minor, "a") for minor in range(10)] +
+        [Version(9, minor, "a") for minor in range(6)] +
+        [Version(8, minor, "r") for minor in range(1)]
+    )
+
+    for match_ver in versions:
+        print(f"- Match: -march={match_ver}.*")
+        print(f"  Flags:")
+        for compat_ver in match_ver.all_compatible:
+            print(f"  - -march={compat_ver}")
+    print()
+
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--clang", required=True, help="Path to clang executable."
+    )
+    parser.add_argument(
+        "--llvm-source",
+        required=True,
+        help="Path to root of llvm-project source tree.",
+    )
+    args = parser.parse_args()
+
+    generate_fpus(args)
+    generate_extensions(args)
+    generate_versions(args)
 
 if __name__ == "__main__":
     main()

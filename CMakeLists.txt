@@ -2037,7 +2037,7 @@ configure_file(
 )
 
 set(multilib_yaml_depends
-    "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py"
+    "${CMAKE_CURRENT_SOURCE_DIR}/multilib-generate.py"
     "${CMAKE_CURRENT_BINARY_DIR}/multilib-without-fpus.yaml"
 )
 if(LIBS_DEPEND_ON_TOOLS)
@@ -2049,7 +2049,7 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy
     ${CMAKE_CURRENT_BINARY_DIR}/multilib-without-fpus.yaml
     ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}/multilib.yaml
-  COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/multilib-fpus.py"
+  COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/multilib-generate.py"
     "--clang=${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}"
     "--llvm-source=${llvmproject_SOURCE_DIR}"
     >> "${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}/multilib.yaml"

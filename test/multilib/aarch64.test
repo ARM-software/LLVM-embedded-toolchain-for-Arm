@@ -1,3 +1,21 @@
-# RUN: %clang -print-multi-directory --target=aarch64-none-elf | FileCheck %s
-# CHECK: aarch64-none-elf/aarch64a_exn_rtti{{$}}
-# CHECK-EMPTY:
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -march=armv8-a | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -march=armv8-a+fp16 | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -march=armv8.1-a | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -march=armv8.5-a+nodotprod | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -march=armv8.9-a | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -march=armv9.5-a | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -march=armv9.5-a+sve2+sme2 | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -mcpu=cortex-a57 | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -mcpu=cortex-a57+fp16 | FileCheck %s --check-prefix=AARCH64-EXNRTTI
+
+# AARCH64-EXNRTTI: aarch64-none-elf/aarch64a_exn_rtti{{$}}
+# AARCH64-EXNRTTI-EMPTY:
+#
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -fno-exceptions -fno-rtti | FileCheck %s --check-prefix=AARCH64
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -march=armv8.5-a+nodotprod -fno-exceptions -fno-rtti | FileCheck %s --check-prefix=AARCH64
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -march=armv9.5-a+sve2+sme2 -fno-exceptions -fno-rtti | FileCheck %s --check-prefix=AARCH64
+# RUN: %clang -print-multi-directory --target=aarch64-none-elf -mcpu=cortex-a57+fp16 -fno-exceptions -fno-rtti | FileCheck %s --check-prefix=AARCH64
+#
+# AARCH64: aarch64-none-elf/aarch64a{{$}}
+# AARCH64-EMPTY:
