@@ -47,6 +47,13 @@ following command line options, in addition to `--target`, `-march` or
   the symbol `__stack` in addition to whatever other memory layout you
   want.
 
+* `-Wl,__llvm_libc_heap_limit=0x`_nnnnnn_ if you are using the heap.
+  The heap start defined by the value of the symbol `_end` which will
+  be defined by the linker if no linker script is used. Alternatively
+  use a linker script that defines the symbols `_end` and
+  `__llvm_libc_heap_limit` in addition to whatever other memory layout
+  you want.
+
 For example:
 
 ```
@@ -54,9 +61,6 @@ clang --config=llvmlibc.cfg --target=arm-none-eabi -march=armv7m -o hello hello.
 ```
 
 ## Limitations of LLVM libc in LLVM Embedded Toolchain for Arm
-
-At present, this toolchain only builds LLVM libc for AArch32, not for
-AArch64.
 
 At present, this toolchain does not build any C++ libraries to go with
 LLVM libc.
