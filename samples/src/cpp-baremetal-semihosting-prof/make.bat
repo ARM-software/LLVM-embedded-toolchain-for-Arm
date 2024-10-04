@@ -37,8 +37,8 @@
 @call :build_fn
 :do_run
 qemu-system-arm.exe -M microbit -semihosting -nographic -device loader,file=hello.hex
-llvm-profdata.exe merge -sparse default.profraw -o hello.profdata
-llvm-cov.exe show hello.elf -instr-profile=hello.profdata
+%BIN_PATH%\llvm-profdata.exe merge -sparse default.profraw -o hello.profdata
+%BIN_PATH%\llvm-cov.exe show hello.elf -instr-profile=hello.profdata
 @exit /B
 
 :clean
