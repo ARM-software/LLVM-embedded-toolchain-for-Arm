@@ -28,7 +28,7 @@ def main():
     )
     parser.add_argument(
         "--reset",
-        help="Clean and reset the repo to a specified commit before patching.",
+        help="Clean and hard reset the repo to a specified commit before patching.",
     )
     parser.add_argument(
         "--restore_on_fail",
@@ -37,29 +37,32 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.reset:
-        reset_args = ["git", "reset", "--quiet", "--hard"]
-        subprocess.check_output(reset_args, cwd=args.llvm_dir)
-        clean_args = ["git", "clean", "--quiet", "--force", "-dx"]
-        subprocess.check_output(clean_args, cwd=args.llvm_dir)
+    if args.llvm_dir:
+        git_cmd = ["git", "-C", args.llvm_dir]
+    else:
+        git_cmd = ["git"]
 
-    patch_names = []
-    for patch_name in os.listdir(args.patchdir):
-        if patch_name.endswith(".patch"):
-            patch_names.append(patch_name)
+    abs_patch_dir = os.path.abspath(args.patchdir)
+
+    if args.reset:
+        reset_args = git_cmd + ["reset", "--quiet", "--hard", args.reset]
+        subprocess.check_output(reset_args)
+        clean_args = git_cmd + ["clean", "--quiet", "--force", "-dx", args.reset]
+        subprocess.check_output(clean_args)
+
+    patch_names = [
+        patch for patch in os.listdir(args.patchdir) if patch.endswith(".patch")
+    ]
     patch_names.sort()
 
     print(f"Found {len(patch_names)} patches to apply:")
-    for patch_name in patch_names:
-        print(patch_name)
+    print("\n".join(patch_names))
 
     if args.method == "am":
-        merge_args = ["git", "am", "-k", "--ignore-whitespace", "--3way"]
+        merge_args = git_cmd + ["am", "-k", "--ignore-whitespace", "--3way"]
         for patch_name in patch_names:
-            merge_args.append(os.path.join(args.patchdir, patch_name))
-        p = subprocess.run(
-            merge_args, cwd=args.llvm_dir, capture_output=True, text=True
-        )
+            merge_args.append(os.path.join(abs_patch_dir, patch_name))
+        p = subprocess.run(merge_args, capture_output=True, text=True)
         print(p.stdout)
         print(p.stderr)
 
@@ -68,61 +71,58 @@ def main():
             sys.exit(0)
         if args.restore_on_fail:
             # Check that the operation can be aborted.
-            if (
-                'To restore the original branch and stop patching, run "git am --abort".'
-                in p.stdout
-            ):
+            # git am does give any specific return codes,
+            # so check for unresolved working files.
+            if os.path.isdir(os.path.join(args.llvm_dir, ".git", "rebase-apply")):
                 print("Aborting git am...")
-                subprocess.run(["git", "am", "--abort"], cwd=args.llvm_dir, check=True)
+                subprocess.run(git_cmd + ["am", "--abort"], check=True)
+                print(f"Abort successful.")
                 sys.exit(2)
+            else:
+                print("Unable to abort.")
         sys.exit(1)
     else:
         applied_patches = []
         for patch_name in patch_names:
-            patch_file = os.path.join(args.patchdir, patch_name)
-            print(f"Checking {patch_file}...")
+            patch_file = os.path.join(abs_patch_dir, patch_name)
+            print(f"Checking {patch_name}...")
             # Check that the patch applies before trying to apply it.
-            apply_check_args = [
-                "git",
+            apply_check_args = git_cmd + [
                 "apply",
                 "--ignore-whitespace",
                 "--3way",
                 "--check",
                 patch_file,
             ]
-            p_check = subprocess.run(apply_check_args, cwd=args.llvm_dir)
+            p_check = subprocess.run(apply_check_args)
 
             if p_check.returncode == 0:
                 # Patch will apply.
-                print(f"Applying {patch_file}...")
-                apply_args = [
-                    "git",
+                print(f"Applying {patch_name}...")
+                apply_args = git_cmd + [
                     "apply",
                     "--ignore-whitespace",
                     "--3way",
                     patch_file,
                 ]
-                apply_args = subprocess.run(apply_args, cwd=args.llvm_dir, check=True)
-                applied_patches.append(patch_file)
+                apply_args = subprocess.run(apply_args, check=True)
+                applied_patches.append(patch_name)
             else:
                 # Patch won't apply.
-                print(f"Unable to apply {patch_file}")
+                print(f"Unable to apply {patch_name}")
                 if args.restore_on_fail:
                     # Remove any patches that have already been applied.
                     while len(applied_patches) > 0:
                         r_patch = applied_patches.pop()
                         print(f"Reversing {r_patch}...")
-                        reverse_args = [
-                            "git",
+                        reverse_args = git_cmd + [
                             "apply",
                             "--ignore-whitespace",
                             "--3way",
                             "--reverse",
-                            r_patch,
+                            os.path.join(abs_patch_dir, r_patch),
                         ]
-                        p_check = subprocess.run(
-                            reverse_args, cwd=args.llvm_dir, check=True
-                        )
+                        p_check = subprocess.run(reverse_args, check=True)
                     print(f"Rollback successful, failure occured on {patch_file}")
                     sys.exit(2)
                 sys.exit(1)
