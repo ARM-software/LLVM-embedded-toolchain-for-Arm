@@ -25,7 +25,7 @@ hello.hex: hello.cpp
 	$(BIN_PATH)/llvm-objcopy -O ihex hello.elf hello.hex
 
 hello-exn.hex: hello-exn.cpp
-	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CRT_SEMIHOST) -print-multi-directory -g -T ../../ldscripts/microbit.ld -o hello.elf $^ | grep "_exn_"
+	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CRT_SEMIHOST) -print-multi-directory -g -T ../../ldscripts/microbit.ld -o hello-exn.elf $^ | grep "_exn_"
 	$(BIN_PATH)/clang++ $(MICROBIT_TARGET) $(CRT_SEMIHOST) -g -T ../../ldscripts/microbit.ld -o hello-exn.elf $^
 	$(BIN_PATH)/llvm-objcopy -O ihex hello-exn.elf hello-exn.hex
 
