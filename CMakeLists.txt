@@ -291,6 +291,8 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0003-Disable-failing-compiler-rt-test.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-libc-tests-with-picolibc-mark-two-more-large-tests.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0006-libunwind-Support-aarch64-without-FPU.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0007-compiler-rt-Support-aarch64-targets-without-FPU.patch
 )
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
@@ -1603,6 +1605,22 @@ add_library_variants_for_cpu(
     aarch64a
     COMPILE_FLAGS "-march=armv8-a"
     MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
+    PICOLIBC_BUILD_TYPE "release"
+    QEMU_MACHINE "virt"
+    QEMU_CPU "cortex-a57"
+    BOOT_FLASH_ADDRESS 0x40000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x40001000
+    FLASH_SIZE 0xfff000
+    RAM_ADDRESS 0x41000000
+    RAM_SIZE 0x1000000
+    STACK_SIZE 8K
+)
+add_library_variants_for_cpu(
+    aarch64a
+    SUFFIX soft_nofp
+    COMPILE_FLAGS "-march=armv8-a+nofp+nosimd -mabi=aapcs-soft"
+    MULTILIB_FLAGS "--target=aarch64-unknown-none-elf -march=armv8-a+nofp+nosimd -mabi=aapcs-soft"
     PICOLIBC_BUILD_TYPE "release"
     QEMU_MACHINE "virt"
     QEMU_CPU "cortex-a57"

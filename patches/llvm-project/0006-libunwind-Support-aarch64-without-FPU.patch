@@ -1,0 +1,58 @@
+From dd64908ad215a4f4cc79e3eb507f15b27b04e89f Mon Sep 17 00:00:00 2001
+From: Keith Packard <keithp@keithp.com>
+Date: Fri, 4 Oct 2024 21:06:37 -0700
+Subject: [libunwind] Support aarch64 without FPU
+
+Skip save/restore of FPU registers on targets without them.
+
+Signed-off-by: Keith Packard <keithp@keithp.com>
+---
+ libunwind/src/UnwindRegistersRestore.S | 4 ++--
+ libunwind/src/UnwindRegistersSave.S    | 2 ++
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/libunwind/src/UnwindRegistersRestore.S b/libunwind/src/UnwindRegistersRestore.S
+index 180a66582f..1702d016c3 100644
+--- a/libunwind/src/UnwindRegistersRestore.S
++++ b/libunwind/src/UnwindRegistersRestore.S
+@@ -658,7 +658,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
+   ldp    x26,x27, [x0, #0x0D0]
+   ldp    x28,x29, [x0, #0x0E0]
+   ldr    x30,     [x0, #0x100]  // restore pc into lr
+-
++#if defined(__ARM_FP) && __ARM_FP != 0
+   ldp    d0, d1,  [x0, #0x110]
+   ldp    d2, d3,  [x0, #0x120]
+   ldp    d4, d5,  [x0, #0x130]
+@@ -676,7 +676,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
+   ldp    d28,d29, [x0, #0x1F0]
+   ldr    d30,     [x0, #0x200]
+   ldr    d31,     [x0, #0x208]
+-
++#endif
+   // Finally, restore sp. This must be done after the last read from the
+   // context struct, because it is allocated on the stack, and an exception
+   // could clobber the de-allocated portion of the stack after sp has been
+diff --git a/libunwind/src/UnwindRegistersSave.S b/libunwind/src/UnwindRegistersSave.S
+index fab234fcd6..a489a8ba6d 100644
+--- a/libunwind/src/UnwindRegistersSave.S
++++ b/libunwind/src/UnwindRegistersSave.S
+@@ -746,6 +746,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+   str    x1,      [x0, #0x0F8]
+   str    x30,     [x0, #0x100]    // store return address as pc
+   // skip cpsr
++#if defined(__ARM_FP) && __ARM_FP != 0
+   stp    d0, d1,  [x0, #0x110]
+   stp    d2, d3,  [x0, #0x120]
+   stp    d4, d5,  [x0, #0x130]
+@@ -763,6 +764,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+   stp    d28,d29, [x0, #0x1F0]
+   str    d30,     [x0, #0x200]
+   str    d31,     [x0, #0x208]
++#endif
+   mov    x0, #0                   // return UNW_ESUCCESS
+   ret
+ 
+-- 
+2.45.2
+
