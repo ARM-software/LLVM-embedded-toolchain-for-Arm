@@ -1518,7 +1518,7 @@ function(add_nonexistent_library_variant)
     )
     cmake_parse_arguments(ERR "" "${one_value_args}" "" ${ARGN})
 
-    string(APPEND multilib_yaml_content "- FatalError: \"${ERR_ERROR_MESSAGE}\"\n")
+    string(APPEND multilib_yaml_content "- Error: \"${ERR_ERROR_MESSAGE}\"\n")
 
     string(APPEND multilib_yaml_content "  Flags:\n")
     string(REPLACE " " ";" multilib_flags_list ${ERR_MULTILIB_FLAGS})
