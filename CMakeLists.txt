@@ -283,7 +283,7 @@ endif()
 # The patches are generated from custom branch, with followin command:
 #   git format-patch -k origin/main
 # The patches apply cleanly against llvm-project commit
-# ed551e0778a35f00ab60f1c80d83ea8274d8d400.
+# 327124ece7d59de56ca0f9faa2cd82af68c011b9.
 set(
     llvm_project_patches
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0001-libc-tests-with-picolibc-xfail-one-remaining-test.patch
