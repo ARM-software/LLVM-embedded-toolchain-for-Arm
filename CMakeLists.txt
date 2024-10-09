@@ -332,18 +332,24 @@ if(NOT (LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)) # libc in a separate repo?
   FetchContent_MakeAvailable(${LLVM_TOOLCHAIN_C_LIBRARY})
 endif()
 
+##################################################################################################
+# We set all project properties later, this call is just to enable the
+# CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT check
+project(LLVMEmbeddedToolchainForArm)
 # We generally want to install to a local directory to see what the
 # output will look like rather than install into the system, so change
 # the default accordingly.
 # See https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT.html
-# Note that this code only works after the first call to project so it
-# can't be moved after the add_subdirectory command below.
+# Note that THIS CODE ONLY WORKS AFTER THE FIRST CALL TO PROJECT so it
+# can't be moved after the add_subdirectory(<llvm>) command below as it will be too late -
+# the llvm project will set it to the default system install directory.
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX
         "${CMAKE_BINARY_DIR}/install"
         CACHE PATH "" FORCE
     )
 endif()
+##################################################################################################
 
 # Whether to try to build C++ libraries. (We can't currently do this
 # for all choices of C library.)
