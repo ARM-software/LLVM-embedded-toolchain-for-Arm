@@ -1,0 +1,22 @@
+From e79697a54cba9bfc1a755ed048e42054d679de61 Mon Sep 17 00:00:00 2001
+From: David Candler <david.candler@arm.com>
+Date: Wed, 2 Oct 2024 14:13:31 +0100
+Subject: [PATCH] Placeholder commit
+
+---
+ .gitignore | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.gitignore b/.gitignore
+index 0e7c6c790013..dfa0b8da0ccd 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,4 +1,4 @@
+-#==============================================================================#
++#==============================================================================#
+ # This file specifies intentionally untracked files that git should ignore.
+ # See: http://www.kernel.org/pub/software/scm/git/docs/gitignore.html
+ #
+-- 
+2.34.1
+

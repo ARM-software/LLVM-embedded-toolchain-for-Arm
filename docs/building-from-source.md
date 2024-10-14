@@ -148,3 +148,12 @@ The same build directory can be used for both native and MinGW toolchains.
 
 See [patches](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/tree/main/patches)
 directory for the current set of differences from upstream.
+
+The patches for llvm-project are split between two folders, llvm-project and
+llvm-project-perf. The former are generally required for building and
+successfully running all tests. The patches in llvm-project-perf are optional,
+and designed to improve performance in certain circumstances.
+
+To reduce divergence from upstream and potential patch conflicts, the
+performance patches are not applied by default, but can be enabled for an
+automatic checkout with the APPLY_LLVM_PERFORMANCE_PATCHES option.
