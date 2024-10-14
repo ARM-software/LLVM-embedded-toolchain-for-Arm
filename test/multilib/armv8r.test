@@ -6,6 +6,16 @@
 # CHECK: arm-none-eabi/armv7r_soft_nofp_exn_rtti{{$}}
 # CHECK-EMPTY:
 
+# RUN: %clang -print-multi-directory --target=armv8r-none-eabi | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabi -march=armv8-r | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=armv8r-none-eabihf -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabihf -mfloat-abi=softfp -march=armv8-r | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabi -march=armv8-r -marm | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabi -march=armv8-r -mthumb | FileCheck --check-prefix=SOFT-VFPV3 %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabi -march=armv8-r -mfpu=fpv5-d16 | FileCheck --check-prefix=SOFT-VFPV3 %s
+# SOFT-VFPV3: arm-none-eabi/armv7r_soft_vfpv3xd_exn_rtti{{$}}
+# SOFT-VFPV3-EMPTY:
+
 # RUN: %clang -print-multi-directory --target=armv8r-none-eabihf -mfpu=vfpv3-d16 | FileCheck --check-prefix=VFPV3 %s
 # RUN: %clang -print-multi-directory --target=armv8r-none-eabihf -mfpu=neon-vfpv3 | FileCheck --check-prefix=VFPV3 %s
 # RUN: %clang -print-multi-directory --target=armv8r-none-eabihf -mfpu=vfpv3 | FileCheck --check-prefix=VFPV3 %s
@@ -18,5 +28,16 @@
 # RUN: %clang -print-multi-directory --target=armv8r-none-eabihf -mfpu=vfpv3-d16 -marm | FileCheck --check-prefix=VFPV3 %s
 # RUN: %clang -print-multi-directory --target=armv8r-none-eabihf -mfpu=vfpv3-d16 -mthumb | FileCheck --check-prefix=VFPV3 %s
 # RUN: %clang -print-multi-directory --target=armv8r-none-eabihf -mcpu=cortex-r52 | FileCheck --check-prefix=VFPV3 %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabihf -march=armv8-r -mfpu=fpv5-d16 | FileCheck --check-prefix=VFPV3 %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabihf -march=armv8-r -mfpu=fp-armv8 | FileCheck --check-prefix=VFPV3 %s
 # VFPV3: arm-none-eabi/armv7r_hard_vfpv3_d16_exn_rtti{{$}}
 # VFPV3-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv8r-none-eabihf                       | FileCheck --check-prefix=VFPV3XD %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabihf   -march=armv8-r         | FileCheck --check-prefix=VFPV3XD %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabihf   -march=armv8-r -marm   | FileCheck --check-prefix=VFPV3XD %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabihf   -march=armv8-r -mthumb | FileCheck --check-prefix=VFPV3XD %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabihf -march=armv8-r -mfpu=fpv4-sp-d16 | FileCheck --check-prefix=VFPV3XD %s
+# RUN: %clang -print-multi-directory --target=arm-none-eabihf -march=armv8-r -mfpu=fpv5-sp-d16 | FileCheck --check-prefix=VFPV3XD %s
+# VFPV3XD: arm-none-eabi/armv7r_hard_vfpv3xd_exn_rtti{{$}}
+# VFPV3XD-EMPTY:
