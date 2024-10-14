@@ -6,6 +6,7 @@ Script to apply a set of patches to llvm-project sources.
 
 import argparse
 import os
+import pathlib
 import subprocess
 import sys
 
@@ -42,26 +43,23 @@ def main():
     else:
         git_cmd = ["git"]
 
-    abs_patch_dir = os.path.abspath(args.patchdir)
-
     if args.reset:
         reset_args = git_cmd + ["reset", "--quiet", "--hard", args.reset]
         subprocess.check_output(reset_args)
         clean_args = git_cmd + ["clean", "--quiet", "--force", "-dx", args.reset]
         subprocess.check_output(clean_args)
 
-    patch_names = [
-        patch for patch in os.listdir(args.patchdir) if patch.endswith(".patch")
-    ]
-    patch_names.sort()
+    abs_patch_dir = os.path.abspath(args.patchdir)
+    patch_list = list(pathlib.Path(abs_patch_dir).glob("*.patch"))
+    patch_list.sort()
 
-    print(f"Found {len(patch_names)} patches to apply:")
-    print("\n".join(patch_names))
+    print(f"Found {len(patch_list)} patches to apply:")
+    print("\n".join(p.name for p in patch_list))
 
     if args.method == "am":
         merge_args = git_cmd + ["am", "-k", "--ignore-whitespace", "--3way"]
-        for patch_name in patch_names:
-            merge_args.append(os.path.join(abs_patch_dir, patch_name))
+        for patch in patch_list:
+            merge_args.append(str(patch))
         p = subprocess.run(merge_args, capture_output=True, text=True)
         print(p.stdout)
         print(p.stderr)
@@ -73,7 +71,10 @@ def main():
             # Check that the operation can be aborted.
             # git am does give any specific return codes,
             # so check for unresolved working files.
-            if os.path.isdir(os.path.join(args.llvm_dir, ".git", "rebase-apply")):
+            rebase_apply_path = os.path.join(".git", "rebase-apply")
+            if args.llvm_dir:
+                rebase_apply_path = os.path.join(args.llvm_dir, rebase_apply_path)
+            if os.path.isdir(rebase_apply_path):
                 print("Aborting git am...")
                 subprocess.run(git_cmd + ["am", "--abort"], check=True)
                 print(f"Abort successful.")
@@ -83,47 +84,48 @@ def main():
         sys.exit(1)
     else:
         applied_patches = []
-        for patch_name in patch_names:
-            patch_file = os.path.join(abs_patch_dir, patch_name)
-            print(f"Checking {patch_name}...")
+        for current_patch in patch_list:
+            print(f"Checking {current_patch.name}...")
             # Check that the patch applies before trying to apply it.
             apply_check_args = git_cmd + [
                 "apply",
                 "--ignore-whitespace",
                 "--3way",
                 "--check",
-                patch_file,
+                str(current_patch),
             ]
             p_check = subprocess.run(apply_check_args)
 
             if p_check.returncode == 0:
                 # Patch will apply.
-                print(f"Applying {patch_name}...")
+                print(f"Applying {current_patch.name}...")
                 apply_args = git_cmd + [
                     "apply",
                     "--ignore-whitespace",
                     "--3way",
-                    patch_file,
+                    str(current_patch),
                 ]
                 apply_args = subprocess.run(apply_args, check=True)
-                applied_patches.append(patch_name)
+                applied_patches.append(current_patch)
             else:
                 # Patch won't apply.
-                print(f"Unable to apply {patch_name}")
+                print(f"Unable to apply {current_patch.name}")
                 if args.restore_on_fail:
                     # Remove any patches that have already been applied.
                     while len(applied_patches) > 0:
-                        r_patch = applied_patches.pop()
-                        print(f"Reversing {r_patch}...")
+                        previous_patch = applied_patches.pop()
+                        print(f"Reversing {previous_patch.name}...")
                         reverse_args = git_cmd + [
                             "apply",
                             "--ignore-whitespace",
                             "--3way",
                             "--reverse",
-                            os.path.join(abs_patch_dir, r_patch),
+                            str(previous_patch),
                         ]
                         p_check = subprocess.run(reverse_args, check=True)
-                    print(f"Rollback successful, failure occured on {patch_file}")
+                    print(
+                        f"Rollback successful, failure occured on {current_patch.name}"
+                    )
                     sys.exit(2)
                 sys.exit(1)
         print(f"All patches applied.")
