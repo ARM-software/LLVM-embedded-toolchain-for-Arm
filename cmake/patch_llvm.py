@@ -69,7 +69,7 @@ def main():
             sys.exit(0)
         if args.restore_on_fail:
             # Check that the operation can be aborted.
-            # git am does give any specific return codes,
+            # git am doesn't give any specific return codes,
             # so check for unresolved working files.
             rebase_apply_path = os.path.join(".git", "rebase-apply")
             if args.llvm_dir:
