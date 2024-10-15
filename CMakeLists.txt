@@ -378,6 +378,12 @@ if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)
         COMPONENT llvm-toolchain-llvmlibc-configs
     )
 
+    install(
+      DIRECTORY
+      ${CMAKE_CURRENT_SOURCE_DIR}/llvmlibc-samples/src
+      DESTINATION samples
+      COMPONENT llvm-toolchain-llvmlibc-configs
+    )
     # We aren't yet able to build C++ libraries to go with llvm-libc
     set(CXX_LIBS OFF)
 

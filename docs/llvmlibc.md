@@ -60,6 +60,11 @@ For example:
 clang --config=llvmlibc.cfg --target=arm-none-eabi -march=armv7m -o hello hello.c -lsemihost -lcrt0 -Wl,--defsym=__stack=0x200000
 ```
 
+## Samples
+
+The overlay package installs a llvmlibc directory in the samples/src
+directory containing sample programs that use LLVM libc.
+
 ## Limitations of LLVM libc in LLVM Embedded Toolchain for Arm
 
 At present, this toolchain does not build any C++ libraries to go with
