@@ -8,10 +8,10 @@ to fully simplify. This adds an extra full unrolling pass to help these
 cases on the cores with branch predictors. It helps produce simplified
 loops, which can then be SROA'd allowing further simplification, which
 can be important for performance.
-This is added under own flag - spending extra compile time to get extra
-performance on specific user request.
+Feature adds extra compile time to get extra performance and 
+is enabled by the opt flag 'extra-LTO-loop-unroll' (off by default).
 
-Originally patch by David Green (david.green@arm.com)
+Original patch by David Green (david.green@arm.com)
 ---
  llvm/lib/Passes/PassBuilderPipelines.cpp | 16 ++++++++++++++++
  1 file changed, 16 insertions(+)
