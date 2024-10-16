@@ -1,0 +1,55 @@
+From 4adfc5231d2c0182d6278b4aa75eec57648e5dd4 Mon Sep 17 00:00:00 2001
+From: Vladi Krapp <vladi.krapp@arm.com>
+Date: Tue, 3 Sep 2024 14:12:48 +0100
+Subject: [Pipelines] Additional unrolling  in LTO 
+
+Some workloads require specific sequences of events to happen
+to fully simplify. This adds an extra full unrolling pass to help these
+cases on the cores with branch predictors. It helps produce simplified
+loops, which can then be SROA'd allowing further simplification, which
+can be important for performance.
+Feature adds extra compile time to get extra performance and 
+is enabled by the opt flag 'extra-LTO-loop-unroll' (off by default).
+
+Original patch by David Green (david.green@arm.com)
+---
+ llvm/lib/Passes/PassBuilderPipelines.cpp | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/llvm/lib/Passes/PassBuilderPipelines.cpp b/llvm/lib/Passes/PassBuilderPipelines.cpp
+index 1184123c7710..6dc45d85927a 100644
+--- a/llvm/lib/Passes/PassBuilderPipelines.cpp
++++ b/llvm/lib/Passes/PassBuilderPipelines.cpp
+@@ -332,6 +332,10 @@ namespace llvm {
+ extern cl::opt<unsigned> MaxDevirtIterations;
+ } // namespace llvm
+ 
++static cl::opt<bool> LTOExtraLoopUnroll(
++    "extra-LTO-loop-unroll", cl::init(false), cl::Hidden,
++    cl::desc("Perform extra loop unrolling pass to assist SROA"));
++
+ void PassBuilder::invokePeepholeEPCallbacks(FunctionPassManager &FPM,
+                                             OptimizationLevel Level) {
+   for (auto &C : PeepholeEPCallbacks)
+@@ -1940,6 +1944,18 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
+   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
+ 
+   FunctionPassManager FPM;
++
++  if (LTOExtraLoopUnroll) {
++    LoopPassManager OmaxLPM;
++    OmaxLPM.addPass(LoopFullUnrollPass(Level.getSpeedupLevel(),
++                                       /* OnlyWhenForced= */ !PTO.LoopUnrolling,
++                                       PTO.ForgetAllSCEVInLoopUnroll));
++    FPM.addPass(
++        createFunctionToLoopPassAdaptor(std::move(OmaxLPM),
++                                        /*UseMemorySSA=*/false,
++                                        /*UseBlockFrequencyInfo=*/true));
++  }
++
+   // The IPO Passes may leave cruft around. Clean up after them.
+   FPM.addPass(InstCombinePass());
+   invokePeepholeEPCallbacks(FPM, Level);
+-- 
+2.34.1
+

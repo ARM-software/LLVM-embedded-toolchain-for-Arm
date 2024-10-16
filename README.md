@@ -172,6 +172,7 @@ and/or increased memory usage during linking. Some of the options in the config 
 corresponding optimisation passes in the [LLVM project](https://github.com/llvm/llvm-project)
 to find out more. Users are also encouraged to create their own configs and tune their own
 flag parameters.
+Information on LLVM Embedded Toolchain for Arm specific optimization flags is available in [Optimization Flags](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/blob/main/docs/optimization-flags.md)
 
 Binary releases of the LLVM Embedded Toolchain for Arm are based on release
 branches of the upstream LLVM Project, thus can safely be used with all tools
