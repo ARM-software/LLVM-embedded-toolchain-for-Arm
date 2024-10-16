@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Copyright © 2019 Keith Packard
+ * Copyright (c) 2024, Arm Limited and affiliates.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -231,7 +232,7 @@ SECTIONS
         PROVIDE( __bss_size = __bss_end - __bss_start );
 
         /* Make the rest of memory available for heap storage
-	 * LLVM libc denotes heap with [__end, __llvm_libc_heap_limit
+	 * LLVM libc denotes heap with [__end, __llvm_libc_heap_limit)
 	 */
         PROVIDE (__llvm_libc_heap_limit = __stack - (DEFINED(__stack_size) ? __stack_size : 4K));
 }

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2020-2023, Arm Limited and affiliates.
+# Copyright (c) 2020-2024, Arm Limited and affiliates.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
