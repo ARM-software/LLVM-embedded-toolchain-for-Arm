@@ -21,8 +21,8 @@
 
 // Implementation of errno
 int *__llvm_libc_errno() {
-  static int errno;
-  return &errno;
+  static int internal_err;
+  return &internal_err;
 }
 
 // Example that uses heap, string and math library.
