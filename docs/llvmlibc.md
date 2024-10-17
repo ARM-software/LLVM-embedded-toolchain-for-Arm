@@ -54,11 +54,20 @@ following command line options, in addition to `--target`, `-march` or
   `__llvm_libc_heap_limit` in addition to whatever other memory layout
   you want.
 
+* LLVM libc does not define errno. If you are using a function that
+  sets errno then you must implement the function `int *__llvm_libc_errno()`
+  that returns the address of your definition of errno.
+
 For example:
 
 ```
 clang --config=llvmlibc.cfg --target=arm-none-eabi -march=armv7m -o hello hello.c -lsemihost -lcrt0 -Wl,--defsym=__stack=0x200000
 ```
+
+## Samples
+
+The overlay package installs a llvmlibc directory in the samples/src
+directory containing sample programs that use LLVM libc.
 
 ## Limitations of LLVM libc in LLVM Embedded Toolchain for Arm
 
