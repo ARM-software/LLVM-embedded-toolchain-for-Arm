@@ -19,7 +19,13 @@
 #include <string.h>
 #include <math.h>
 
-/* Example that uses heap, string and math library */
+// Implementation of errno
+int *__llvm_libc_errno() {
+  static int errno;
+  return &errno;
+}
+
+// Example that uses heap, string and math library.
 
 int main(void) {
   const char *hello_s = "hello ";
@@ -32,7 +38,9 @@ int main(void) {
   strncpy(out_s, hello_s, hello_s_len + 1);
   assert(out_s_len >= strlen(out_s) + world_s_len + 1);
   strncat(out_s, world_s, world_s_len + 1);
-  printf("%s %d\n", out_s, abs(-3));
+  // 2024-10-17 Embedded printf implementation does not currently
+  // support printing floating point numbers.
+  printf("%s %li\n", out_s, lround(400000 * atanf(1.0f)));
   free(out_s);
   return 0;
 }

@@ -54,6 +54,10 @@ following command line options, in addition to `--target`, `-march` or
   `__llvm_libc_heap_limit` in addition to whatever other memory layout
   you want.
 
+* LLVM libc does not define errno. If you are using a function that
+  sets errno then you must implement the function `int *__llvm_libc_errno()`
+  that returns the address of your definition of errno.
+
 For example:
 
 ```

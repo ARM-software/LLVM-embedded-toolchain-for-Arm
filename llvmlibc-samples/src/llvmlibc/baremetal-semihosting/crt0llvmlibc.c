@@ -34,8 +34,8 @@ extern char __tdata_end[];
 extern char __tls_end[];
 
 void _start(void) {
-  memcpy(__data_start, __data_source, (uintptr_t) __data_size);
-  memset(__bss_start, '\0', (uintptr_t) __bss_size);
+  memcpy(__data_start, __data_source, (size_t) __data_size);
+  memset(__bss_start, 0, (size_t) __bss_size);
   _platform_init();
   _Exit(main(0, NULL));
 }
