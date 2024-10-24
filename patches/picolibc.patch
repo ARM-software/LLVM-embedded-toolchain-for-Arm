@@ -1,8 +1,8 @@
 diff --git a/meson.build b/meson.build
-index 0fdfa0412..8e679f166 100644
+index f90f5b818..2f8d63733 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -1224,6 +1224,18 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
+@@ -1310,6 +1310,18 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
    error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
  endif
  
@@ -22,13 +22,13 @@ index 0fdfa0412..8e679f166 100644
  	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
  	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
 diff --git a/picolibc.ld.in b/picolibc.ld.in
-index b97ea3300..04b94f35c 100644
+index 7b63ba172..cda5e1e7e 100644
 --- a/picolibc.ld.in
 +++ b/picolibc.ld.in
 @@ -68,6 +68,9 @@ SECTIONS
- 		*(.text.unlikely .text.unlikely.*)
- 		*(.text.startup .text.startup.*)
- 		*(.text .text.* .opd .opd.*)
+ 		*(.literal.unlikely .text.unlikely .literal.unlikely.* .text.unlikely.*)
+ 		*(.literal.startup .text.startup .literal.startup.* .text.startup.*)
+ 		*(.literal .text .literal.* .text.* .opd .opd.*)
 +		PROVIDE (__start___lcxx_override = .);
 +		*(__lcxx_override)
 +		PROVIDE (__stop___lcxx_override = .);
