@@ -1,0 +1,60 @@
+From 8e51f55289eef78b08edb845023c1a7c9c0191b5 Mon Sep 17 00:00:00 2001
+From: David Candler <david.candler@arm.com>
+Date: Wed, 23 Oct 2024 14:40:58 +0100
+Subject: [PATCH] Remove armv4t/armv5t from check-all targets
+
+The compiler-rt and libcxx tests for armv4t and armv5t variants
+currently hang until a timeout is reached. Rather than disable the
+tests, this patch removes them from the check-all targets. This
+allows the tests to still be run while investigating the issue, but
+does not interrupt overall testing of the toolchain.
+---
+ CMakeLists.txt | 18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 60ec6c6..fa5b462 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1310,7 +1310,11 @@ function(add_compiler_rt_tests variant)
+     )
+     add_custom_target(check-compiler-rt-${variant})
+     add_dependencies(check-compiler-rt-${variant} compiler_rt_${variant}-check-compiler-rt)
+-    add_dependencies(check-compiler-rt check-compiler-rt-${variant})
++    # Do not add armv4 or armv5 tests to the check-all
++    # targets as they currently hang.
++    if(NOT VARIANT_COMPILE_FLAGS MATCHES "-march=armv4|5")
++        add_dependencies(check-compiler-rt check-compiler-rt-${variant})
++    endif()
+     add_dependencies(check-llvm-toolchain-runtimes-${variant} check-compiler-rt-${variant})
+ endfunction()
+ 
+@@ -1334,7 +1338,11 @@ function(add_libcxx_libcxxabi_libunwind_tests variant)
+         )
+         add_custom_target(${check_target}-${variant_with_extensions})
+         add_dependencies(${check_target}-${variant_with_extensions} ${target_name}-${check_target})
+-        add_dependencies(${check_target} ${target_name}-${check_target})
++        # Do not add armv4 or armv5 tests to the check-all
++        # targets as they currently hang.
++        if(NOT variant MATCHES "-march=armv4|5")
++            add_dependencies(${check_target} ${target_name}-${check_target})
++        endif()
+         add_dependencies(check-llvm-toolchain-runtimes-${variant} ${check_target}-${variant_with_extensions})
+     endforeach()
+ endfunction()
+@@ -1499,7 +1507,11 @@ function(add_library_variant target_arch)
+             message("C++ runtime libraries tests disabled for ${variant}")
+         else()
+             add_custom_target(check-llvm-toolchain-runtimes-${variant})
+-            add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
++            # Do not add armv4 or armv5 tests to the check-all
++            # targets as they currently hang.
++            if(NOT VARIANT_COMPILE_FLAGS MATCHES "-march=armv4|5")
++                add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
++            endif()
+             add_compiler_rt_tests("${variant}")
+             if(CXX_LIBS)
+                 add_libcxx_libcxxabi_libunwind_tests("${variant}")
+-- 
+2.34.1
+

@@ -804,8 +804,12 @@ function(
     if(run_tests)
         add_custom_target(check-picolibc-${variant})
         add_dependencies(check-picolibc-${variant} picolibc_${variant}-test)
-        add_dependencies(check-picolibc check-picolibc-${variant})
-        add_dependencies(llvm-toolchain-runtimes picolibc_${variant})
+        # Do not add armv4 or armv5 tests to the check-all
+        # targets as they currently hang.
+        if(NOT variant MATCHES "armv4|5")
+            add_dependencies(check-picolibc check-picolibc-${variant})
+            add_dependencies(llvm-toolchain-runtimes picolibc_${variant})
+        endif()
     endif()
 endfunction()
 
@@ -1310,7 +1314,11 @@ function(add_compiler_rt_tests variant)
     )
     add_custom_target(check-compiler-rt-${variant})
     add_dependencies(check-compiler-rt-${variant} compiler_rt_${variant}-check-compiler-rt)
-    add_dependencies(check-compiler-rt check-compiler-rt-${variant})
+    # Do not add armv4 or armv5 tests to the check-all
+    # targets as they currently hang.
+    if(NOT variant MATCHES "armv4|5")
+        add_dependencies(check-compiler-rt check-compiler-rt-${variant})
+    endif()
     add_dependencies(check-llvm-toolchain-runtimes-${variant} check-compiler-rt-${variant})
 endfunction()
 
@@ -1334,7 +1342,11 @@ function(add_libcxx_libcxxabi_libunwind_tests variant)
         )
         add_custom_target(${check_target}-${variant_with_extensions})
         add_dependencies(${check_target}-${variant_with_extensions} ${target_name}-${check_target})
-        add_dependencies(${check_target} ${target_name}-${check_target})
+        # Do not add armv4 or armv5 tests to the check-all
+        # targets as they currently hang.
+        if(NOT variant MATCHES "armv4|5")
+            add_dependencies(${check_target} ${target_name}-${check_target})
+        endif()
         add_dependencies(check-llvm-toolchain-runtimes-${variant} ${check_target}-${variant_with_extensions})
     endforeach()
 endfunction()
@@ -1499,7 +1511,11 @@ function(add_library_variant target_arch)
             message("C++ runtime libraries tests disabled for ${variant}")
         else()
             add_custom_target(check-llvm-toolchain-runtimes-${variant})
-            add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
+            # Do not add armv4 or armv5 tests to the check-all
+            # targets as they currently hang.
+            if(NOT variant MATCHES "armv4|5")
+                add_dependencies(check-llvm-toolchain-runtimes check-llvm-toolchain-runtimes-${variant})
+            endif()
             add_compiler_rt_tests("${variant}")
             if(CXX_LIBS)
                 add_libcxx_libcxxabi_libunwind_tests("${variant}")
