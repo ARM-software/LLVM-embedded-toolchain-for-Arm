@@ -223,14 +223,7 @@ endif()
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-if(NOT CMAKE_C_COMPILER_LAUNCHER AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
-    # If ccache is available then use it by default.
-    find_program(CCACHE_EXECUTABLE ccache)
-    if(CCACHE_EXECUTABLE)
-        set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}" CACHE FILEPATH "" FORCE)
-        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}" CACHE FILEPATH "" FORCE)
-    endif()
-endif()
+set(LLVM_CCACHE_BUILD ON CACHE BOOL "")
 
 # If lld is available then use it by default.
 find_program(LLD_EXECUTABLE lld)
