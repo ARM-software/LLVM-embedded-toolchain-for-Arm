@@ -6,4 +6,4 @@ In some cases it is benefitial to perform an additional loop unroll pass so that
 Use cases where this could be beneficial - multiple (N>=4) nested loops.
 
 ### Usage: 
-    -mllvm -extra-LTO-loop-unroll=true/false
+    -Wl,-plugin-opt=-extra-LTO-loop-unroll=true/false
