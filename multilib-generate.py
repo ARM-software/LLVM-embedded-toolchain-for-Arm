@@ -247,10 +247,10 @@ def generate_extensions(args):
     print("# original option to check that.")
 
     for feature in all_features:
-        print(f"- Match: -march=armv.*\\+{feature}($|\+.*)")
+        print(f"- Match: -march=armv.*\\+{feature}($|\\+.*)")
         print(f"  Flags:")
         print(f"  - -march=armvX+{feature}")
-        print(f"- Match: -march=armv.*\\+no{feature}($|\+.*)")
+        print(f"- Match: -march=armv.*\\+no{feature}($|\\+.*)")
         print(f"  Flags:")
         print(f"  - -march=armvX+no{feature}")
     print()
