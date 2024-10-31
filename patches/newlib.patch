@@ -1,3 +1,20 @@
+diff --git a/libgloss/aarch64/syscalls.c b/libgloss/aarch64/syscalls.c
+index 7343cc61f..2c4b63c17 100644
+--- a/libgloss/aarch64/syscalls.c
++++ b/libgloss/aarch64/syscalls.c
+@@ -172,6 +172,12 @@ newslot (void)
+   return i;
+ }
+
++int __aarch64_sme_accessible() {
++  int result = 0;
++  asm volatile ( "mrs %x[result], id_aa64pfr1_el1" : [result]"=r"(result) :  : );
++  return (result & 0x3000000) != 0;
++}
++
+ void
+ initialise_monitor_handles (void)
+ {
 diff --git a/libgloss/arm/cpu-init/rdimon-aem.S b/libgloss/arm/cpu-init/rdimon-aem.S
 index 95b86e4d4..b91034ae6 100644
 --- a/libgloss/arm/cpu-init/rdimon-aem.S
