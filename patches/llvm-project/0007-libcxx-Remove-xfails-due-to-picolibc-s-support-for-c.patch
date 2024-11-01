@@ -1,0 +1,47 @@
+From 2c6b08baa20bb4a7e4a936ecf286a1c9e1f0f8c9 Mon Sep 17 00:00:00 2001
+From: Victor Campos <victor.campos@arm.com>
+Date: Thu, 31 Oct 2024 14:03:58 +0000
+Subject: [libcxx] Remove xfails due to picolibc's support for char16_t and
+ char32_t
+
+picolibc recently
+([link](https://github.com/picolibc/picolibc/commit/f6f68758fe2aa62854f49b90c3daeeb08242b512))
+added support for char16_t and char32_t.
+
+These xfails aren't needed anymore.
+---
+ libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp | 3 ---
+ libcxx/test/std/strings/c.strings/cuchar.compile.pass.cpp    | 3 ---
+ 2 files changed, 6 deletions(-)
+
+diff --git a/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp b/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp
+index a1560c8ee585..2b6455466681 100644
+--- a/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp
++++ b/libcxx/test/std/depr/depr.c.headers/uchar_h.compile.pass.cpp
+@@ -11,9 +11,6 @@
+ // Apple platforms don't provide <uchar.h> yet, so these tests fail.
+ // XFAIL: target={{.+}}-apple-{{.+}}
+ 
+-// mbrtoc16 not defined.
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
+-
+ // <uchar.h>
+ 
+ #include <uchar.h>
+diff --git a/libcxx/test/std/strings/c.strings/cuchar.compile.pass.cpp b/libcxx/test/std/strings/c.strings/cuchar.compile.pass.cpp
+index 2076384deb2b..db00cbde3336 100644
+--- a/libcxx/test/std/strings/c.strings/cuchar.compile.pass.cpp
++++ b/libcxx/test/std/strings/c.strings/cuchar.compile.pass.cpp
+@@ -11,9 +11,6 @@
+ // Apple platforms don't provide <uchar.h> yet, so these tests fail.
+ // XFAIL: target={{.+}}-apple-{{.+}}
+ 
+-// mbrtoc16 not defined.
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
+-
+ // <cuchar>
+ 
+ #include <cuchar>
+-- 
+2.43.0
+
