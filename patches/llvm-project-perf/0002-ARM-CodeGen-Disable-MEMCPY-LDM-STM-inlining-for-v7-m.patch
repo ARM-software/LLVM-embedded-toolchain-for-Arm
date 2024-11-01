@@ -2,14 +2,14 @@ From 61af6af10d10a08b81d3924fa5b35bfb548b2a05 Mon Sep 17 00:00:00 2001
 From: nasmnc01 <nashe.mncube@arm.com>
 Author: Scott Douglass <scott.douglass@arm.com>
 Date: Tue, 13 Aug 2024 10:55:51 +0100
-Subject: [PATCH] [ARM][CodeGen] Disable MEMCPY LDM/STM inlining for v7-m
+Subject: [PATCH] [ARM][CodeGen] Prefer MEMCPY LDM/STM inlining for v7-m
 
-This patch disables the expansion of MEMCPY to LDM/STM
-on v7-m targets. This is due to a slowdown caused
-by this inlining method.
+This patch changes the behaviour of memcpy inlining on v7m targets.
+The old behaviour was to inline memcpys with LDM/STM instructions.
+Alternatively, using LD/ST instructions for memcpy inlining allowed
+for performance gains of 1% to 2% on selected benchmarks.
 
 Co-authored-by: Nashe Mncube <nashe.mncube@arm.com>
-Change-Id: I91095299c2c67670a16849d08540bdbc07a95adc
 ---
  llvm/lib/Target/ARM/ARMFeatures.td          |   5 +
  llvm/lib/Target/ARM/ARMProcessors.td        |   2 +-
@@ -188,7 +188,7 @@ index c57825949c1c..12db2ab1fca2 100644
      return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                    Alignment.value(), RTLIB::MEMCPY);
 
-+  if (Subtarget.allowInlineMemcpyAsLdSt())
++  if (Subtarget.UseInlineMemcpyAsLdSt)
 +    return EmitMemcpyAsLdSt(DAG, dl, Subtarget, Chain, Dst, Src, SizeVal,
 +                            isVolatile, DstPtrInfo, SrcPtrInfo);
 +
@@ -212,19 +212,6 @@ index 275b1c0f8dc0..6ff422c15b12 100644
    SDValue
    EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                             SDValue Dst, SDValue Src, SDValue Size,
-diff --git a/llvm/lib/Target/ARM/ARMSubtarget.h b/llvm/lib/Target/ARM/ARMSubtarget.h
-index 2f7af05a259f..0acf919b1360 100644
---- a/llvm/lib/Target/ARM/ARMSubtarget.h
-+++ b/llvm/lib/Target/ARM/ARMSubtarget.h
-@@ -523,6 +523,8 @@ public:
-   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                    unsigned PhysReg) const override;
-   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
-+
-+  bool allowInlineMemcpyAsLdSt() const { return UseInlineMemcpyAsLdSt; }
- };
-
- } // end namespace llvm
 --
 2.34.1
 
