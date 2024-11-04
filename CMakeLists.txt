@@ -720,6 +720,7 @@ function(
     default_ram_size
     default_stack_size
     run_tests
+    executor
 )
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
         set(MESON_INSTALL_QUIET "--quiet")
@@ -755,6 +756,7 @@ function(
             -Dtests-enable-stack-protector=false
             -Dtest-long-double=${enable_long_double_test}
             -Dnewlib-nano-malloc=${newlib_nano_malloc}
+            -Dtest-machine=${executor}
             --prefix <INSTALL_DIR>
             --cross-file <BINARY_DIR>/meson-cross-build.txt
             --buildtype=${build_type}
@@ -1040,6 +1042,7 @@ macro(
     default_ram_size
     default_stack_size
     run_tests
+    executor
 )
     # It would be nice to just pass ${ARGN} to both the underlying functions,
     # but that has the side effect of expanding any list arguments (e.g.
@@ -1062,6 +1065,7 @@ macro(
             "${default_ram_size}"
             "${default_stack_size}"
             "${run_tests}"
+            "${executor}"
         )
     elseif(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
         add_newlib(
@@ -1453,6 +1457,7 @@ function(add_library_variant target_arch)
             set(have_executor FALSE)
         endif()
     else()
+        set(VARIANT_EXECUTOR "qemu")
         get_qemu_params(
             "${target_triple}"
             "${VARIANT_QEMU_MACHINE}"
@@ -1483,6 +1488,7 @@ function(add_library_variant target_arch)
             "${VARIANT_RAM_SIZE}"
             "${VARIANT_STACK_SIZE}"
             "${have_executor}"
+            "${VARIANT_EXECUTOR}"
         )
         add_compiler_rt(
             "${directory}"
@@ -1634,13 +1640,14 @@ add_library_variants_for_cpu(
     COMPILE_FLAGS "-march=armv8-a"
     MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
     PICOLIBC_BUILD_TYPE "release"
-    QEMU_MACHINE "virt"
-    QEMU_CPU "cortex-a57"
-    BOOT_FLASH_ADDRESS 0x40000000
+    EXECUTOR fvp
+    FVP_MODEL aem-a
+    FVP_CONFIG "v8a-aarch64"
+    BOOT_FLASH_ADDRESS 0x80000000
     BOOT_FLASH_SIZE 0x1000
-    FLASH_ADDRESS 0x40001000
+    FLASH_ADDRESS 0x80001000
     FLASH_SIZE 0xfff000
-    RAM_ADDRESS 0x41000000
+    RAM_ADDRESS 0x81000000
     RAM_SIZE 0x1000000
     STACK_SIZE 8K
 )
