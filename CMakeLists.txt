@@ -1713,6 +1713,23 @@ add_library_variants_for_cpu(
 )
 add_library_variants_for_cpu(
     armv7a
+    SUFFIX soft_nofp_strictly_aligned
+    COMPILE_FLAGS "-mfloat-abi=soft -march=armv7a -mfpu=none -mno-unaligned-access"
+    MULTILIB_FLAGS "--target=armv7-unknown-none-eabi -mfpu=none -mno-unaligned-access"
+    PICOLIBC_BUILD_TYPE "release"
+    QEMU_MACHINE "none"
+    QEMU_CPU "cortex-a7"
+    QEMU_PARAMS "-m 1G"
+    BOOT_FLASH_ADDRESS 0x00000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x20000000
+    FLASH_SIZE 0x1000000
+    RAM_ADDRESS 0x21000000
+    RAM_SIZE 0x1000000
+    STACK_SIZE 4K
+)
+add_library_variants_for_cpu(
+    armv7a
     SUFFIX hard_vfpv3_d16
     COMPILE_FLAGS "-mfloat-abi=hard -march=armv7a -mfpu=vfpv3-d16"
     MULTILIB_FLAGS "--target=armv7-unknown-none-eabihf -mfpu=vfpv3-d16"
