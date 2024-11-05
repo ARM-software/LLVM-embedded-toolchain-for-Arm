@@ -1640,9 +1640,24 @@ add_library_variants_for_cpu(
     COMPILE_FLAGS "-march=armv8-a"
     MULTILIB_FLAGS "--target=aarch64-unknown-none-elf"
     PICOLIBC_BUILD_TYPE "release"
+    QEMU_MACHINE "virt"
+    QEMU_CPU "cortex-a57"
+    BOOT_FLASH_ADDRESS 0x40000000
+    BOOT_FLASH_SIZE 0x1000
+    FLASH_ADDRESS 0x40001000
+    FLASH_SIZE 0xfff000
+    RAM_ADDRESS 0x41000000
+    RAM_SIZE 0x1000000
+    STACK_SIZE 8K
+)
+add_library_variants_for_cpu(
+    aarch64a_be
+    COMPILE_FLAGS "--target=aarch64_be-unknown-none-elf -mbig-endian"
+    MULTILIB_FLAGS "--target=aarch64_be-unknown-none-elf -mbig-endian"
+    PICOLIBC_BUILD_TYPE "release"
     EXECUTOR fvp
     FVP_MODEL aem-a
-    FVP_CONFIG "v8a-aarch64"
+    FVP_CONFIG "v8a-aarch64 big-endian"
     BOOT_FLASH_ADDRESS 0x80000000
     BOOT_FLASH_SIZE 0x1000
     FLASH_ADDRESS 0x80001000
