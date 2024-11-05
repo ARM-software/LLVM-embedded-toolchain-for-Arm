@@ -188,7 +188,7 @@ index c57825949c1c..12db2ab1fca2 100644
      return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                    Alignment.value(), RTLIB::MEMCPY);
 
-+  if (Subtarget.UseInlineMemcpyAsLdSt)
++  if (Subtarget.allowInlineMemcpyAsLdSt())
 +    return EmitMemcpyAsLdSt(DAG, dl, Subtarget, Chain, Dst, Src, SizeVal,
 +                            isVolatile, DstPtrInfo, SrcPtrInfo);
 +
@@ -212,6 +212,19 @@ index 275b1c0f8dc0..6ff422c15b12 100644
    SDValue
    EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                             SDValue Dst, SDValue Src, SDValue Size,
+diff --git a/llvm/lib/Target/ARM/ARMSubtarget.h b/llvm/lib/Target/ARM/ARMSubtarget.h
+index 2f7af05a259f..0acf919b1360 100644
+--- a/llvm/lib/Target/ARM/ARMSubtarget.h
++++ b/llvm/lib/Target/ARM/ARMSubtarget.h
+@@ -523,6 +523,8 @@ public:
+   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
+                                    unsigned PhysReg) const override;
+   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
++
++  bool allowInlineMemcpyAsLdSt() const { return UseInlineMemcpyAsLdSt; }
+ };
+ 
+ } // end namespace llvm
 --
 2.34.1
 
