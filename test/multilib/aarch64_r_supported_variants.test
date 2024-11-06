@@ -1,0 +1,5 @@
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8-r		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8-r	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+
+# CHECK-NOT: error
+# CHECK-NOT: warning

@@ -1,0 +1,35 @@
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.1-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.1-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.2-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.2-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.3-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.3-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.4-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.4-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.5-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.5-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.6-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.6-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.7-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.7-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.8-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.8-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.9-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv8.9-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.1-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.1-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.2-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.2-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.3-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.3-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.4-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.4-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.5-a		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=aarch64-none-elf	-march=armv9.5-a	-mabi=aapcs-soft	 2>&1 | FileCheck %s --match-full-lines
+
+# CHECK-NOT: error
+# CHECK-NOT: warning
