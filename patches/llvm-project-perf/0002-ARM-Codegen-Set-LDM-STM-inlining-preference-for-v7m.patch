@@ -1,8 +1,8 @@
-From 40f07cbde57022b25412cf1c9239755613500d86 Mon Sep 17 00:00:00 2001
+From a5ba56aadc91cc59bc8b00b77f42594d08fc31c5 Mon Sep 17 00:00:00 2001
 From: nasmnc01 <nashe.mncube@arm.com>
 Author: Scott Douglass <scott.douglass@arm.com>
 Date: Tue, 13 Aug 2024 10:55:51 +0100
-Subject: [PATCH] [ARM][CodeGen] Prefer MEMCPY LDM/STM inlining for v7-m
+Subject: [PATCH] [ARM][CodeGen]Prefer MEMCPY LDM/STM inlining for v7-m
 
 This patch changes the behaviour of memcpy inlining on v7m targets.
 The old behaviour was to inline memcpys with LDM/STM instructions.
@@ -11,57 +11,19 @@ for performance gains of 1% to 2% on selected benchmarks.
 
 Co-authored-by: Nashe Mncube <nashe.mncube@arm.com>
 ---
- llvm/lib/Target/ARM/ARMFeatures.td          |   5 +
- llvm/lib/Target/ARM/ARMProcessors.td        |   2 +-
- llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp | 121 ++++++++++++++++++++
+ llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp | 116 ++++++++++++++
  llvm/lib/Target/ARM/ARMSelectionDAGInfo.h   |   6 +
- 4 files changed, 133 insertions(+), 1 deletion(-)
+ llvm/lib/Target/ARM/ARMSubtarget.h          |   4 +
+ 3 files changed, 126 insertions(+)
 
-diff --git a/llvm/lib/Target/ARM/ARMFeatures.td b/llvm/lib/Target/ARM/ARMFeatures.td
-index bb437698296c..f7fa00aba424 100644
---- a/llvm/lib/Target/ARM/ARMFeatures.td
-+++ b/llvm/lib/Target/ARM/ARMFeatures.td
-@@ -510,6 +510,11 @@ def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
-     "DisablePostRAScheduler", "true",
-     "Don't schedule again after register allocation">;
- 
-+def FeatureUseInlineMemcpyAsLdSt :
-+    SubtargetFeature<"use-inline-memcpy-ldst", "UseInlineMemcpyAsLdSt",
-+        "true", "Use memcpy inlining as LD/ST instructions">;
-+
-+
- // Armv8.5-A extensions
- 
- // Has speculation barrier.
-diff --git a/llvm/lib/Target/ARM/ARMProcessors.td b/llvm/lib/Target/ARM/ARMProcessors.td
-index b94a5fc16146..ffb0c86bc687 100644
---- a/llvm/lib/Target/ARM/ARMProcessors.td
-+++ b/llvm/lib/Target/ARM/ARMProcessors.td
-@@ -96,7 +96,7 @@ def ProcR52plus  : SubtargetFeature<"r52plus", "ARMProcFamily", "CortexR52plus",
- def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
-                                    "Cortex-M3 ARM processors", []>;
- def ProcM7      : SubtargetFeature<"m7", "ARMProcFamily", "CortexM7",
--                                   "Cortex-M7 ARM processors", []>;
-+                                   "Cortex-M7 ARM processors", [FeatureUseInlineMemcpyAsLdSt]>;
- 
- //===----------------------------------------------------------------------===//
- // ARM processors
 diff --git a/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp b/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp
-index c57825949c1c..63ae7a042886 100644
+index c57825949c1c..0913b2719813 100644
 --- a/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp
 +++ b/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp
-@@ -12,6 +12,7 @@
- 
- #include "ARMTargetMachine.h"
- #include "ARMTargetTransformInfo.h"
-+#include "llvm/ADT/SmallVector.h"
- #include "llvm/CodeGen/SelectionDAG.h"
- #include "llvm/IR/DerivedTypes.h"
- #include "llvm/Support/CommandLine.h"
-@@ -138,6 +139,122 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
+@@ -138,6 +138,118 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
    return CallResult.second;
  }
- 
+
 +SDValue ARMSelectionDAGInfo::EmitMemcpyAsLdSt(
 +    SelectionDAG &DAG, SDLoc dl, const ARMSubtarget &Subtarget, SDValue Chain,
 +    SDValue Dst, SDValue Src, uint64_t SizeVal, bool isVolatile,
@@ -75,8 +37,8 @@ index c57825949c1c..63ae7a042886 100644
 +  unsigned I = 0;
 +  // Emit a maximum of 4 loads in Thumb1 since we have fewer registers
 +  const unsigned MaxLoads = Subtarget.isThumb1Only() ? 4 : 6;
-+  SmallVector<SDValue> TFOps(6);
-+  SmallVector<SDValue> Loads(6);
++  SDValue TFOps[6];
++  SDValue Loads[6];
 +  uint64_t SrcOff = 0, DstOff = 0;
 +
 +  MachineMemOperand::Flags MOFlags = MachineMemOperand::Flags::MONone;
@@ -107,8 +69,7 @@ index c57825949c1c..63ae7a042886 100644
 +      TFOps[I] = Loads[I].getValue(1);
 +      SrcOff += VTSize;
 +    }
-+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-+                        ArrayRef(TFOps.data(), I));
++    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, I));
 +
 +    for (I = 0; I < MaxLoads && EmittedNumMemOps + I < NumMemOps; ++I) {
 +      TFOps[I] = DAG.getStore(
@@ -118,8 +79,7 @@ index c57825949c1c..63ae7a042886 100644
 +          DstPtrInfo.getWithOffset(DstOff), MaybeAlign(0), StoreMOFlags);
 +      DstOff += VTSize;
 +    }
-+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-+                        ArrayRef(TFOps.data(), I));
++    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, I));
 +
 +    EmittedNumMemOps += I;
 +  }
@@ -150,8 +110,7 @@ index c57825949c1c..63ae7a042886 100644
 +    SrcOff += VTSize;
 +    BytesLeft -= VTSize;
 +  }
-+  Chain =
-+      DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps.data(), I));
++  Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, I));
 +
 +  I = 0;
 +  BytesLeft = BytesLeftSave;
@@ -174,18 +133,17 @@ index c57825949c1c..63ae7a042886 100644
 +    BytesLeft -= VTSize;
 +  }
 +
-+  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-+                     ArrayRef(TFOps.data(), I));
++  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ArrayRef(TFOps, I));
 +}
 +
  static bool shouldGenerateInlineTPLoop(const ARMSubtarget &Subtarget,
                                         const SelectionDAG &DAG,
                                         ConstantSDNode *ConstantSize,
-@@ -192,6 +309,10 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
+@@ -192,6 +304,10 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
      return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                    Alignment.value(), RTLIB::MEMCPY);
- 
-+  if (Subtarget.useInlineMemcpyAsLdSt())
+
++  if (Subtarget.allowInlineMemcpyAsLdSt())
 +    return EmitMemcpyAsLdSt(DAG, dl, Subtarget, Chain, Dst, Src, SizeVal,
 +                            isVolatile, DstPtrInfo, SrcPtrInfo);
 +
@@ -199,7 +157,7 @@ index 275b1c0f8dc0..6ff422c15b12 100644
 @@ -44,6 +44,12 @@ public:
                                    MachinePointerInfo DstPtrInfo,
                                    MachinePointerInfo SrcPtrInfo) const override;
- 
+
 +  SDValue EmitMemcpyAsLdSt(SelectionDAG &DAG, SDLoc dl,
 +                           const ARMSubtarget &Subtarget, SDValue Chain,
 +                           SDValue Dst, SDValue Src, uint64_t SizeVal,
@@ -209,6 +167,21 @@ index 275b1c0f8dc0..6ff422c15b12 100644
    SDValue
    EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                             SDValue Dst, SDValue Src, SDValue Size,
--- 
+diff --git a/llvm/lib/Target/ARM/ARMSubtarget.h b/llvm/lib/Target/ARM/ARMSubtarget.h
+index 2f7af05a259f..20aa9e4f334b 100644
+--- a/llvm/lib/Target/ARM/ARMSubtarget.h
++++ b/llvm/lib/Target/ARM/ARMSubtarget.h
+@@ -523,6 +523,10 @@ public:
+   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
+                                    unsigned PhysReg) const override;
+   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
++
++  bool allowInlineMemcpyAsLdSt() const {
++    return HasV7Ops && ARMProcClass == MClass;
++  }
+ };
+
+ } // end namespace llvm
+--
 2.34.1
 
