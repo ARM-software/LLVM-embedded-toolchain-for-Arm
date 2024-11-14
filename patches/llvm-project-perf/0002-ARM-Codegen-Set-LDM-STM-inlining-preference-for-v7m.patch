@@ -1,4 +1,4 @@
-From 05dad583794a733720cc38a7e7231332d9c9b7b0 Mon Sep 17 00:00:00 2001
+From 8aa999e52ef03be7d8c05f4bd151d7df60d17e8f Mon Sep 17 00:00:00 2001
 From: Scott Douglass <scott.douglass@arm.com>
 Date: Tue, 13 Aug 2024 10:55:51 +0100
 Subject: [PATCH] [ARM][CodeGen]Prefer MEMCPY LDM/STM inlining for v7-m
@@ -8,47 +8,30 @@ The old behaviour was to inline memcpys with LDM/STM instructions.
 Alternatively, using LD/ST instructions for memcpy inlining allowed
 for performance gains of 1% to 2% on selected benchmarks.
 
-Co-authored-by: Nashe Mncube<nashe.mncube@arm.com>
+Co-authored-by: Nashe Mncube <nashe.mncube@arm.com>
 ---
- llvm/lib/Target/ARM/ARMFeatures.td          |   7 +-
- llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp | 116 ++++++++++++++
+ llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp | 120 +++++++++++++++
  llvm/lib/Target/ARM/ARMSelectionDAGInfo.h   |   6 +
- llvm/test/CodeGen/ARM/memcpy-no-inline.ll   |   2 +-
  llvm/test/CodeGen/ARM/memcpy-v7m.ll         | 161 ++++++++++++++++++++
- llvm/test/CodeGen/Thumb2/mve-memtp-loop.ll  |  34 +++--
- 6 files changed, 315 insertions(+), 11 deletions(-)
+ 3 files changed, 287 insertions(+)
  create mode 100644 llvm/test/CodeGen/ARM/memcpy-v7m.ll
 
-diff --git a/llvm/lib/Target/ARM/ARMFeatures.td b/llvm/lib/Target/ARM/ARMFeatures.td
-index bb437698296c..57bee03190f8 100644
---- a/llvm/lib/Target/ARM/ARMFeatures.td
-+++ b/llvm/lib/Target/ARM/ARMFeatures.td
-@@ -2,6 +2,11 @@
- // ARM Subtarget state.
- //
-
-+def FeatureInlineMemcpyWithLdSt : SubtargetFeature<"inline-memcpy-ld-st",
-+    "InlineMemcpyWithLdSt", "true",
-+    "Inline memcpys using ld/st instructions.">;
-+
-+
- // True if compiling for Thumb, false for ARM.
- def ModeThumb             : SubtargetFeature<"thumb-mode", "IsThumb",
-                                              "true", "Thumb mode">;
-@@ -639,7 +644,7 @@ def HasV6T2Ops  : SubtargetFeature<"v6t2", "HasV6T2Ops", "true",
-
- def HasV7Ops    : SubtargetFeature<"v7", "HasV7Ops", "true",
-                                    "Support ARM v7 instructions",
--                                   [HasV6T2Ops, FeatureV7Clrex]>;
-+                                   [HasV6T2Ops, FeatureV7Clrex, FeatureInlineMemcpyWithLdSt]>;
-
- def HasV8MMainlineOps :
-                   SubtargetFeature<"v8m.main", "HasV8MMainlineOps", "true",
 diff --git a/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp b/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp
-index e7ea10ff971a..fc852f77c756 100644
+index e7ea10ff971a..09ed4ab219a1 100644
 --- a/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp
 +++ b/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp
-@@ -136,6 +136,118 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
+@@ -30,6 +30,10 @@ cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
+                           "Allow (may be subject to certain conditions) "
+                           "conversion of memcpy to TP loop.")));
+
++static cl::opt<bool> EnableInlineMemcpyAsLdSt(
++    "enable-inline-memcpy-ld-st", cl::init(false), cl::Hidden,
++    cl::desc("Inline memcpy with LD/ST instructions."));
++
+ // Emit, if possible, a specialized version of the given Libcall. Typically this
+ // means selecting the appropriately aligned version, but we also convert memset
+ // of 0 into memclr.
+@@ -136,6 +140,118 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
    return CallResult.second;
  }
 
@@ -167,11 +150,11 @@ index e7ea10ff971a..fc852f77c756 100644
  static bool shouldGenerateInlineTPLoop(const ARMSubtarget &Subtarget,
                                         const SelectionDAG &DAG,
                                         ConstantSDNode *ConstantSize,
-@@ -190,6 +302,10 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
+@@ -190,6 +306,10 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
      return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                    Alignment.value(), RTLIB::MEMCPY);
 
-+  if (Subtarget.inlineMemcpyWithLdSt() && Subtarget.isMClass())
++  if (EnableInlineMemcpyAsLdSt && Subtarget.isMClass() && Subtarget.hasV7Ops())
 +    return EmitMemcpyAsLdSt(DAG, dl, Subtarget, Chain, Dst, Src, SizeVal,
 +                            isVolatile, DstPtrInfo, SrcPtrInfo);
 +
@@ -195,24 +178,14 @@ index 275b1c0f8dc0..6ff422c15b12 100644
    SDValue
    EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                             SDValue Dst, SDValue Src, SDValue Size,
-diff --git a/llvm/test/CodeGen/ARM/memcpy-no-inline.ll b/llvm/test/CodeGen/ARM/memcpy-no-inline.ll
-index 43d640a4058a..c59dcf791300 100644
---- a/llvm/test/CodeGen/ARM/memcpy-no-inline.ll
-+++ b/llvm/test/CodeGen/ARM/memcpy-no-inline.ll
-@@ -1,4 +1,4 @@
--; RUN: llc -mtriple=thumbv7m-arm-none-eabi -mcpu=cortex-m3 < %s | FileCheck %s
-+; RUN: llc -mtriple=thumbv7m-arm-none-eabi -mcpu=cortex-m3 -mattr=-inline-memcpy-ld-st < %s | FileCheck %s
-
- %struct.mystruct = type { [31 x i8] }
-
 diff --git a/llvm/test/CodeGen/ARM/memcpy-v7m.ll b/llvm/test/CodeGen/ARM/memcpy-v7m.ll
 new file mode 100644
-index 000000000000..d9474683d1ca
+index 000000000000..12f74c04087e
 --- /dev/null
 +++ b/llvm/test/CodeGen/ARM/memcpy-v7m.ll
 @@ -0,0 +1,161 @@
 +; NOTE: Assertions have been autogenerated by utils/update_llc_test_checks.py UTC_ARGS: --version 5
-+; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-m7  -mattr=+inline-memcpy-ld-st -verify-machineinstrs %s -o - | FileCheck %s
++; RUN: llc -mtriple=arm-none-eabi -mcpu=cortex-m7  -verify-machineinstrs -enable-inline-memcpy-ld-st %s -o - | FileCheck %s
 +
 +@d = external global [64 x i32]
 +@s = external global [64 x i32]
@@ -372,51 +345,6 @@ index 000000000000..d9474683d1ca
 +  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %3, i32 28, i32 4, i1 false)
 +  ret void
 +}
-diff --git a/llvm/test/CodeGen/Thumb2/mve-memtp-loop.ll b/llvm/test/CodeGen/Thumb2/mve-memtp-loop.ll
-index da59cb259db6..d58b864af8ab 100644
---- a/llvm/test/CodeGen/Thumb2/mve-memtp-loop.ll
-+++ b/llvm/test/CodeGen/Thumb2/mve-memtp-loop.ll
-@@ -168,15 +168,31 @@ entry:
- define void @test8(ptr noalias nocapture %X, ptr noalias nocapture readonly %Y, i32 %n) {
- ; CHECK-LABEL: test8:
- ; CHECK:       @ %bb.0: @ %entry
--; CHECK-NEXT:    .save {r4, lr}
--; CHECK-NEXT:    push {r4, lr}
--; CHECK-NEXT:    ldm.w r1!, {r2, r3, r4, r12, lr}
--; CHECK-NEXT:    stm.w r0!, {r2, r3, r4, r12, lr}
--; CHECK-NEXT:    ldm.w r1!, {r2, r3, r4, r12, lr}
--; CHECK-NEXT:    stm.w r0!, {r2, r3, r4, r12, lr}
--; CHECK-NEXT:    ldm.w r1, {r2, r3, r4, r12, lr}
--; CHECK-NEXT:    stm.w r0, {r2, r3, r4, r12, lr}
--; CHECK-NEXT:    pop {r4, pc}
-+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-+; CHECK-NEXT:    .pad #12
-+; CHECK-NEXT:    sub sp, #12
-+; CHECK-NEXT:    ldr r2, [r1]
-+; CHECK-NEXT:    add.w r11, r1, #16
-+; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-+; CHECK-NEXT:    add.w lr, r1, #4
-+; CHECK-NEXT:    ldr r2, [r1, #48]
-+; CHECK-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-+; CHECK-NEXT:    ldr r2, [r1, #52]
-+; CHECK-NEXT:    str r2, [sp] @ 4-byte Spill
-+; CHECK-NEXT:    ldm.w r11, {r4, r5, r6, r7, r8, r9, r10, r11}
-+; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-+; CHECK-NEXT:    ldm.w lr, {r3, r12, lr}
-+; CHECK-NEXT:    stm.w r0, {r2, r3, r12, lr}
-+; CHECK-NEXT:    add.w r2, r0, #16
-+; CHECK-NEXT:    ldr r1, [r1, #56]
-+; CHECK-NEXT:    stm.w r2, {r4, r5, r6, r7, r8, r9, r10, r11}
-+; CHECK-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-+; CHECK-NEXT:    str r2, [r0, #48]
-+; CHECK-NEXT:    ldr r2, [sp] @ 4-byte Reload
-+; CHECK-NEXT:    strd r2, r1, [r0, #52]
-+; CHECK-NEXT:    add sp, #12
-+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
- entry:
-   call void @llvm.memcpy.p0.p0.i32(ptr align 4 %X, ptr align 4 %Y, i32 60, i1 false)
-   ret void
 --
 2.34.1
 
