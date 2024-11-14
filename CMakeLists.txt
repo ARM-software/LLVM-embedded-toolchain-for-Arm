@@ -47,7 +47,7 @@
 #   git -C repos clone https://github.com/llvm/llvm-project.git
 #   git -C repos/llvm-project am -k $PWD/patches/llvm-project/*.patch
 #   git -C repos clone https://github.com/picolibc/picolibc.git
-#   git -C repos/picolibc apply $PWD/patches/picolibc.patch
+#   git -C repos/picolibc apply $PWD/patches/picolibc/*.patch
 #   mkdir build
 #   cd build
 #   cmake .. -GNinja -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=../repos/llvm-project -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=../repos/picolibc
@@ -289,6 +289,11 @@ set(LLVM_PATCH_COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/p
 if(APPLY_LLVM_PERFORMANCE_PATCHES)
     set(LLVM_PATCH_COMMAND ${LLVM_PATCH_COMMAND} && ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/patch_llvm.py ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project-perf)
 endif()
+set(
+    picolibc_patches
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc/0001-Enable-libcxx-builds.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc/0002-Add-bootcode-for-AArch64-FVPs.patch
+)
 
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
@@ -308,7 +313,7 @@ FetchContent_Declare(picolibc
     GIT_TAG "${picolibc_TAG}"
     GIT_SHALLOW "${picolibc_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${CMAKE_CURRENT_SOURCE_DIR}/patches/picolibc.patch
+    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${picolibc_patches}
     # We only want to download the content, not configure it at this
     # stage. picolibc will be built in many configurations using
     # ExternalProject_Add using the sources that are checked out here.

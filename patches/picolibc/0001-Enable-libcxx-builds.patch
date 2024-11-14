@@ -1,0 +1,49 @@
+From 42f07bef7775a1387f9707e959f8b6782f9d6808 Mon Sep 17 00:00:00 2001
+From: Simi Pallipurath <simi.pallipurath@arm.com>
+Date: Thu, 14 Nov 2024 10:07:08 +0000
+Subject: [PATCH 1/2] [PATCH 1/2] Enable libcxx builds
+
+Modifications to build config and linker script required to enable
+libc++ builds.
+---
+ meson.build    | 12 ++++++++++++
+ picolibc.ld.in |  3 +++
+ 2 files changed, 15 insertions(+)
+
+diff --git a/meson.build b/meson.build
+index 012d664bd..4161d6574 100644
+--- a/meson.build
++++ b/meson.build
+@@ -1318,6 +1318,18 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
+   error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
+ endif
+ 
++conf_data.set('_GNU_SOURCE', '',
++        description: '''Enable GNU functions like strtof_l.
++It's necessary to set this globally because inline functions in
++libc++ headers call the GNU functions.'''
++)
++
++conf_data.set('_PICOLIBC_CTYPE_SMALL', '0',
++        description: '''Disable picolibc's small ctype implementation.
++libc++ expects newlib-style ctype tables, and also expects support for locales
++and extended character sets, so picolibc's small ctype is not compatible with it'''
++)
++
+ conf_data.set('_HAVE_CC_INHIBIT_LOOP_TO_LIBCALL',
+ 	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
+ 	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
+diff --git a/picolibc.ld.in b/picolibc.ld.in
+index 7b63ba172..cda5e1e7e 100644
+--- a/picolibc.ld.in
++++ b/picolibc.ld.in
+@@ -68,6 +68,9 @@ SECTIONS
+ 		*(.literal.unlikely .text.unlikely .literal.unlikely.* .text.unlikely.*)
+ 		*(.literal.startup .text.startup .literal.startup.* .text.startup.*)
+ 		*(.literal .text .literal.* .text.* .opd .opd.*)
++		PROVIDE (__start___lcxx_override = .);
++		*(__lcxx_override)
++		PROVIDE (__stop___lcxx_override = .);
+ 		*(.gnu.linkonce.t.*)
+ 		KEEP (*(.fini .fini.*))
+ 		@PREFIX@__text_end = .;

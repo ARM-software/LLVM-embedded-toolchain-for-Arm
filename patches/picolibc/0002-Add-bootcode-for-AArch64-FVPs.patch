@@ -1,42 +1,29 @@
+From f2ca20cebc85850a50b80424bb0f81c927edd04b Mon Sep 17 00:00:00 2001
+From: Simi Pallipurath <simi.pallipurath@arm.com>
+Date: Thu, 14 Nov 2024 10:12:33 +0000
+Subject: [PATCH 2/2] [PATCH 2/2] Add bootcode for AArch64 FVPs
+
+The AArch64 FVP (Fixed Virtual Platform) models differ from QEMU in a
+few ways which affect the crt0 code:
+
+* The memory map is different, so needs different page tables.
+* They boot up at EL3, instead of EL1, so we need to set the EL3 versions of the system registers.
+* Add option to build crt0 bootcode for different machines
+* Build new FVP variants of crt0, instead of replacing QEMU ones
+* Split assembly parts of AArch64 crt0 into a separate file
+* Make error checking target-specific
+---
+ meson.build                         |   1 +
+ meson_options.txt                   |   3 +
+ picocrt/machine/aarch64/crt0.S      | 200 +++++++++++++++++++
+ picocrt/machine/aarch64/crt0.c      | 198 +++----------------
+ picocrt/machine/aarch64/meson.build |   9 +-
+ picocrt/meson.build                 | 296 ++++++++++++++++------------
+ 6 files changed, 404 insertions(+), 303 deletions(-)
+ create mode 100644 picocrt/machine/aarch64/crt0.S
+
 diff --git a/meson.build b/meson.build
-index f90f5b818..2f8d63733 100644
---- a/meson.build
-+++ b/meson.build
-@@ -1310,6 +1310,18 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
-   error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
- endif
- 
-+conf_data.set('_GNU_SOURCE', '',
-+        description: '''Enable GNU functions like strtof_l.
-+It's necessary to set this globally because inline functions in
-+libc++ headers call the GNU functions.'''
-+)
-+
-+conf_data.set('_PICOLIBC_CTYPE_SMALL', '0',
-+        description: '''Disable picolibc's small ctype implementation.
-+libc++ expects newlib-style ctype tables, and also expects support for locales
-+and extended character sets, so picolibc's small ctype is not compatible with it'''
-+)
-+
- conf_data.set('_HAVE_CC_INHIBIT_LOOP_TO_LIBCALL',
- 	      cc.has_argument('-fno-tree-loop-distribute-patterns'),
- 	      description: 'Compiler flag to prevent detecting memcpy/memset patterns')
-diff --git a/picolibc.ld.in b/picolibc.ld.in
-index 7b63ba172..cda5e1e7e 100644
---- a/picolibc.ld.in
-+++ b/picolibc.ld.in
-@@ -68,6 +68,9 @@ SECTIONS
- 		*(.literal.unlikely .text.unlikely .literal.unlikely.* .text.unlikely.*)
- 		*(.literal.startup .text.startup .literal.startup.* .text.startup.*)
- 		*(.literal .text .literal.* .text.* .opd .opd.*)
-+		PROVIDE (__start___lcxx_override = .);
-+		*(__lcxx_override)
-+		PROVIDE (__stop___lcxx_override = .);
- 		*(.gnu.linkonce.t.*)
- 		KEEP (*(.fini .fini.*))
- 		@PREFIX@__text_end = .;
-diff --git a/meson.build b/meson.build
-index 8cf1006d9..4e612966f 100644
+index 4161d6574..9d3f5c672 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -151,6 +151,7 @@ multilib_exclude = get_option('multilib-exclude')
@@ -881,4 +868,3 @@ index 76965990f..be8f875be 100644
 +  endforeach
    
  endforeach
-
