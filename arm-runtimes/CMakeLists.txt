@@ -96,6 +96,7 @@ set(ENABLE_LIBC_TESTS ${ENABLE_LIBC_TESTS_def} CACHE BOOL "Enable libc tests (pi
 set(ENABLE_COMPILER_RT_TESTS ${ENABLE_COMPILER_RT_TESTS_def} CACHE BOOL "Enable compiler-rt tests.")
 set(ENABLE_LIBCXX_TESTS ${ENABLE_LIBCXX_TESTS_def} CACHE BOOL "Enable libcxx tests.")
 set(LLVM_BINARY_DIR "" CACHE PATH "Path to LLVM toolchain root to build libraries with")
+set(LIBC_HDRGEN "" CACHE PATH "Path to prebuilt lbc-hdrgen if not included in LLVM binaries set by LLVM_BINARY_DIR")
 
 # Temporary location to collect the libraries as they are built.
 set(TEMP_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/tmp_install")
@@ -137,7 +138,7 @@ else()
     else()
         set(target_triple "arm-none-eabi")
     endif()
-    if(flags MATCHES "-mfloat-abi=hard")
+    if(COMPILE_FLAGS MATCHES "-mfloat-abi=hard")
         # Also, compiler-rt looks in the ABI component of the
         # triple to decide whether to use the hard float ABI.
         set(target_triple "${target_triple}hf")
@@ -145,8 +146,15 @@ else()
     set(cpu_family arm)
 endif()
 
+# Create a single target for all testing. If no testing is enabled, this
+# will simply do nothing.
+add_custom_target(check-all)
+
 # If any testing is enabled, prepare test executor settings.
 if (ENABLE_LIBC_TESTS OR ENABLE_COMPILER_RT_TESTS OR ENABLE_LIBCXX_TESTS)
+    # Flags required to link tests.
+    set(test_link_flags "-nostartfiles -lcrt0-semihost -lsemihost -T picolibcpp.ld")
+
     if(TEST_EXECUTOR STREQUAL qemu)
         if(TARGET_ARCH MATCHES "^aarch64")
             find_program(QEMU_EXECUTABLE qemu-system-aarch64)
@@ -198,7 +206,6 @@ if (ENABLE_LIBC_TESTS OR ENABLE_COMPILER_RT_TESTS OR ENABLE_LIBCXX_TESTS)
 endif()
 
 set(compile_arch_flags "--target=${target_triple} ${COMPILE_FLAGS}")
-set(link_flags "-nostartfiles -lcrt0-semihost -lsemihost -T picolibcpp.ld")
 # Compiling the libraries benefits from some extra optimization
 # flags, and requires a sysroot.
 set(lib_compile_flags "${compile_arch_flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${TEMP_LIB_DIR}")
@@ -238,7 +245,7 @@ if(VARIANT STREQUAL "armv6m_soft_nofp")
 endif()
 
 if (ENABLE_COMPILER_RT_TESTS)
-    set(compiler_rt_test_flags "${lib_compile_flags} ${link_flags}")
+    set(compiler_rt_test_flags "${lib_compile_flags} ${test_link_flags}")
     set(compiler_rt_lit_args "${LLVM_LIT_ARGS} --xunit-xml-output=results.junit.xml")
     set(
         compiler_rt_test_cmake_args 
@@ -298,6 +305,7 @@ ExternalProject_Add(
 )
 
 add_custom_target(check-compiler-rt)
+add_dependencies(check-all check-compiler-rt)
 if (ENABLE_COMPILER_RT_TESTS)
     ExternalProject_Add_Step(
         compiler_rt
@@ -357,7 +365,7 @@ if(C_LIBRARY STREQUAL picolibc)
     to_meson_list("${picolibc_flags}" picolibc_meson_flags)
     
     if (ENABLE_LIBC_TESTS)
-        set(picolibc_test_executor_bin ${CMAKE_CURRENT_SOURCE_DIR}/picolibc-test-wrapper.py)
+        set(picolibc_test_executor_bin ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-test-wrapper.py)
         to_meson_list("${test_executor_params}" meson_test_executor_params)
     endif()
 
@@ -394,6 +402,7 @@ if(C_LIBRARY STREQUAL picolibc)
     )
 
     add_custom_target(check-picolibc)
+    add_dependencies(check-all check-picolibc)
     if (ENABLE_LIBC_TESTS)
         # meson builds the tests at the same time as the library.
         # So reconfigure to enable tests at a later point.
@@ -416,7 +425,7 @@ if(C_LIBRARY STREQUAL picolibc)
             check
             COMMAND ${MESON_EXECUTABLE} test -C <BINARY_DIR>
             COMMAND ${Python3_EXECUTABLE}
-            ${TOOLCHAIN_SOURCE_DIR}/test-support/modify-picolibc-xml.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/test-support/modify-picolibc-xml.py
             --picolibc-build-dir <BINARY_DIR>
             --variant ${VARIANT}
             USES_TERMINAL TRUE
@@ -542,6 +551,8 @@ if(C_LIBRARY STREQUAL llvmlibc)
         DESTINATION
         ${LIBC_CFG_DIR}
     )
+    
+    set(lib_compile_flags "${lib_compile_flags} -Wno-error=atomic-alignment")
 
     set(common_llvmlibc_cmake_args
         -DCMAKE_AR=${LLVM_BINARY_DIR}/bin/llvm-ar${CMAKE_EXECUTABLE_SUFFIX}
@@ -568,6 +579,9 @@ if(C_LIBRARY STREQUAL llvmlibc)
         # If libc-hdrgen is provided, there is no need to build it,
         # but a target is still needed to satisfy the dependency.
         add_custom_target(libc_hdrgen)
+    elseif(EXISTS ${LLVM_BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
+        set(LIBC_HDRGEN ${LLVM_BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
+        add_custom_target(libc_hdrgen)
     else()
         ExternalProject_Add(
             libc_hdrgen
@@ -576,10 +590,8 @@ if(C_LIBRARY STREQUAL llvmlibc)
                 -DLLVM_ENABLE_RUNTIMES=libc
                 -DLLVM_LIBC_FULL_BUILD=ON
                 -DCMAKE_BUILD_TYPE=Debug
-            STEP_TARGETS build install
             BUILD_COMMAND ${CMAKE_COMMAND} --build . --target libc-hdrgen
             INSTALL_COMMAND ${CMAKE_COMMAND} -E true
-            # Always run the build command so that incremental builds are correct.
             CONFIGURE_HANDLED_BY_BUILD TRUE
         )
         ExternalProject_Get_property(libc_hdrgen BINARY_DIR)
@@ -674,7 +686,7 @@ if(ENABLE_CXX_LIBS)
                 -DLIBUNWIND_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libunwind-picolibc.cfg.in
                 -DLIBUNWIND_TEST_PARAMS=executor=${lit_test_executor}
                 -DRUNTIME_TEST_ARCH_FLAGS=${compile_arch_flags}
-                -DRUNTIME_TEST_LINK_FLAGS=${link_flags}
+                -DRUNTIME_TEST_LINK_FLAGS=${test_link_flags}
                 -DLLVM_LIT_ARGS=${cxxlibs_lit_args}
             )
         endif()
@@ -750,8 +762,11 @@ if(ENABLE_CXX_LIBS)
         CONFIGURE_HANDLED_BY_BUILD TRUE
     )
     add_custom_target(check-cxx)
+    add_dependencies(check-all check-cxx)
     add_custom_target(check-cxxabi)
+    add_dependencies(check-all check-cxxabi)
     add_custom_target(check-unwind)
+    add_dependencies(check-all check-unwind)
     if (ENABLE_LIBCXX_TESTS)
         foreach(check_target check-cxx check-cxxabi check-unwind)
             ExternalProject_Add_Step(
@@ -772,9 +787,9 @@ if(ENABLE_CXX_LIBS)
         endforeach()
     endif()
 
-    install(
-        DIRECTORY ${TEMP_LIB_DIR}/
-        DESTINATION .
-    )
-
 endif()
+
+install(
+    DIRECTORY ${TEMP_LIB_DIR}/
+    DESTINATION .
+)

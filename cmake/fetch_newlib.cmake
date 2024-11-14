@@ -6,7 +6,12 @@
 
 include(FetchContent)
 
-set(newlib_patch ${CMAKE_CURRENT_SOURCE_DIR}/../patches/newlib.patch)
+if(NOT VERSIONS_JSON)
+    include(${CMAKE_CURRENT_LIST_DIR}/read_versions.cmake)
+endif()
+read_repo_version(newlib newlib)
+
+set(newlib_patch ${CMAKE_CURRENT_LIST_DIR}/../patches/newlib.patch)
 
 FetchContent_Declare(newlib
     GIT_REPOSITORY https://sourceware.org/git/newlib-cygwin.git

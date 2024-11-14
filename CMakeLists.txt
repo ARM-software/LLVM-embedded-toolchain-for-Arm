@@ -139,6 +139,13 @@ option(
     ON
 )
 option(
+    LIBS_USE_COMPILER_LAUNCHER
+    "Pass CMAKE_C_COMPILER_LAUNCHER and CMAKE_CXX_COMPILER_LAUNCHER
+    down to the library builds, so that programs such as ccache can
+    be used to speed up repeated builds. This is not done by default,
+    as it can also make the inital build slower due to the cold cache."
+)
+option(
     APPLY_LLVM_PERFORMANCE_PATCHES
     "During checkout, apply optional downstream patches to
     llvm-project to improve performance."
@@ -261,38 +268,11 @@ include(ProcessorCount)
 #
 # If you want to stop cmake updating the repos then run
 # cmake . -DFETCHCONTENT_FULLY_DISCONNECTED=ON
-
-# Read which revisions of the repos to use.
-file(READ versions.json VERSIONS_JSON)
-function(read_repo_version output_variable_prefix repo)
-    string(JSON tag GET ${VERSIONS_JSON} "repos" "${repo}" "tag")
-    string(JSON tagType GET ${VERSIONS_JSON} "repos" "${repo}" "tagType")
-    if(tagType STREQUAL "commithash")
-        # GIT_SHALLOW doesn't work with commit hashes.
-        set(shallow OFF)
-    elseif(tagType STREQUAL "branch")
-        set(shallow ON)
-        # CMake docs recommend that "branch names and tags should
-        # generally be specified as remote names"
-        set(tag "origin/${tag}")
-    elseif(tagType STREQUAL "tag")
-        set(shallow ON)
-    else()
-        message(FATAL_ERROR "Unrecognised tagType ${tagType}")
-    endif()
-
-    set(${output_variable_prefix}_TAG "${tag}" PARENT_SCOPE)
-    set(${output_variable_prefix}_SHALLOW "${shallow}" PARENT_SCOPE)
-endfunction()
-read_repo_version(llvmproject llvm-project)
-
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/fetch_llvm.cmake)
 if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL picolibc)
-    read_repo_version(picolibc picolibc)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/fetch_picolibc.cmake)
 endif()
 if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL newlib)
-    read_repo_version(newlib newlib)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/fetch_newlib.cmake)
 endif()
 
@@ -365,11 +345,6 @@ if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)
     )
     ExternalProject_Get_property(libc_hdrgen BINARY_DIR)
     set(LIBC_HDRGEN ${BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
-
-    # Add an empty check target, to simplify the logic below that expects to
-    # find one for every libc type. We have no current setup to run the LLVM
-    # libc test suite.
-    add_custom_target(check-llvmlibc)
 
     # LLVM libc lacks a configuration for AArch64, but the AArch32 one works
     # fine. However, setting the configuration for both architectures to the
@@ -581,6 +556,15 @@ else()
     set(library_subdir "")
 endif()
 
+if (LIBS_USE_COMPILER_LAUNCHER)
+    if(CMAKE_C_COMPILER_LAUNCHER)
+        list(APPEND compiler_launcher_cmake_args "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}")
+    endif()
+    if(CMAKE_CXX_COMPILER_LAUNCHER)
+        list(APPEND compiler_launcher_cmake_args "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}")
+    endif()
+endif()
+
 ExternalProject_Add(
     multilib-${LLVM_TOOLCHAIN_C_LIBRARY}
     PREFIX ${CMAKE_BINARY_DIR}/multilib-builds
@@ -588,10 +572,12 @@ ExternalProject_Add(
     INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}
     DEPENDS ${lib_tool_dependencies}
     CMAKE_ARGS
+    ${compiler_launcher_cmake_args}
     -DC_LIBRARY=${LLVM_TOOLCHAIN_C_LIBRARY}
     -DLLVM_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/llvm
     -DMULTILIB_JSON=${LLVM_TOOLCHAIN_MULTILIB_JSON}
     -DENABLE_VARIANTS=${LLVM_TOOLCHAIN_LIBRARY_VARIANTS}
+    -DLIBC_HDRGEN=${LIBC_HDRGEN}
     -DFVP_INSTALL_DIR=${FVP_INSTALL_DIR}
     -DFVP_CONFIG_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fvp/config
     -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=${FETCHCONTENT_SOURCE_DIR_LLVMPROJECT}

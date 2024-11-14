@@ -47,7 +47,6 @@ def main():
             new_classname = old_classname.replace(old_suitename, new_suitename)
             testcase.set("classname", new_classname)
 
-    xml_file = os.path.join(args.compiler_rt_build_dir, "test", "results2.junit.xml")
     tree.write(xml_file)
     print(f"Results written to {xml_file}")
 

@@ -32,6 +32,15 @@ set(ENABLE_VARIANTS "all" CACHE STRING "Semicolon separated list of variants to 
 set(C_LIBRARY "picolibc" CACHE STRING "Which C library to use.")
 set_property(CACHE C_LIBRARY PROPERTY STRINGS picolibc newlib llvmlibc)
 set(LLVM_BINARY_DIR "" CACHE PATH "Path to LLVM toolchain build or install root.")
+set(LIBC_HDRGEN "" CACHE PATH "Path to prebuilt lbc-hdrgen if not included in LLVM binaries set by LLVM_BINARY_DIR")
+set(
+    FVP_INSTALL_DIR
+    "" CACHE STRING
+    "The directory in which the FVP models are installed. These are not
+    included in this repository, but can be downloaded by the script
+    fvp/get_fvps.sh"
+)
+set(FVP_CONFIG_DIR "${TOOLCHAIN_SOURCE_DIR}/fvp/config" CACHE STRING "The directory in which the FVP models are installed.")
 
 # If a compiler launcher such as ccache has been set, it should be
 # passed down to each subproject build.
@@ -46,6 +55,7 @@ endif()
 # Arguments to pass down to the library projects.
 foreach(arg
     LLVM_BINARY_DIR
+    LIBC_HDRGEN
     FVP_INSTALL_DIR
     FVP_CONFIG_DIR
 )
@@ -63,6 +73,34 @@ if(C_LIBRARY STREQUAL picolibc)
 elseif(C_LIBRARY STREQUAL newlib)
     include(${TOOLCHAIN_SOURCE_DIR}/cmake/fetch_newlib.cmake)
     list(APPEND passthrough_dirs "-DFETCHCONTENT_SOURCE_DIR_NEWLIB=${FETCHCONTENT_SOURCE_DIR_NEWLIB}")
+endif()
+
+# Target for any dependencies to build the runtimes project.
+add_custom_target(runtimes-depends)
+
+# If building llvm-libc, ensure libc-hdrgen is available.
+if(C_LIBRARY STREQUAL llvmlibc)
+    if(NOT LIBC_HDRGEN)
+        if(EXISTS ${LLVM_BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
+            set(LIBC_HDRGEN ${LLVM_BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
+        else()
+            ExternalProject_Add(
+                libc_hdrgen
+                SOURCE_DIR ${llvmproject_SOURCE_DIR}/llvm
+                CMAKE_ARGS
+                    -DLLVM_ENABLE_RUNTIMES=libc
+                    -DLLVM_LIBC_FULL_BUILD=ON
+                    -DCMAKE_BUILD_TYPE=Debug
+                BUILD_COMMAND ${CMAKE_COMMAND} --build . --target libc-hdrgen
+                INSTALL_COMMAND ${CMAKE_COMMAND} -E true
+                CONFIGURE_HANDLED_BY_BUILD TRUE
+            )
+            ExternalProject_Get_property(libc_hdrgen BINARY_DIR)
+            set(LIBC_HDRGEN ${BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
+            add_dependencies(runtimes-depends libc_hdrgen)
+        endif()
+    endif()
+    list(APPEND passthrough_dirs "-DLIBC_HDRGEN=${LIBC_HDRGEN}")
 endif()
 
 # Create one target to run all the tests.
@@ -111,13 +149,14 @@ foreach(lib_idx RANGE ${lib_count_dec})
                 DIRECTORY ${destination_directory}
                 DESTINATION ${parent_dir_name}
             )
-            set(variant_json_file ${CMAKE_CURRENT_BINARY_DIR}/json/variants/${variant_json})
+            set(variant_json_file ${CMAKE_CURRENT_SOURCE_DIR}/json/variants/${variant_json})
 
             ExternalProject_Add(
                 runtimes-${variant}
                 PREFIX ${CMAKE_BINARY_DIR}/lib-builds
                 SOURCE_DIR ${TOOLCHAIN_SOURCE_DIR}/arm-runtimes
                 INSTALL_DIR ${destination_directory}
+                DEPENDS runtimes-depends
                 CMAKE_ARGS
                 ${compiler_launcher_cmake_args}
                 ${passthrough_dirs}

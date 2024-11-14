@@ -6,8 +6,13 @@
 
 include(FetchContent)
 
-set(llvm_patch_script ${CMAKE_CURRENT_SOURCE_DIR}/patch_llvm.py)
-set(patch_dir ${CMAKE_CURRENT_SOURCE_DIR}/../patches)
+if(NOT VERSIONS_JSON)
+    include(${CMAKE_CURRENT_LIST_DIR}/read_versions.cmake)
+endif()
+read_repo_version(llvmproject llvm-project)
+
+set(llvm_patch_script ${CMAKE_CURRENT_LIST_DIR}/patch_llvm.py)
+set(patch_dir ${CMAKE_CURRENT_LIST_DIR}/../patches)
 set(LLVM_PATCH_COMMAND ${Python3_EXECUTABLE} ${llvm_patch_script} ${patch_dir}/llvm-project)
 if(APPLY_LLVM_PERFORMANCE_PATCHES)
     set(LLVM_PATCH_COMMAND ${LLVM_PATCH_COMMAND} && ${Python3_EXECUTABLE} ${llvm_patch_script} ${patch_dir}/llvm-project-perf)
