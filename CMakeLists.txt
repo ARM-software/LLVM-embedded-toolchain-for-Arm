@@ -556,7 +556,7 @@ else()
     set(library_subdir "")
 endif()
 
-if (LIBS_USE_COMPILER_LAUNCHER)
+if(LIBS_USE_COMPILER_LAUNCHER)
     if(CMAKE_C_COMPILER_LAUNCHER)
         list(APPEND compiler_launcher_cmake_args "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}")
     endif()

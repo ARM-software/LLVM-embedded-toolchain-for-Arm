@@ -131,12 +131,12 @@ foreach(lib_idx RANGE ${lib_count_dec})
     string(JSON lib_def GET ${multilib_defs} ${lib_idx})
     string(JSON variant GET ${lib_def} "variant")
 
-    if (variant IN_LIST ENABLE_VARIANTS OR ENABLE_VARIANTS STREQUAL "all")
+    if(variant IN_LIST ENABLE_VARIANTS OR ENABLE_VARIANTS STREQUAL "all")
         string(JSON variant_multilib_flags GET ${lib_def} "flags")
         # Placeholder libraries won't have a json, so store the error in
         # a variable so a fatal error isn't generated.
         string(JSON variant_json ERROR_VARIABLE json_error GET ${lib_def} "json")
-        
+
         if(NOT variant_json STREQUAL "json-NOTFOUND")
             # Sort by target triple
             if(variant MATCHES "^aarch64")
@@ -263,7 +263,7 @@ add_custom_command(
 
 # Combine the two parts.
 add_custom_command(
-    OUTPUT 
+    OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/multilib/multilib.yaml
     COMMAND
         ${CMAKE_COMMAND} -E cat

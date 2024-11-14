@@ -16,7 +16,7 @@
 #
 
 # CMake build for a library variant, combining a chosen C library
-# with builtins from compiler-rt and libcx/libcxxabi/libunwind 
+# with builtins from compiler-rt and libcx/libcxxabi/libunwind
 
 cmake_minimum_required(VERSION 3.20)
 
@@ -31,7 +31,7 @@ set(C_LIBRARY "picolibc" CACHE STRING "Which C library to use.")
 set_property(CACHE C_LIBRARY PROPERTY STRINGS picolibc newlib llvmlibc)
 
 set(VARIANT_JSON "" CACHE STRING "JSON file to load args from.")
-if (VARIANT_JSON)
+if(VARIANT_JSON)
     file(READ ${VARIANT_JSON} variant_json_read)
     # Load arguments common to all libraries.
     string(JSON json_args GET ${variant_json_read} "args" "common")
@@ -151,7 +151,7 @@ endif()
 add_custom_target(check-all)
 
 # If any testing is enabled, prepare test executor settings.
-if (ENABLE_LIBC_TESTS OR ENABLE_COMPILER_RT_TESTS OR ENABLE_LIBCXX_TESTS)
+if(ENABLE_LIBC_TESTS OR ENABLE_COMPILER_RT_TESTS OR ENABLE_LIBCXX_TESTS)
     # Flags required to link tests.
     set(test_link_flags "-nostartfiles -lcrt0-semihost -lsemihost -T picolibcpp.ld")
 
@@ -244,11 +244,11 @@ if(VARIANT STREQUAL "armv6m_soft_nofp")
     set(compiler_rt_test_flags "${compiler_rt_test_flags} -fomit-frame-pointer")
 endif()
 
-if (ENABLE_COMPILER_RT_TESTS)
+if(ENABLE_COMPILER_RT_TESTS)
     set(compiler_rt_test_flags "${lib_compile_flags} ${test_link_flags}")
     set(compiler_rt_lit_args "${LLVM_LIT_ARGS} --xunit-xml-output=results.junit.xml")
     set(
-        compiler_rt_test_cmake_args 
+        compiler_rt_test_cmake_args
         -DCOMPILER_RT_INCLUDE_TESTS=ON
         -DCOMPILER_RT_EMULATOR=${lit_test_executor}
         -DCOMPILER_RT_TEST_COMPILER=${LLVM_BINARY_DIR}/bin/clang
@@ -306,7 +306,7 @@ ExternalProject_Add(
 
 add_custom_target(check-compiler-rt)
 add_dependencies(check-all check-compiler-rt)
-if (ENABLE_COMPILER_RT_TESTS)
+if(ENABLE_COMPILER_RT_TESTS)
     ExternalProject_Add_Step(
         compiler_rt
         check-compiler-rt
@@ -363,8 +363,8 @@ if(C_LIBRARY STREQUAL picolibc)
     endif()
     separate_arguments(picolibc_flags)
     to_meson_list("${picolibc_flags}" picolibc_meson_flags)
-    
-    if (ENABLE_LIBC_TESTS)
+
+    if(ENABLE_LIBC_TESTS)
         set(picolibc_test_executor_bin ${CMAKE_CURRENT_SOURCE_DIR}/test-support/picolibc-test-wrapper.py)
         to_meson_list("${test_executor_params}" meson_test_executor_params)
     endif()
@@ -403,7 +403,7 @@ if(C_LIBRARY STREQUAL picolibc)
 
     add_custom_target(check-picolibc)
     add_dependencies(check-all check-picolibc)
-    if (ENABLE_LIBC_TESTS)
+    if(ENABLE_LIBC_TESTS)
         # meson builds the tests at the same time as the library.
         # So reconfigure to enable tests at a later point.
         ExternalProject_Add_Step(
@@ -448,7 +448,7 @@ endif()
 ###############################################################################
 
 if(C_LIBRARY STREQUAL newlib)
-    if (ENABLE_LIBC_TESTS)
+    if(ENABLE_LIBC_TESTS)
         message(FATAL_ERROR "Tests cannot yet be enabled using newlib libc.")
     endif()
 
@@ -532,7 +532,7 @@ endif()
 ###############################################################################
 
 if(C_LIBRARY STREQUAL llvmlibc)
-    if (ENABLE_LIBC_TESTS)
+    if(ENABLE_LIBC_TESTS)
         message(FATAL_ERROR "Tests cannot yet be enabled using llvm libc.")
     endif()
     if(ENABLE_CXX_LIBS)
@@ -551,7 +551,7 @@ if(C_LIBRARY STREQUAL llvmlibc)
         DESTINATION
         ${LIBC_CFG_DIR}
     )
-    
+
     set(lib_compile_flags "${lib_compile_flags} -Wno-error=atomic-alignment")
 
     set(common_llvmlibc_cmake_args
@@ -676,7 +676,7 @@ if(ENABLE_CXX_LIBS)
             -DLIBCXX_ENABLE_EXCEPTIONS=${enable_exceptions}
             -DLIBCXX_ENABLE_RTTI=${enable_rtti}
         )
-        if (ENABLE_LIBCXX_TESTS)
+        if(ENABLE_LIBCXX_TESTS)
             set(cxxlibs_lit_args "${LLVM_LIT_ARGS} --xunit-xml-output=results.junit.xml")
             set(cxxlibs_test_cmake_options
                 -DLIBCXX_TEST_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/test-support/llvm-libc++-picolibc.cfg.in
@@ -690,7 +690,7 @@ if(ENABLE_CXX_LIBS)
                 -DLLVM_LIT_ARGS=${cxxlibs_lit_args}
             )
         endif()
-     elseif(C_LIBRARY STREQUAL newlib)
+    elseif(C_LIBRARY STREQUAL newlib)
         set(cxxlibs_extra_cmake_options
             -DLIBCXXABI_ENABLE_THREADS=OFF
             -DLIBCXX_ENABLE_THREADS=OFF
@@ -767,7 +767,7 @@ if(ENABLE_CXX_LIBS)
     add_dependencies(check-all check-cxxabi)
     add_custom_target(check-unwind)
     add_dependencies(check-all check-unwind)
-    if (ENABLE_LIBCXX_TESTS)
+    if(ENABLE_LIBCXX_TESTS)
         foreach(check_target check-cxx check-cxxabi check-unwind)
             ExternalProject_Add_Step(
                 cxxlibs
