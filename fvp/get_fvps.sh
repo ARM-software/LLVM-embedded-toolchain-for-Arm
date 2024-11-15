@@ -35,9 +35,9 @@ while true; do
 done
 
 URL_CORSONE_310='https://developer.arm.com/-/media/Arm%20Developer%20Community/Downloads/OSS/FVP/Corstone-310/FVP_Corstone_SSE-310_11.24_13_Linux64.tgz?rev=c370b571bdff42d3a0152471eca3d798&hash=1E388EE3B6E8F675D02D2832DBE61946DEC0386A'
-URL_BASE_AEM_A='https://developer.arm.com/-/cdn-downloads/permalink/Fixed-Virtual-Platforms/FM-11.26/FVP_Base_RevC-2xAEMvA_11.26_11_Linux64.tgz'
-URL_BASE_AEM_R='https://developer.arm.com/-/cdn-downloads/permalink/Fixed-Virtual-Platforms/FM-11.26/FVP_Base_AEMv8R_11.26_11_Linux64.tgz'
-URL_CRYPTO='https://developer.arm.com/-/cdn-downloads/permalink/Fast-Models-Crypto-Plug-in/FM-11.26/FastModels_crypto_11.26.011_Linux64.tgz'
+URL_BASE_AEM_A='https://developer.arm.com/-/cdn-downloads/permalink/Fixed-Virtual-Platforms/FM-11.27/FVP_Base_RevC-2xAEMvA_11.27_19_Linux64.tgz'
+URL_BASE_AEM_R='https://developer.arm.com/-/cdn-downloads/permalink/Fixed-Virtual-Platforms/FM-11.27/FVP_Base_AEMv8R_11.27_19_Linux64.tgz'
+URL_CRYPTO='https://developer.arm.com/-/cdn-downloads/permalink/Fast-Models-Crypto-Plug-in/FM-11.27/FastModels_crypto_11.27.019_Linux64.tgz'
 
 cd "$(dirname "$0")"
 
@@ -59,19 +59,19 @@ tar -xf ${DOWNLOAD_DIR}/FVP_Corstone_SSE-310_11.24_13_Linux64.tgz
 fi
 
 if [ ! -d "Base_RevC_AEMvA_pkg" ]; then
-tar -xf ${DOWNLOAD_DIR}/FVP_Base_RevC-2xAEMvA_11.26_11_Linux64.tgz
+tar -xf ${DOWNLOAD_DIR}/FVP_Base_RevC-2xAEMvA_11.27_19_Linux64.tgz
 # (Extracted directly into ./Base_RevC_AEMvA_pkg/, no installer)
 fi
 
 if [ ! -d "AEMv8R_base_pkg" ]; then
-tar -xf ${DOWNLOAD_DIR}/FVP_Base_AEMv8R_11.26_11_Linux64.tgz
+tar -xf ${DOWNLOAD_DIR}/FVP_Base_AEMv8R_11.27_19_Linux64.tgz
 # (Extracted directly into ./AEMv8R_base_pkg/, no installer)
 fi
 
-if [ ! -d "FastModelsPortfolio_11.26" ]; then
-tar -xf ${DOWNLOAD_DIR}/FastModels_crypto_11.26.011_Linux64.tgz
+if [ ! -d "FastModelsPortfolio_11.27" ]; then
+tar -xf ${DOWNLOAD_DIR}/FastModels_crypto_11.27.019_Linux64.tgz
 # SDDKW-93582: Non-interactive installation fails if cwd is different.
-pushd FastModels_crypto_11.26.011_Linux64
+pushd FastModels_crypto_11.27.019_Linux64
 # This installer doesn't allow providing a default path for interactive
 # installation.
 ./setup.bin $INSTALLER_FLAGS_CRYPTO
