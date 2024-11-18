@@ -7,7 +7,7 @@ config.name = 'libc++abi-@RUNTIME_VARIANT_NAME@'
 
 config.substitutions.append(('%{libc-include}', '@CMAKE_INSTALL_PREFIX@/include'))
 config.substitutions.append(('%{libc-lib}', '@CMAKE_INSTALL_PREFIX@/lib'))
-config.substitutions.append(('%{libc-linker-script}', '@LIBC_LINKER_SCRIPT@'))
+config.substitutions.append(('%{libc-extra-link-flags}', '@RUNTIME_TEST_LINK_FLAGS@'))
 
 config.substitutions.append(('%{flags}', '@RUNTIME_TEST_ARCH_FLAGS@'))
 config.substitutions.append(('%{compile_flags}',
@@ -19,8 +19,8 @@ config.substitutions.append(('%{link_flags}',
     ' -nostdlib++ -L %{lib}'
     ' -lc++ -lc++abi'
     ' -nostdlib -L %{libc-lib}'
-    ' -lc -lm -lclang_rt.builtins -lsemihost -nostartfiles -lcrt0-semihost'
-    ' -T %{libc-linker-script}'
+    ' -lc -lm -lclang_rt.builtins'
+    ' %{libc-extra-link-flags}'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T -- '

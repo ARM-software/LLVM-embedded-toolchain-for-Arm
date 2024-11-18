@@ -1,0 +1,40 @@
+{
+    "args": {
+        "common": {
+            "TARGET_ARCH": "armv7m",
+            "VARIANT": "armv7m_hard_fpv4_sp_d16",
+            "COMPILE_FLAGS": "-mfloat-abi=hard -march=armv7m -mfpu=fpv4-sp-d16",
+            "ENABLE_EXCEPTIONS": "OFF",
+            "ENABLE_RTTI": "OFF",
+            "TEST_EXECUTOR": "qemu",
+            "QEMU_MACHINE": "mps2-an386",
+            "QEMU_CPU": "cortex-m4",
+            "BOOT_FLASH_ADDRESS": "0x00000000",
+            "BOOT_FLASH_SIZE": "0x1000",
+            "FLASH_ADDRESS": "0x21000000",
+            "FLASH_SIZE": "0x600000",
+            "RAM_ADDRESS": "0x21600000",
+            "RAM_SIZE": "0xa00000",
+            "STACK_SIZE": "4K"
+        },
+        "picolibc": {
+            "PICOLIBC_BUILD_TYPE": "minsize",
+            "ENABLE_CXX_LIBS": "ON",
+            "ENABLE_LIBC_TESTS": "ON",
+            "ENABLE_COMPILER_RT_TESTS": "ON",
+            "ENABLE_LIBCXX_TESTS": "ON"
+        },
+        "newlib": {
+            "ENABLE_CXX_LIBS": "ON",
+            "ENABLE_LIBC_TESTS": "OFF",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        },
+        "llvmlibc": {
+            "ENABLE_CXX_LIBS": "OFF",
+            "ENABLE_LIBC_TESTS": "OFF",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        }
+    }
+}

@@ -238,7 +238,11 @@ def get_extension_list(clang, triple):
 def generate_extensions(args):
     aarch64_features = get_extension_list(args.clang, "aarch64-none-eabi")
     aarch32_features = get_extension_list(args.clang, "arm-none-eabi")
-    all_features = set(aarch64_features) | set(aarch32_features)
+    all_features = list(aarch64_features)
+    # Combine the aarch64 and aarch32 lists without duplication.
+    # Casting to sets and merging would be simpler, but creates
+    # non-deterministic output.
+    all_features.extend(feat for feat in list(aarch32_features) if feat not in all_features)
 
     print("# Expand -march=...+[no]feature... into individual options we can match")
     print("# on. We use 'armvX' to represent a feature applied to any architecture, so")
