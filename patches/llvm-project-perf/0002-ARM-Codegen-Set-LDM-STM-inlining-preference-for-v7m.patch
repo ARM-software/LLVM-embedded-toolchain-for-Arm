@@ -23,7 +23,7 @@ index e7ea10ff971a..09ed4ab219a1 100644
 @@ -30,6 +30,10 @@ cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
                            "Allow (may be subject to certain conditions) "
                            "conversion of memcpy to TP loop.")));
-
+ 
 +static cl::opt<bool> EnableInlineMemcpyAsLdSt(
 +    "enable-inline-memcpy-ld-st", cl::init(false), cl::Hidden,
 +    cl::desc("Inline memcpy with LD/ST instructions."));
@@ -34,7 +34,7 @@ index e7ea10ff971a..09ed4ab219a1 100644
 @@ -136,6 +140,118 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
    return CallResult.second;
  }
-
+ 
 +SDValue ARMSelectionDAGInfo::EmitMemcpyAsLdSt(
 +    SelectionDAG &DAG, SDLoc dl, const ARMSubtarget &Subtarget, SDValue Chain,
 +    SDValue Dst, SDValue Src, uint64_t SizeVal, bool isVolatile,
@@ -153,7 +153,7 @@ index e7ea10ff971a..09ed4ab219a1 100644
 @@ -190,6 +306,10 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
      return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                    Alignment.value(), RTLIB::MEMCPY);
-
+ 
 +  if (EnableInlineMemcpyAsLdSt && Subtarget.isMClass() && Subtarget.hasV7Ops())
 +    return EmitMemcpyAsLdSt(DAG, dl, Subtarget, Chain, Dst, Src, SizeVal,
 +                            isVolatile, DstPtrInfo, SrcPtrInfo);
@@ -168,7 +168,7 @@ index 275b1c0f8dc0..6ff422c15b12 100644
 @@ -44,6 +44,12 @@ public:
                                    MachinePointerInfo DstPtrInfo,
                                    MachinePointerInfo SrcPtrInfo) const override;
-
+ 
 +  SDValue EmitMemcpyAsLdSt(SelectionDAG &DAG, SDLoc dl,
 +                           const ARMSubtarget &Subtarget, SDValue Chain,
 +                           SDValue Dst, SDValue Src, uint64_t SizeVal,
@@ -345,6 +345,6 @@ index 000000000000..12f74c04087e
 +  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %3, i32 28, i32 4, i1 false)
 +  ret void
 +}
---
+-- 
 2.34.1
 
