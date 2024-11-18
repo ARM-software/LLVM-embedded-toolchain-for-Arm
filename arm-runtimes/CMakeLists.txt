@@ -676,10 +676,10 @@ if(ENABLE_CXX_LIBS)
             -DLIBCXX_ENABLE_THREADS=OFF
             -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
             -DLIBUNWIND_ENABLE_THREADS=OFF
-            -DLIBCXXABI_ENABLE_EXCEPTIONS=${enable_exceptions}
-            -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${enable_exceptions}
-            -DLIBCXX_ENABLE_EXCEPTIONS=${enable_exceptions}
-            -DLIBCXX_ENABLE_RTTI=${enable_rtti}
+            -DLIBCXXABI_ENABLE_EXCEPTIONS=${ENABLE_EXCEPTIONS}
+            -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${ENABLE_EXCEPTIONS}
+            -DLIBCXX_ENABLE_EXCEPTIONS=${ENABLE_EXCEPTIONS}
+            -DLIBCXX_ENABLE_RTTI=${ENABLE_RTTI}
         )
         if(ENABLE_LIBCXX_TESTS)
             set(cxxlibs_lit_args "${LLVM_LIT_ARGS} --xunit-xml-output=results.junit.xml")
