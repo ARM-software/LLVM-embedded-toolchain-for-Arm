@@ -200,7 +200,7 @@ Alternatively, `ninja check-all` runs all enabled tests.
 
 ## Building sets of libraries
 
-As well as indvidual libraries, it is also possible to build a set of
+As well as individual libraries, it is also possible to build a set of
 libraries without rebuilding the entire toolchain. The `arm-multilib`
 sub-project builds and collects multiple libraries, and generates a
 `multilib.yaml` file to map compile flags to variants.

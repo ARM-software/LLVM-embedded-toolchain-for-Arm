@@ -104,10 +104,6 @@ set(TEMP_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/tmp_install")
 include(ExternalProject)
 include(${TOOLCHAIN_SOURCE_DIR}/cmake/fetch_llvm.cmake)
 
-# For building picolibc use Meson.
-# Although picolibc has support for building with CMake, the Meson code
-# is more mature and works better with LLVM.
-find_program(MESON_EXECUTABLE meson REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # If a compiler launcher such as ccache has been set, it should be
@@ -153,7 +149,11 @@ add_custom_target(check-all)
 # If any testing is enabled, prepare test executor settings.
 if(ENABLE_LIBC_TESTS OR ENABLE_COMPILER_RT_TESTS OR ENABLE_LIBCXX_TESTS)
     # Flags required to link tests.
-    set(test_link_flags "-nostartfiles -lcrt0-semihost -lsemihost -T picolibcpp.ld")
+    if(C_LIBRARY STREQUAL picolibc)
+        set(test_link_flags "-nostartfiles -lcrt0-semihost -lsemihost -T picolibcpp.ld")
+    else()
+        message(FATAL_ERROR "Tests can only be enabled using picolibc.")
+    endif()
 
     if(TEST_EXECUTOR STREQUAL qemu)
         if(TARGET_ARCH MATCHES "^aarch64")
@@ -336,6 +336,11 @@ endif()
 if(C_LIBRARY STREQUAL picolibc)
     include(${TOOLCHAIN_SOURCE_DIR}/cmake/fetch_picolibc.cmake)
     include(${CMAKE_CURRENT_SOURCE_DIR}/to_meson_list.cmake)
+
+    # For building picolibc use Meson.
+    # Although picolibc has support for building with CMake, the Meson code
+    # is more mature and works better with LLVM.
+    find_program(MESON_EXECUTABLE meson REQUIRED)
 
     if(CMAKE_INSTALL_MESSAGE STREQUAL NEVER)
         set(MESON_INSTALL_QUIET "--quiet")

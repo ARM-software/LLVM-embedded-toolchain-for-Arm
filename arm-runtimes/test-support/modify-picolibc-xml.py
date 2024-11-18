@@ -14,7 +14,7 @@ from xml.etree import ElementTree
 def main():
     parser = argparse.ArgumentParser(description="Reformat picolibc xml results")
     parser.add_argument(
-        "--picolibc-build-dir",
+        "--dir",
         required=True,
         help="Path to picolibc build directory",
     )
@@ -29,7 +29,7 @@ def main():
     # Variants such as armv8m.main need to be renamed.
     variant_name = args.variant.replace(".", "_")
 
-    xml_file = os.path.join(args.picolibc_build_dir, "meson-logs", "testlog.junit.xml")
+    xml_file = os.path.join(args.dir, "meson-logs", "testlog.junit.xml")
 
     tree = ElementTree.parse(xml_file)
     root = tree.getroot()

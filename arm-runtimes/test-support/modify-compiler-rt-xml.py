@@ -14,7 +14,7 @@ from xml.etree import ElementTree
 def main():
     parser = argparse.ArgumentParser(description="Reformat compiler-rt xml results")
     parser.add_argument(
-        "--compiler-rt-build-dir",
+        "--dir",
         required=True,
         help="Path to compiler-rt build directory",
     )
@@ -29,7 +29,7 @@ def main():
     # Variants such as armv8m.main need to be renamed.
     variant_name = args.variant.replace(".", "_")
 
-    xml_file = os.path.join(args.compiler_rt_build_dir, "test", "results.junit.xml")
+    xml_file = os.path.join(args.dir, "test", "results.junit.xml")
 
     tree = ElementTree.parse(xml_file)
     root = tree.getroot()
