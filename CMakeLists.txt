@@ -1647,7 +1647,7 @@ add_library_variants_for_cpu(
 add_library_variants_for_cpu(
     aarch64a_be
     COMPILE_FLAGS "--target=aarch64_be-unknown-none-elf -mbig-endian"
-    MULTILIB_FLAGS "--target=aarch64_be-unknown-none-elf -mbig-endian"
+    MULTILIB_FLAGS "--target=aarch64_be-unknown-none-elf"
     PICOLIBC_BUILD_TYPE "release"
     EXECUTOR fvp
     FVP_MODEL aem-a
