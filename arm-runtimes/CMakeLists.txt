@@ -313,7 +313,7 @@ if(ENABLE_COMPILER_RT_TESTS)
         COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target check-compiler-rt
         COMMAND ${Python3_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/test-support/modify-compiler-rt-xml.py
-        --compiler-rt-build-dir <BINARY_DIR>
+        --dir <BINARY_DIR>
         --variant ${VARIANT}
         USES_TERMINAL TRUE
         EXCLUDE_FROM_MAIN TRUE
@@ -431,7 +431,7 @@ if(C_LIBRARY STREQUAL picolibc)
             COMMAND ${MESON_EXECUTABLE} test -C <BINARY_DIR>
             COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/test-support/modify-picolibc-xml.py
-            --picolibc-build-dir <BINARY_DIR>
+            --dir <BINARY_DIR>
             --variant ${VARIANT}
             USES_TERMINAL TRUE
             EXCLUDE_FROM_MAIN TRUE

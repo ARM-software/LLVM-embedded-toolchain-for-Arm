@@ -516,6 +516,11 @@ add_dependencies(
     version_txt
 )
 
+# Set LLVM_DEFAULT_EXTERNAL_LIT to the directory of clang
+# which was build in previous step. This path is not exported
+# by add_subdirectory of llvm project
+set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
+
 if(LIBS_DEPEND_ON_TOOLS)
     set(lib_tool_dependencies
         clang
