@@ -572,6 +572,12 @@ if(NOT PREBUILT_TARGET_LIBRARIES)
         endif()
     endif()
 
+    # ENABLE_VARIANTS expects a semi-colon separated list.
+    # To prevent CMake expanding it automatically while passing it
+    # down, switch to comma separated. Enabling the ExternalProject
+    # LIST_SEPARATOR option will handle switching it back.
+    string(REPLACE ";" "," ENABLE_VARIANTS_PASSTHROUGH "${LLVM_TOOLCHAIN_LIBRARY_VARIANTS}")
+
     ExternalProject_Add(
         multilib-${LLVM_TOOLCHAIN_C_LIBRARY}
         PREFIX ${CMAKE_BINARY_DIR}/multilib-builds
@@ -583,7 +589,7 @@ if(NOT PREBUILT_TARGET_LIBRARIES)
         -DC_LIBRARY=${LLVM_TOOLCHAIN_C_LIBRARY}
         -DLLVM_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/llvm
         -DMULTILIB_JSON=${LLVM_TOOLCHAIN_MULTILIB_JSON}
-        -DENABLE_VARIANTS=${LLVM_TOOLCHAIN_LIBRARY_VARIANTS}
+        -DENABLE_VARIANTS=${ENABLE_VARIANTS_PASSTHROUGH}
         -DLIBC_HDRGEN=${LIBC_HDRGEN}
         -DFVP_INSTALL_DIR=${FVP_INSTALL_DIR}
         -DFVP_CONFIG_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fvp/config
