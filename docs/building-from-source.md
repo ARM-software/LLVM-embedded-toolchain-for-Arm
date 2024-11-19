@@ -89,7 +89,7 @@ mkdir repos
 git -C repos clone https://github.com/llvm/llvm-project.git
 git -C repos/llvm-project am -k "$PWD"/patches/llvm-project/*.patch
 git -C repos clone https://github.com/picolibc/picolibc.git
-git -C repos/picolibc apply "$PWD"/patches/picolibc.patch
+git -C repos/picolibc apply "$PWD"/patches/picolibc/*.patch
 mkdir build
 cd build
 cmake .. -GNinja -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=../repos/llvm-project -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=../repos/picolibc
@@ -157,3 +157,83 @@ and designed to improve performance in certain circumstances.
 To reduce divergence from upstream and potential patch conflicts, the
 performance patches are not applied by default, but can be enabled for an
 automatic checkout with the APPLY_LLVM_PERFORMANCE_PATCHES option.
+
+## Building individual library variants
+
+When working on library code, it may be useful to build a library variant
+without having to rebuild the entire toolchain.
+
+Each variant is built using the `arm-runtimes` sub-project, and can be
+configured and built directly if you provide a path to a LLVM build or install.
+
+The default CMake arguments to build a particular variant are stored in a JSON
+format in the arm-multilib/json/variants folder, which can be loaded at
+configuration with the `-DVARIANT_JSON` setting. Any additional options
+provided on the command line will override values from he JSON. `-DC_LIBRARY`
+will be required to set which library to build, and `-DLLVM_BINARY_DIR` should
+point to a build or install of LLVM.
+
+For example, to build the `armv7a_soft_nofp` variant using `picolibc`, using
+an existing LLVM build and source checkouts:
+
+```
+cd LLVM-embedded-toolchain-for-Arm
+mkdir build-lib
+cmake ../arm-runtimes -G Ninja \
+  -DVARIANT_JSON=../arm-multilib/json/variants/armv7a_soft_nofp.json \
+	-DC_LIBRARY=picolibc \
+ 	-DLLVM_BINARY_DIR=/path/to/llvm \
+	-DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=/path/to/llvm-project \
+	-DFETCHCONTENT_SOURCE_DIR_PICOLIBC=/path/to/picolibc
+ninja
+```
+
+If enabled and the required test executor available, tests can be run with
+using specific test targets:
+`ninja check-picolibc`
+`ninja check-compiler-rt`
+`ninja check-cxx`
+`ninja check-cxxabi`
+`ninja check-unwind`
+
+Alternatively, `ninja check-all` runs all enabled tests. 
+
+## Building sets of libraries
+
+As well as individual libraries, it is also possible to build a set of
+libraries without rebuilding the entire toolchain. The `arm-multilib`
+sub-project builds and collects multiple libraries, and generates a
+`multilib.yaml` file to map compile flags to variants.
+
+The `arm-multilib/multilib.json` file defines which variants are built and
+their order in the mapping. This can be used to configure the project directly
+
+For example, building the picolibc variants using an existing LLVM build and
+source checkouts:
+```
+cd LLVM-embedded-toolchain-for-Arm
+mkdir build-multilib
+cmake ../arm-multilib -G Ninja \
+  -DMULTILIB_JSON=../arm-multilib/json/multilib.json \
+	-DC_LIBRARY=picolibc \
+ 	-DLLVM_BINARY_DIR=/path/to/llvm \
+	-DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=/path/to/llvm-project \
+	-DFETCHCONTENT_SOURCE_DIR_PICOLIBC=/path/to/picolibc
+ninja
+```
+To only build a subset of the variants defined in the JSON file,
+the `-DENABLE_VARIANTS` option controls which variants to build.
+E.g, `-DENABLE_VARIANTS="aarch64a;armv7a_soft_nofp"` only builds the two 
+variants of `aarch64a` and `armv7a_soft_nofp`.
+
+If enabled and the required test executor available, tests can be run with
+using specific test targets:
+
+`ninja check-picolibc`
+`ninja check-compiler-rt`
+`ninja check-cxx`
+`ninja check-cxxabi`
+`ninja check-unwind`
+
+Alternatively, `ninja check-all` runs all enabled tests.
+`ninja check-<VARAINT_NAME>` runs all the tests for that specific variant.

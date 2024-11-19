@@ -1,0 +1,40 @@
+{
+    "args": {
+        "common": {
+            "TARGET_ARCH": "armv8.1m.main",
+            "VARIANT": "armv8.1m.main_hard_fpdp_nomve_exn_rtti",
+            "COMPILE_FLAGS": "-mfloat-abi=hard -march=armv8.1m.main+nomve -mfpu=fp-armv8-fullfp16-d16",
+            "ENABLE_EXCEPTIONS": "ON",
+            "ENABLE_RTTI": "ON",
+            "TEST_EXECUTOR": "qemu",
+            "QEMU_MACHINE": "mps3-an547",
+            "QEMU_CPU": "cortex-m55",
+            "BOOT_FLASH_ADDRESS": "0x00000000",
+            "BOOT_FLASH_SIZE": "512K",
+            "FLASH_ADDRESS": "0x60000000",
+            "FLASH_SIZE": "0x1000000",
+            "RAM_ADDRESS": "0x61000000",
+            "RAM_SIZE": "0x1000000",
+            "STACK_SIZE": "4K"
+        },
+        "picolibc": {
+            "PICOLIBC_BUILD_TYPE": "release",
+            "ENABLE_CXX_LIBS": "ON",
+            "ENABLE_LIBC_TESTS": "ON",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        },
+        "newlib": {
+            "ENABLE_CXX_LIBS": "ON",
+            "ENABLE_LIBC_TESTS": "OFF",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        },
+        "llvmlibc": {
+            "ENABLE_CXX_LIBS": "OFF",
+            "ENABLE_LIBC_TESTS": "OFF",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        }
+    }
+}
