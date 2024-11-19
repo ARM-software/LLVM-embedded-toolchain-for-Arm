@@ -6,7 +6,7 @@
             "COMPILE_FLAGS": "-march=armv8-a -mbig-endian",
             "ENABLE_EXCEPTIONS": "ON",
             "ENABLE_RTTI": "ON",
-	    "TEST_EXECUTOR": "fvp",
+            "TEST_EXECUTOR": "fvp",
             "FVP_MODEL": "aem-a",
             "FVP_CONFIG": "v8a-aarch64 big-endian",
             "BOOT_FLASH_ADDRESS": "0x80000000",
