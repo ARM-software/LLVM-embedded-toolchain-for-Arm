@@ -150,6 +150,10 @@ option(
     "During checkout, apply optional downstream patches to
     llvm-project to improve performance."
 )
+option(
+    ENABLE_FVP_TESTING
+    "Tests using FVP need to be explictly enabled."
+)
 set(
     FVP_INSTALL_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/fvp/install" CACHE STRING
@@ -592,6 +596,7 @@ if(NOT PREBUILT_TARGET_LIBRARIES)
         -DENABLE_VARIANTS=${ENABLE_VARIANTS_PASSTHROUGH}
         -DLIBC_HDRGEN=${LIBC_HDRGEN}
         -DFVP_INSTALL_DIR=${FVP_INSTALL_DIR}
+        -DENABLE_FVP_TESTING=${ENABLE_FVP_TESTING}
         -DFVP_CONFIG_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fvp/config
         -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=${FETCHCONTENT_SOURCE_DIR_LLVMPROJECT}
         -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=${FETCHCONTENT_SOURCE_DIR_PICOLIBC}
