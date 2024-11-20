@@ -33,6 +33,10 @@ set(C_LIBRARY "picolibc" CACHE STRING "Which C library to use.")
 set_property(CACHE C_LIBRARY PROPERTY STRINGS picolibc newlib llvmlibc)
 set(LLVM_BINARY_DIR "" CACHE PATH "Path to LLVM toolchain build or install root.")
 set(LIBC_HDRGEN "" CACHE PATH "Path to prebuilt lbc-hdrgen if not included in LLVM binaries set by LLVM_BINARY_DIR")
+option(
+    ENABLE_FVP_TESTING
+    "Tests using FVP need to be explictly enabled."
+)
 set(
     FVP_INSTALL_DIR
     "" CACHE STRING
@@ -151,6 +155,34 @@ foreach(lib_idx RANGE ${lib_count_dec})
             )
             set(variant_json_file ${CMAKE_CURRENT_SOURCE_DIR}/json/variants/${variant_json})
 
+            # Read info from the variant specific json.
+            file(READ ${variant_json_file} variant_json_str)
+            string(JSON test_executor GET ${variant_json_str} "args" "common" "TEST_EXECUTOR")
+
+            # FVP testing should default to off, so override any 
+            # settings from the JSON.
+            if(test_executor STREQUAL "fvp" AND NOT ${ENABLE_FVP_TESTING})
+                set(additional_cmake_args "-DENABLE_LIBC_TESTS=OFF" "-DENABLE_COMPILER_RT_TESTS=OFF" "-DENABLE_LIBCXX_TESTS=OFF")
+                set(read_ENABLE_LIBC_TESTS "OFF")
+                set(read_ENABLE_COMPILER_RT_TESTS "OFF")
+                set(read_ENABLE_LIBCXX_TESTS "OFF")
+            else()
+                # From the json, check which tests are enabled.
+                foreach(test_enable_var
+                    ENABLE_LIBC_TESTS
+                    ENABLE_COMPILER_RT_TESTS
+                    ENABLE_LIBCXX_TESTS
+                )
+                    string(JSON read_${test_enable_var} ERROR_VARIABLE json_error GET ${variant_json_str} "args" ${C_LIBRARY} ${test_enable_var})
+                    if(read_${test_enable_var} STREQUAL "json-NOTFOUND")
+                        string(JSON read_${test_enable_var} ERROR_VARIABLE json_error GET ${variant_json_str} "args" "common" ${test_enable_var})
+                        if(read_${test_enable_var} STREQUAL "json-NOTFOUND")
+                            set(read_${test_enable_var} "OFF")
+                        endif()
+                    endif()
+                endforeach()
+            endif()
+
             ExternalProject_Add(
                 runtimes-${variant}
                 PREFIX ${CMAKE_BINARY_DIR}/lib-builds
@@ -160,6 +192,7 @@ foreach(lib_idx RANGE ${lib_count_dec})
                 CMAKE_ARGS
                 ${compiler_launcher_cmake_args}
                 ${passthrough_dirs}
+                ${additional_cmake_args}
                 -DVARIANT_JSON=${variant_json_file}
                 -DC_LIBRARY=${C_LIBRARY}
                 -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
@@ -171,23 +204,6 @@ foreach(lib_idx RANGE ${lib_count_dec})
                 CONFIGURE_HANDLED_BY_BUILD TRUE
                 TEST_EXCLUDE_FROM_MAIN TRUE
             )
-
-            # Read info from the variant specific json.
-            # From the json, check which tests are enabled.
-            file(READ ${variant_json_file} variant_json_str)
-            foreach(test_enable_var
-                ENABLE_LIBC_TESTS
-                ENABLE_COMPILER_RT_TESTS
-                ENABLE_LIBCXX_TESTS
-            )
-                string(JSON read_${test_enable_var} ERROR_VARIABLE json_error GET ${variant_json_str} "args" ${C_LIBRARY} ${test_enable_var})
-                if(read_${test_enable_var} STREQUAL "json-NOTFOUND")
-                    string(JSON read_${test_enable_var} ERROR_VARIABLE json_error GET ${variant_json_str} "args" "common" ${test_enable_var})
-                    if(read_${test_enable_var} STREQUAL "json-NOTFOUND")
-                        set(read_${test_enable_var} "OFF")
-                    endif()
-                endif()
-            endforeach()
             set(check_targets "")
             if(read_ENABLE_LIBC_TESTS)
                 list(APPEND check_targets check-${C_LIBRARY})

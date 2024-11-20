@@ -150,6 +150,10 @@ option(
     "During checkout, apply optional downstream patches to
     llvm-project to improve performance."
 )
+option(
+    ENABLE_FVP_TESTING
+    "Tests using FVP need to be explictly enabled."
+)
 set(
     FVP_INSTALL_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/fvp/install" CACHE STRING
@@ -516,17 +520,10 @@ add_dependencies(
     version_txt
 )
 
-if(LIBS_DEPEND_ON_TOOLS)
-    set(lib_tool_dependencies
-        clang
-        lld
-        llvm-ar
-        llvm-config
-        llvm-nm
-        llvm-ranlib
-        llvm-strip
-    )
-endif()
+# Set LLVM_DEFAULT_EXTERNAL_LIT to the directory of clang
+# which was build in previous step. This path is not exported
+# by add_subdirectory of llvm project
+set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_BINARY_DIR}/bin/llvm-lit")
 
 add_custom_target(check-llvm-toolchain-runtimes)
 add_custom_target(check-${LLVM_TOOLCHAIN_C_LIBRARY})
@@ -535,116 +532,138 @@ add_custom_target(check-cxx)
 add_custom_target(check-cxxabi)
 add_custom_target(check-unwind)
 
-add_dependencies(
-    check-llvm-toolchain-runtimes
-    check-${LLVM_TOOLCHAIN_C_LIBRARY}
-    check-compiler-rt
-    check-cxx
-    check-cxxabi
-    check-unwind
-)
-
-if(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
-    # If we're building a non-default libc with the intention of
-    # installing it as an overlay on the main package archive, then
-    # all of its includes, libraries and multilib.yaml go in a
-    # subdirectory of lib/clang-runtimes. Configuration files in the
-    # bin directory will make it easy to reset the sysroot to point at
-    # that subdir.
-    set(library_subdir "/${LLVM_TOOLCHAIN_C_LIBRARY}")
-else()
-    set(library_subdir "")
-endif()
-
-if(LIBS_USE_COMPILER_LAUNCHER)
-    if(CMAKE_C_COMPILER_LAUNCHER)
-        list(APPEND compiler_launcher_cmake_args "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}")
+if(NOT PREBUILT_TARGET_LIBRARIES)
+    if(LIBS_DEPEND_ON_TOOLS)
+        set(lib_tool_dependencies
+            clang
+            lld
+            llvm-ar
+            llvm-config
+            llvm-nm
+            llvm-ranlib
+            llvm-strip
+        )
     endif()
-    if(CMAKE_CXX_COMPILER_LAUNCHER)
-        list(APPEND compiler_launcher_cmake_args "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}")
-    endif()
-endif()
 
-ExternalProject_Add(
-    multilib-${LLVM_TOOLCHAIN_C_LIBRARY}
-    PREFIX ${CMAKE_BINARY_DIR}/multilib-builds
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/arm-multilib
-    INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}
-    DEPENDS ${lib_tool_dependencies}
-    CMAKE_ARGS
-    ${compiler_launcher_cmake_args}
-    -DC_LIBRARY=${LLVM_TOOLCHAIN_C_LIBRARY}
-    -DLLVM_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/llvm
-    -DMULTILIB_JSON=${LLVM_TOOLCHAIN_MULTILIB_JSON}
-    -DENABLE_VARIANTS=${LLVM_TOOLCHAIN_LIBRARY_VARIANTS}
-    -DLIBC_HDRGEN=${LIBC_HDRGEN}
-    -DFVP_INSTALL_DIR=${FVP_INSTALL_DIR}
-    -DFVP_CONFIG_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fvp/config
-    -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=${FETCHCONTENT_SOURCE_DIR_LLVMPROJECT}
-    -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=${FETCHCONTENT_SOURCE_DIR_PICOLIBC}
-    -DFETCHCONTENT_SOURCE_DIR_NEWLIB=${FETCHCONTENT_SOURCE_DIR_NEWLIB}
-    -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-    USES_TERMINAL_CONFIGURE FALSE
-    USES_TERMINAL_BUILD TRUE
-    USES_TERMINAL_TEST TRUE
-    LIST_SEPARATOR ,
-    CONFIGURE_HANDLED_BY_BUILD TRUE
-    TEST_EXCLUDE_FROM_MAIN TRUE
-    STEP_TARGETS build install
-)
 
-add_dependencies(
-    llvm-toolchain-runtimes
-    multilib-${LLVM_TOOLCHAIN_C_LIBRARY}-install
-)
-
-foreach(check_target check-${LLVM_TOOLCHAIN_C_LIBRARY} check-compiler-rt check-cxx check-cxxabi check-unwind)
-    ExternalProject_Add_Step(
-        multilib-${LLVM_TOOLCHAIN_C_LIBRARY}
-        ${check_target}
-        COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target ${check_target}
-        USES_TERMINAL TRUE
-        EXCLUDE_FROM_MAIN TRUE
-        ALWAYS TRUE
+    add_dependencies(
+        check-llvm-toolchain-runtimes
+        check-${LLVM_TOOLCHAIN_C_LIBRARY}
+        check-compiler-rt
+        check-cxx
+        check-cxxabi
+        check-unwind
     )
-    ExternalProject_Add_StepTargets(multilib-${LLVM_TOOLCHAIN_C_LIBRARY} ${check_target})
-    ExternalProject_Add_StepDependencies(
+
+    if(LLVM_TOOLCHAIN_LIBRARY_OVERLAY_INSTALL)
+        # If we're building a non-default libc with the intention of
+        # installing it as an overlay on the main package archive, then
+        # all of its includes, libraries and multilib.yaml go in a
+        # subdirectory of lib/clang-runtimes. Configuration files in the
+        # bin directory will make it easy to reset the sysroot to point at
+        # that subdir.
+        set(library_subdir "/${LLVM_TOOLCHAIN_C_LIBRARY}")
+    else()
+        set(library_subdir "")
+    endif()
+
+    if(LIBS_USE_COMPILER_LAUNCHER)
+        if(CMAKE_C_COMPILER_LAUNCHER)
+            list(APPEND compiler_launcher_cmake_args "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}")
+        endif()
+        if(CMAKE_CXX_COMPILER_LAUNCHER)
+            list(APPEND compiler_launcher_cmake_args "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}")
+        endif()
+    endif()
+
+    # ENABLE_VARIANTS expects a semi-colon separated list.
+    # To prevent CMake expanding it automatically while passing it
+    # down, switch to comma separated. Enabling the ExternalProject
+    # LIST_SEPARATOR option will handle switching it back.
+    string(REPLACE ";" "," ENABLE_VARIANTS_PASSTHROUGH "${LLVM_TOOLCHAIN_LIBRARY_VARIANTS}")
+
+    ExternalProject_Add(
         multilib-${LLVM_TOOLCHAIN_C_LIBRARY}
-        ${check_target}
+        PREFIX ${CMAKE_BINARY_DIR}/multilib-builds
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/arm-multilib
+        INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/llvm/${TARGET_LIBRARIES_DIR}${library_subdir}
+        DEPENDS ${lib_tool_dependencies}
+        CMAKE_ARGS
+        ${compiler_launcher_cmake_args}
+        -DC_LIBRARY=${LLVM_TOOLCHAIN_C_LIBRARY}
+        -DLLVM_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/llvm
+        -DMULTILIB_JSON=${LLVM_TOOLCHAIN_MULTILIB_JSON}
+        -DENABLE_VARIANTS=${ENABLE_VARIANTS_PASSTHROUGH}
+        -DLIBC_HDRGEN=${LIBC_HDRGEN}
+        -DFVP_INSTALL_DIR=${FVP_INSTALL_DIR}
+        -DENABLE_FVP_TESTING=${ENABLE_FVP_TESTING}
+        -DFVP_CONFIG_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fvp/config
+        -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=${FETCHCONTENT_SOURCE_DIR_LLVMPROJECT}
+        -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=${FETCHCONTENT_SOURCE_DIR_PICOLIBC}
+        -DFETCHCONTENT_SOURCE_DIR_NEWLIB=${FETCHCONTENT_SOURCE_DIR_NEWLIB}
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        USES_TERMINAL_CONFIGURE FALSE
+        USES_TERMINAL_BUILD TRUE
+        USES_TERMINAL_TEST TRUE
+        LIST_SEPARATOR ,
+        CONFIGURE_HANDLED_BY_BUILD TRUE
+        TEST_EXCLUDE_FROM_MAIN TRUE
+        STEP_TARGETS build install
+    )
+
+    add_dependencies(
+        llvm-toolchain-runtimes
         multilib-${LLVM_TOOLCHAIN_C_LIBRARY}-install
     )
-    add_dependencies(${check_target} multilib-${LLVM_TOOLCHAIN_C_LIBRARY}-${check_target})
-endforeach()
 
-# Read the json to generate variant specific target names for convenience.
-file(READ ${LLVM_TOOLCHAIN_MULTILIB_JSON} multilib_json_str)
-string(JSON multilib_defs GET ${multilib_json_str} "libs")
-
-string(JSON lib_count LENGTH ${multilib_defs})
-math(EXPR lib_count_dec "${lib_count} - 1")
-
-foreach(lib_idx RANGE ${lib_count_dec})
-    string(JSON lib_def GET ${multilib_defs} ${lib_idx})
-    string(JSON variant GET ${lib_def} "variant")
     foreach(check_target check-${LLVM_TOOLCHAIN_C_LIBRARY} check-compiler-rt check-cxx check-cxxabi check-unwind)
         ExternalProject_Add_Step(
             multilib-${LLVM_TOOLCHAIN_C_LIBRARY}
-            ${check_target}-${variant}
-            COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target ${check_target}-${variant}
+            ${check_target}
+            COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target ${check_target}
             USES_TERMINAL TRUE
             EXCLUDE_FROM_MAIN TRUE
             ALWAYS TRUE
         )
-        ExternalProject_Add_StepTargets(multilib-${LLVM_TOOLCHAIN_C_LIBRARY} ${check_target}-${variant})
+        ExternalProject_Add_StepTargets(multilib-${LLVM_TOOLCHAIN_C_LIBRARY} ${check_target})
         ExternalProject_Add_StepDependencies(
             multilib-${LLVM_TOOLCHAIN_C_LIBRARY}
-            ${check_target}-${variant}
+            ${check_target}
             multilib-${LLVM_TOOLCHAIN_C_LIBRARY}-install
         )
-        add_custom_target(${check_target}-${variant})
-        add_dependencies(${check_target}-${variant} multilib-${LLVM_TOOLCHAIN_C_LIBRARY}-${check_target}-${variant})
+        add_dependencies(${check_target} multilib-${LLVM_TOOLCHAIN_C_LIBRARY}-${check_target})
     endforeach()
-endforeach()
+
+    # Read the json to generate variant specific target names for convenience.
+    file(READ ${LLVM_TOOLCHAIN_MULTILIB_JSON} multilib_json_str)
+    string(JSON multilib_defs GET ${multilib_json_str} "libs")
+
+    string(JSON lib_count LENGTH ${multilib_defs})
+    math(EXPR lib_count_dec "${lib_count} - 1")
+
+    foreach(lib_idx RANGE ${lib_count_dec})
+        string(JSON lib_def GET ${multilib_defs} ${lib_idx})
+        string(JSON variant GET ${lib_def} "variant")
+        foreach(check_target check-${LLVM_TOOLCHAIN_C_LIBRARY} check-compiler-rt check-cxx check-cxxabi check-unwind)
+            ExternalProject_Add_Step(
+                multilib-${LLVM_TOOLCHAIN_C_LIBRARY}
+                ${check_target}-${variant}
+                COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target ${check_target}-${variant}
+                USES_TERMINAL TRUE
+                EXCLUDE_FROM_MAIN TRUE
+                ALWAYS TRUE
+            )
+            ExternalProject_Add_StepTargets(multilib-${LLVM_TOOLCHAIN_C_LIBRARY} ${check_target}-${variant})
+            ExternalProject_Add_StepDependencies(
+                multilib-${LLVM_TOOLCHAIN_C_LIBRARY}
+                ${check_target}-${variant}
+                multilib-${LLVM_TOOLCHAIN_C_LIBRARY}-install
+            )
+            add_custom_target(${check_target}-${variant})
+            add_dependencies(${check_target}-${variant} multilib-${LLVM_TOOLCHAIN_C_LIBRARY}-${check_target}-${variant})
+        endforeach()
+    endforeach()
+endif()
 
 install(
     DIRECTORY ${LLVM_BINARY_DIR}/${TARGET_LIBRARIES_DIR}/.
