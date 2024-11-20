@@ -11,6 +11,16 @@
             "flags": "--target=aarch64-unknown-none-elf -fno-exceptions -fno-rtti"
         },
         {
+            "variant": "aarch64a_strictalign_exn_rtti",
+            "json": "aarch64a_strictalign_exn_rtti.json",
+            "flags": "--target=aarch64-unknown-none-elf -mno-unaligned-access"
+        },
+        {
+            "variant": "aarch64a_strictalign",
+            "json": "aarch64a_strictalign.json",
+            "flags": "--target=aarch64-unknown-none-elf -mno-unaligned-access -fno-exceptions -fno-rtti"
+        },
+        {
             "variant": "armv4t_exn_rtti",
             "json": "armv4t_exn_rtti.json",
             "flags": "--target=armv4t-unknown-none-eabi -mfpu=none"
