@@ -313,7 +313,7 @@ if(ENABLE_COMPILER_RT_TESTS)
         COMMAND "${CMAKE_COMMAND}" --build <BINARY_DIR> --target check-compiler-rt
         COMMAND ${Python3_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/test-support/modify-compiler-rt-xml.py
-        --compiler-rt-build-dir <BINARY_DIR>
+        --dir <BINARY_DIR>
         --variant ${VARIANT}
         USES_TERMINAL TRUE
         EXCLUDE_FROM_MAIN TRUE
@@ -432,7 +432,7 @@ if(C_LIBRARY STREQUAL picolibc)
             COMMAND ${MESON_EXECUTABLE} test -C <BINARY_DIR>
             COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/test-support/modify-picolibc-xml.py
-            --picolibc-build-dir <BINARY_DIR>
+            --dir <BINARY_DIR>
             --variant ${VARIANT}
             USES_TERMINAL TRUE
             EXCLUDE_FROM_MAIN TRUE
@@ -677,10 +677,10 @@ if(ENABLE_CXX_LIBS)
             -DLIBCXX_ENABLE_THREADS=OFF
             -DLIBCXX_ENABLE_WIDE_CHARACTERS=OFF
             -DLIBUNWIND_ENABLE_THREADS=OFF
-            -DLIBCXXABI_ENABLE_EXCEPTIONS=${enable_exceptions}
-            -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${enable_exceptions}
-            -DLIBCXX_ENABLE_EXCEPTIONS=${enable_exceptions}
-            -DLIBCXX_ENABLE_RTTI=${enable_rtti}
+            -DLIBCXXABI_ENABLE_EXCEPTIONS=${ENABLE_EXCEPTIONS}
+            -DLIBCXXABI_ENABLE_STATIC_UNWINDER=${ENABLE_EXCEPTIONS}
+            -DLIBCXX_ENABLE_EXCEPTIONS=${ENABLE_EXCEPTIONS}
+            -DLIBCXX_ENABLE_RTTI=${ENABLE_RTTI}
         )
         if(ENABLE_LIBCXX_TESTS)
             set(cxxlibs_lit_args "${LLVM_LIT_ARGS} --xunit-xml-output=results.junit.xml")
