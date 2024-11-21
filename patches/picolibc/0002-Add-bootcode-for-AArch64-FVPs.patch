@@ -1,6 +1,6 @@
-From f2ca20cebc85850a50b80424bb0f81c927edd04b Mon Sep 17 00:00:00 2001
+From 4cc216a9190d2568f20e9ce92ce80a12da295cbf Mon Sep 17 00:00:00 2001
 From: Simi Pallipurath <simi.pallipurath@arm.com>
-Date: Thu, 14 Nov 2024 10:12:33 +0000
+Date: Thu, 21 Nov 2024 13:26:38 +0000
 Subject: [PATCH 2/2] [PATCH 2/2] Add bootcode for AArch64 FVPs
 
 The AArch64 FVP (Fixed Virtual Platform) models differ from QEMU in a
@@ -16,10 +16,10 @@ few ways which affect the crt0 code:
  meson.build                         |   1 +
  meson_options.txt                   |   3 +
  picocrt/machine/aarch64/crt0.S      | 200 +++++++++++++++++++
- picocrt/machine/aarch64/crt0.c      | 198 +++----------------
- picocrt/machine/aarch64/meson.build |   9 +-
- picocrt/meson.build                 | 296 ++++++++++++++++------------
- 6 files changed, 404 insertions(+), 303 deletions(-)
+ picocrt/machine/aarch64/crt0.c      | 198 +++---------------
+ picocrt/machine/aarch64/meson.build |   2 +-
+ picocrt/meson.build                 | 300 ++++++++++++++++------------
+ 6 files changed, 401 insertions(+), 303 deletions(-)
  create mode 100644 picocrt/machine/aarch64/crt0.S
 
 diff --git a/meson.build b/meson.build
@@ -518,27 +518,20 @@ index affb41fa9..dfe838111 100644
 -
  #endif /* CRT0_SEMIHOST */
 diff --git a/picocrt/machine/aarch64/meson.build b/picocrt/machine/aarch64/meson.build
-index 808d691a5..923d32c3b 100644
+index 808d691a5..18705e6f9 100644
 --- a/picocrt/machine/aarch64/meson.build
 +++ b/picocrt/machine/aarch64/meson.build
-@@ -32,4 +32,11 @@
+@@ -32,4 +32,4 @@
  # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  # OF THE POSSIBILITY OF SUCH DAMAGE.
  #
 -src_picocrt += files('crt0.c')
 +src_picocrt += files('crt0.c', 'crt0.S')
-+
-+picocrt_machines += [
-+  {
-+    'name': 'fvp',
-+    'suffix': '-fvp',
-+  },
-+]
 diff --git a/picocrt/meson.build b/picocrt/meson.build
-index 76965990f..be8f875be 100644
+index 76965990f..47004486e 100644
 --- a/picocrt/meson.build
 +++ b/picocrt/meson.build
-@@ -36,6 +36,17 @@
+@@ -36,6 +36,21 @@
  src_picocrt = []
  src_picocrt_none = files('crt0-none.c')
  
@@ -551,12 +544,16 @@ index 76965990f..be8f875be 100644
 +    # Suffix used on file names, QEMU's is empty because it is the default.
 +    'suffix': '',
 +  },
++  {
++    'name': 'fvp',
++    'suffix': '-fvp',
++  },
 +]
 +
  machine_dir = 'machine' / host_cpu_family
  picocrt_march_add=''
  if fs.is_dir(machine_dir)
-@@ -44,6 +55,16 @@ else
+@@ -44,6 +59,16 @@ else
    src_picocrt = files('shared/crt0.c')
  endif
  
@@ -573,7 +570,7 @@ index 76965990f..be8f875be 100644
  foreach target : targets
    value = get_variable('target_' + target)
  
-@@ -60,150 +81,163 @@ foreach target : targets
+@@ -60,150 +85,163 @@ foreach target : targets
      value = [value[0], new_cflags]
    endif
  
@@ -868,3 +865,6 @@ index 76965990f..be8f875be 100644
 +  endforeach
    
  endforeach
+-- 
+2.34.1
+
