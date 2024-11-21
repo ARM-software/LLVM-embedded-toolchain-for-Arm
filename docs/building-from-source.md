@@ -171,7 +171,13 @@ format in the arm-multilib/json/variants folder, which can be loaded at
 configuration with the `-DVARIANT_JSON` setting. Any additional options
 provided on the command line will override values from he JSON. `-DC_LIBRARY`
 will be required to set which library to build, and `-DLLVM_BINARY_DIR` should
-point to a build or install of LLVM.
+point to the top-level directory of a build or install of LLVM.
+
+(The actual binaries, such as `clang`, are expected to be in
+`$LLVM_BINARY_DIR/bin`, not `$LLVM_BINARY_DIR` itself. For example, if you're
+using the results of a full build of this toolchain itself in another
+directory, then you should set `LLVM_BINARY_DIR` to point at the `llvm`
+subdirectory of the previous build tree, not the `llvm/bin` subdirectory.)
 
 For example, to build the `armv7a_soft_nofp` variant using `picolibc`, using
 an existing LLVM build and source checkouts:
@@ -179,12 +185,13 @@ an existing LLVM build and source checkouts:
 ```
 cd LLVM-embedded-toolchain-for-Arm
 mkdir build-lib
+cd build-lib
 cmake ../arm-runtimes -G Ninja \
   -DVARIANT_JSON=../arm-multilib/json/variants/armv7a_soft_nofp.json \
-	-DC_LIBRARY=picolibc \
- 	-DLLVM_BINARY_DIR=/path/to/llvm \
-	-DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=/path/to/llvm-project \
-	-DFETCHCONTENT_SOURCE_DIR_PICOLIBC=/path/to/picolibc
+  -DC_LIBRARY=picolibc \
+  -DLLVM_BINARY_DIR=/path/to/llvm \
+  -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=/path/to/llvm-project \
+  -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=/path/to/picolibc
 ninja
 ```
 
@@ -213,12 +220,13 @@ source checkouts:
 ```
 cd LLVM-embedded-toolchain-for-Arm
 mkdir build-multilib
+cd build-multilib
 cmake ../arm-multilib -G Ninja \
   -DMULTILIB_JSON=../arm-multilib/json/multilib.json \
-	-DC_LIBRARY=picolibc \
- 	-DLLVM_BINARY_DIR=/path/to/llvm \
-	-DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=/path/to/llvm-project \
-	-DFETCHCONTENT_SOURCE_DIR_PICOLIBC=/path/to/picolibc
+  -DC_LIBRARY=picolibc \
+  -DLLVM_BINARY_DIR=/path/to/llvm \
+  -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=/path/to/llvm-project \
+  -DFETCHCONTENT_SOURCE_DIR_PICOLIBC=/path/to/picolibc
 ninja
 ```
 To only build a subset of the variants defined in the JSON file,
