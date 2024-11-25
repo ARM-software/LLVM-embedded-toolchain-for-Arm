@@ -390,6 +390,7 @@ if(C_LIBRARY STREQUAL picolibc)
             -Dmultilib=false
             -Dtests-enable-stack-protector=false
             -Dtest-long-double=${enable_picolibc_long_double_test}
+            -Dtest-machine=${TEST_EXECUTOR}
             -Dnewlib-nano-malloc=${newlib_nano_malloc}
             -Dtests=false
             --prefix <INSTALL_DIR>

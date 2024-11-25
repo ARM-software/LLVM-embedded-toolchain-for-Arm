@@ -1,6 +1,6 @@
-From f2ca20cebc85850a50b80424bb0f81c927edd04b Mon Sep 17 00:00:00 2001
+From 3b0b62ce6d81211a71eebe63b4b4ef0732da93ef Mon Sep 17 00:00:00 2001
 From: Simi Pallipurath <simi.pallipurath@arm.com>
-Date: Thu, 14 Nov 2024 10:12:33 +0000
+Date: Mon, 25 Nov 2024 11:13:50 +0000
 Subject: [PATCH 2/2] [PATCH 2/2] Add bootcode for AArch64 FVPs
 
 The AArch64 FVP (Fixed Virtual Platform) models differ from QEMU in a
@@ -18,12 +18,13 @@ few ways which affect the crt0 code:
  picocrt/machine/aarch64/crt0.S      | 200 +++++++++++++++++++
  picocrt/machine/aarch64/crt0.c      | 198 +++----------------
  picocrt/machine/aarch64/meson.build |   9 +-
+ picocrt/machine/arm/meson.build     |   7 +
  picocrt/meson.build                 | 296 ++++++++++++++++------------
- 6 files changed, 404 insertions(+), 303 deletions(-)
+ 7 files changed, 411 insertions(+), 303 deletions(-)
  create mode 100644 picocrt/machine/aarch64/crt0.S
 
 diff --git a/meson.build b/meson.build
-index 4161d6574..9d3f5c672 100644
+index 012d664bd..b8f43c800 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -151,6 +151,7 @@ multilib_exclude = get_option('multilib-exclude')
@@ -534,6 +535,21 @@ index 808d691a5..923d32c3b 100644
 +    'suffix': '-fvp',
 +  },
 +]
+diff --git a/picocrt/machine/arm/meson.build b/picocrt/machine/arm/meson.build
+index 808d691a5..ecc9a485b 100644
+--- a/picocrt/machine/arm/meson.build
++++ b/picocrt/machine/arm/meson.build
+@@ -33,3 +33,10 @@
+ # OF THE POSSIBILITY OF SUCH DAMAGE.
+ #
+ src_picocrt += files('crt0.c')
++
++picocrt_machines += [
++  {
++    'name': 'fvp',
++    'suffix': '-fvp',
++  },
++]
 diff --git a/picocrt/meson.build b/picocrt/meson.build
 index 76965990f..be8f875be 100644
 --- a/picocrt/meson.build
@@ -868,3 +884,6 @@ index 76965990f..be8f875be 100644
 +  endforeach
    
  endforeach
+-- 
+2.34.1
+
