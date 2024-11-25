@@ -40,8 +40,6 @@ disabled_tests = [
 ]
 
 disabled_tests_fvp = [
-    # SDDKW-53824: ":semihosting-features" pseudo-file not implemented.
-    "test/semihost/semihost-exit-extended",
     # SDDKW-25808: SYS_SEEK returns wrong value.
     "test/semihost/semihost-seek",
     "test/test-fread-fwrite",
