@@ -1,0 +1,695 @@
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv6-m	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m		-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7e-m	-mfloat-abi=softfp	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m		-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv7-m	-mfloat-abi=softfp	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.base	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main		-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8-m.main	-mfloat-abi=softfp	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main		-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main	-mfloat-abi=softfp	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16		-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+fp16	-mfloat-abi=softfp	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+mve.fp	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob		-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=hard	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=crypto-neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=neon 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=neon-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfp 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv2 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3-d16-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3xd 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv3xd-fp16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=soft	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=none 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fpv4-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fpv5-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fpv5-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-sp-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fp-armv8-fullfp16-d16 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=neon-fp-armv8 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=neon-vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=vfpv4 2>&1 | FileCheck %s --match-full-lines
+# RUN: %clang -print-multi-flags-experimental -S -x c -v - '-###'	--target=arm-none-eabi	-march=armv8.1-m.main+lob	-mfloat-abi=softfp	-mfpu=vfpv4-d16 2>&1 | FileCheck %s --match-full-lines
+
+# CHECK-NOT: error
+# CHECK-NOT: warning

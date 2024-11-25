@@ -1,0 +1,40 @@
+{
+    "args": {
+        "common": {
+            "TARGET_ARCH": "armv8.1m.main",
+            "VARIANT": "armv8.1m.main_soft_nofp_nomve_pacret_bti_exn_rtti",
+            "COMPILE_FLAGS": "-mfloat-abi=soft -march=armv8.1m.main+nomve+pacbti -mfpu=none -mbranch-protection=pac-ret+bti",
+            "ENABLE_EXCEPTIONS": "ON",
+            "ENABLE_RTTI": "ON",
+            "TEST_EXECUTOR": "fvp",
+            "FVP_MODEL": "corstone-310",
+            "FVP_CONFIG": "cortex-m85 m-pacbti m-nofp mve-none",
+            "BOOT_FLASH_ADDRESS": "0x01000000",
+            "BOOT_FLASH_SIZE": "2M",
+            "FLASH_ADDRESS": "0x60000000",
+            "FLASH_SIZE": "0x1000000",
+            "RAM_ADDRESS": "0x61000000",
+            "RAM_SIZE": "0x1000000",
+            "STACK_SIZE": "4K"
+        },
+        "picolibc": {
+            "PICOLIBC_BUILD_TYPE": "release",
+            "ENABLE_CXX_LIBS": "ON",
+            "ENABLE_LIBC_TESTS": "ON",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        },
+        "newlib": {
+            "ENABLE_CXX_LIBS": "ON",
+            "ENABLE_LIBC_TESTS": "OFF",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        },
+        "llvmlibc": {
+            "ENABLE_CXX_LIBS": "OFF",
+            "ENABLE_LIBC_TESTS": "OFF",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        }
+    }
+}

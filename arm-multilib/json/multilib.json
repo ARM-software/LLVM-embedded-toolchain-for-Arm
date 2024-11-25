@@ -1,0 +1,259 @@
+{
+    "libs": [
+        {
+            "variant": "aarch64a_exn_rtti",
+            "json": "aarch64a_exn_rtti.json",
+            "flags": "--target=aarch64-unknown-none-elf"
+        },
+        {
+            "variant": "aarch64a",
+            "json": "aarch64a.json",
+            "flags": "--target=aarch64-unknown-none-elf -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv4t_exn_rtti",
+            "json": "armv4t_exn_rtti.json",
+            "flags": "--target=armv4t-unknown-none-eabi -mfpu=none"
+        },
+        {
+            "variant": "armv4t",
+            "json": "armv4t.json",
+            "flags": "--target=armv4t-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv5te_exn_rtti",
+            "json": "armv5te_exn_rtti.json",
+            "flags": "--target=armv5e-unknown-none-eabi -mfpu=none"
+        },
+        {
+            "variant": "armv5te",
+            "json": "armv5te.json",
+            "flags": "--target=armv5e-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv6m_soft_nofp_exn_rtti",
+            "json": "armv6m_soft_nofp_exn_rtti.json",
+            "flags": "--target=thumbv6m-unknown-none-eabi -mfpu=none"
+        },
+        {
+            "variant": "armv6m_soft_nofp",
+            "json": "armv6m_soft_nofp.json",
+            "flags": "--target=thumbv6m-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7a_soft_nofp_exn_rtti",
+            "json": "armv7a_soft_nofp_exn_rtti.json",
+            "flags": "--target=armv7-unknown-none-eabi -mfpu=none"
+        },
+        {
+            "variant": "armv7a_soft_nofp",
+            "json": "armv7a_soft_nofp.json",
+            "flags": "--target=armv7-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7a_hard_vfpv3_d16_exn_rtti",
+            "json": "armv7a_hard_vfpv3_d16_exn_rtti.json",
+            "flags": "--target=armv7-unknown-none-eabihf -mfpu=vfpv3-d16"
+        },
+        {
+            "variant": "armv7a_hard_vfpv3_d16",
+            "json": "armv7a_hard_vfpv3_d16.json",
+            "flags": "--target=armv7-unknown-none-eabihf -mfpu=vfpv3-d16 -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7a_soft_vfpv3_d16_exn_rtti",
+            "json": "armv7a_soft_vfpv3_d16_exn_rtti.json",
+            "flags": "--target=armv7-unknown-none-eabi -mfpu=vfpv3-d16"
+        },
+        {
+            "variant": "armv7a_soft_vfpv3_d16",
+            "json": "armv7a_soft_vfpv3_d16.json",
+            "flags": "--target=armv7-unknown-none-eabi -mfpu=vfpv3-d16 -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7r_soft_nofp_exn_rtti",
+            "json": "armv7r_soft_nofp_exn_rtti.json",
+            "flags": "--target=armv7r-unknown-none-eabi -mfpu=none"
+        },
+        {
+            "variant": "armv7r_soft_nofp",
+            "json": "armv7r_soft_nofp.json",
+            "flags": "--target=armv7r-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7r_hard_vfpv3xd_exn_rtti",
+            "json": "armv7r_hard_vfpv3xd_exn_rtti.json",
+            "flags": "--target=armv7r-unknown-none-eabihf -mfpu=vfpv3xd"
+        },
+        {
+            "variant": "armv7r_hard_vfpv3xd",
+            "json": "armv7r_hard_vfpv3xd.json",
+            "flags": "--target=armv7r-unknown-none-eabihf -mfpu=vfpv3xd -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7r_hard_vfpv3_d16_exn_rtti",
+            "json": "armv7r_hard_vfpv3_d16_exn_rtti.json",
+            "flags": "--target=armv7r-unknown-none-eabihf -mfpu=vfpv3-d16"
+        },
+        {
+            "variant": "armv7r_hard_vfpv3_d16",
+            "json": "armv7r_hard_vfpv3_d16.json",
+            "flags": "--target=armv7r-unknown-none-eabihf -mfpu=vfpv3-d16 -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7r_soft_vfpv3xd_exn_rtti",
+            "json": "armv7r_soft_vfpv3xd_exn_rtti.json",
+            "flags": "--target=armv7r-unknown-none-eabi -mfpu=vfpv3xd"
+        },
+        {
+            "variant": "armv7r_soft_vfpv3xd",
+            "json": "armv7r_soft_vfpv3xd.json",
+            "flags": "--target=armv7r-unknown-none-eabi -mfpu=vfpv3xd -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7m_soft_fpv4_sp_d16_exn_rtti",
+            "json": "armv7m_soft_fpv4_sp_d16_exn_rtti.json",
+            "flags": "--target=thumbv7m-unknown-none-eabi -mfpu=fpv4-sp-d16"
+        },
+        {
+            "variant": "armv7m_soft_fpv4_sp_d16",
+            "json": "armv7m_soft_fpv4_sp_d16.json",
+            "flags": "--target=thumbv7m-unknown-none-eabi -mfpu=fpv4-sp-d16 -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7m_hard_fpv4_sp_d16_exn_rtti",
+            "json": "armv7m_hard_fpv4_sp_d16_exn_rtti.json",
+            "flags": "--target=thumbv7m-unknown-none-eabihf -mfpu=fpv4-sp-d16"
+        },
+        {
+            "variant": "armv7m_hard_fpv4_sp_d16",
+            "json": "armv7m_hard_fpv4_sp_d16.json",
+            "flags": "--target=thumbv7m-unknown-none-eabihf -mfpu=fpv4-sp-d16 -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7m_hard_fpv5_d16_exn_rtti",
+            "json": "armv7m_hard_fpv5_d16_exn_rtti.json",
+            "flags": "--target=thumbv7m-unknown-none-eabihf -mfpu=fpv5-d16"
+        },
+        {
+            "variant": "armv7m_hard_fpv5_d16",
+            "json": "armv7m_hard_fpv5_d16.json",
+            "flags": "--target=thumbv7m-unknown-none-eabihf -mfpu=fpv5-d16 -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7m_soft_nofp_exn_rtti",
+            "json": "armv7m_soft_nofp_exn_rtti.json",
+            "flags": "--target=thumbv7m-unknown-none-eabi -mfpu=none"
+        },
+        {
+            "variant": "armv7m_soft_nofp",
+            "json": "armv7m_soft_nofp.json",
+            "flags": "--target=thumbv7m-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8m.main_soft_nofp_exn_rtti",
+            "json": "armv8m.main_soft_nofp_exn_rtti.json",
+            "flags": "--target=thumbv8m.main-unknown-none-eabi -mfpu=none"
+        },
+        {
+            "variant": "armv8m.main_soft_nofp",
+            "json": "armv8m.main_soft_nofp.json",
+            "flags": "--target=thumbv8m.main-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8m.main_hard_fp_exn_rtti",
+            "json": "armv8m.main_hard_fp_exn_rtti.json",
+            "flags": "--target=thumbv8m.main-unknown-none-eabihf -mfpu=fpv5-sp-d16"
+        },
+        {
+            "variant": "armv8m.main_hard_fp",
+            "json": "armv8m.main_hard_fp.json",
+            "flags": "--target=thumbv8m.main-unknown-none-eabihf -mfpu=fpv5-sp-d16 -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8.1m.main_soft_nofp_nomve_exn_rtti",
+            "json": "armv8.1m.main_soft_nofp_nomve_exn_rtti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabi -mfpu=none"
+        },
+        {
+            "variant": "armv8.1m.main_soft_nofp_nomve",
+            "json": "armv8.1m.main_soft_nofp_nomve.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8.1m.main_hard_fp_nomve_exn_rtti",
+            "json": "armv8.1m.main_hard_fp_nomve_exn_rtti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16"
+        },
+        {
+            "variant": "armv8.1m.main_hard_fp_nomve",
+            "json": "armv8.1m.main_hard_fp_nomve.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16 -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8.1m.main_hard_fpdp_nomve_exn_rtti",
+            "json": "armv8.1m.main_hard_fpdp_nomve_exn_rtti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16"
+        },
+        {
+            "variant": "armv8.1m.main_hard_fpdp_nomve",
+            "json": "armv8.1m.main_hard_fpdp_nomve.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16 -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8.1m.main_hard_nofp_mve_exn_rtti",
+            "json": "armv8.1m.main_hard_nofp_mve_exn_rtti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+mve -mfpu=none"
+        },
+        {
+            "variant": "armv8.1m.main_hard_nofp_mve",
+            "json": "armv8.1m.main_hard_nofp_mve.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+mve -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8.1m.main_softfp_nomve",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabi -march=thumbv8.1m.main+mve",
+            "error": "No library available for MVE with soft-float ABI. Try -mfloat-abi=hard."
+        },
+        {
+            "variant": "armv8.1m.main_soft_nofp_nomve_pacret_bti_exn_rtti",
+            "json": "armv8.1m.main_soft_nofp_nomve_pacret_bti_exn_rtti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabi -mfpu=none -mbranch-protection=pac-ret+bti"
+        },
+        {
+            "variant": "armv8.1m.main_soft_nofp_nomve_pacret_bti",
+            "json": "armv8.1m.main_soft_nofp_nomve_pacret_bti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabi -mfpu=none -mbranch-protection=pac-ret+bti -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8.1m.main_hard_fp_nomve_pacret_bti_exn_rtti",
+            "json": "armv8.1m.main_hard_fp_nomve_pacret_bti_exn_rtti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16 -mbranch-protection=pac-ret+bti"
+        },
+        {
+            "variant": "armv8.1m.main_hard_fp_nomve_pacret_bti",
+            "json": "armv8.1m.main_hard_fp_nomve_pacret_bti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-sp-d16 -mbranch-protection=pac-ret+bti -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8.1m.main_hard_fpdp_nomve_pacret_bti_exn_rtti",
+            "json": "armv8.1m.main_hard_fpdp_nomve_pacret_bti_exn_rtti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16 -mbranch-protection=pac-ret+bti"
+        },
+        {
+            "variant": "armv8.1m.main_hard_fpdp_nomve_pacret_bti",
+            "json": "armv8.1m.main_hard_fpdp_nomve_pacret_bti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+fp16 -mfpu=fp-armv8-fullfp16-d16 -mbranch-protection=pac-ret+bti -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv8.1m.main_hard_nofp_mve_pacret_bti_exn_rtti",
+            "json": "armv8.1m.main_hard_nofp_mve_pacret_bti_exn_rtti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+mve -mfpu=none -mbranch-protection=pac-ret+bti"
+        },
+        {
+            "variant": "armv8.1m.main_hard_nofp_mve_pacret_bti",
+            "json": "armv8.1m.main_hard_nofp_mve_pacret_bti.json",
+            "flags": "--target=thumbv8.1m.main-unknown-none-eabihf -march=thumbv8.1m.main+mve -mfpu=none -mbranch-protection=pac-ret+bti -fno-exceptions -fno-rtti"
+        }
+    ]
+}

@@ -1,0 +1,41 @@
+{
+    "args": {
+        "common": {
+            "TARGET_ARCH": "armv7r",
+            "VARIANT": "armv7r_soft_nofp",
+            "COMPILE_FLAGS": "-mfloat-abi=soft -march=armv7r -mfpu=none",
+            "ENABLE_EXCEPTIONS": "OFF",
+            "ENABLE_RTTI": "OFF",
+            "TEST_EXECUTOR": "qemu",
+            "QEMU_MACHINE": "none",
+            "QEMU_CPU": "cortex-r5f",
+            "QEMU_PARAMS": "-m 1G",
+            "BOOT_FLASH_ADDRESS": "0x00000000",
+            "BOOT_FLASH_SIZE": "0x1000",
+            "FLASH_ADDRESS": "0x20000000",
+            "FLASH_SIZE": "0x1000000",
+            "RAM_ADDRESS": "0x21000000",
+            "RAM_SIZE": "0x1000000",
+            "STACK_SIZE": "4K"
+        },
+        "picolibc": {
+            "PICOLIBC_BUILD_TYPE": "release",
+            "ENABLE_CXX_LIBS": "ON",
+            "ENABLE_LIBC_TESTS": "ON",
+            "ENABLE_COMPILER_RT_TESTS": "ON",
+            "ENABLE_LIBCXX_TESTS": "ON"
+        },
+        "newlib": {
+            "ENABLE_CXX_LIBS": "ON",
+            "ENABLE_LIBC_TESTS": "OFF",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        },
+        "llvmlibc": {
+            "ENABLE_CXX_LIBS": "OFF",
+            "ENABLE_LIBC_TESTS": "OFF",
+            "ENABLE_COMPILER_RT_TESTS": "OFF",
+            "ENABLE_LIBCXX_TESTS": "OFF"
+        }
+    }
+}
