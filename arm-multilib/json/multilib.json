@@ -10,6 +10,16 @@
             "json": "aarch64a.json",
             "flags": "--target=aarch64-unknown-none-elf -fno-exceptions -fno-rtti"
         },
+        { 
+            "variant": "aarch64a_be_exn_rtti",
+            "json": "aarch64a_be_exn_rtti.json",
+            "flags": "--target=aarch64_be-unknown-none-elf"
+        },
+        {
+            "variant": "aarch64a_be",
+            "json": "aarch64a_be.json",
+            "flags": "--target=aarch64_be-unknown-none-elf -fno-exceptions -fno-rtti"
+        },
         {
             "variant": "aarch64a_strictalign_exn_rtti",
             "json": "aarch64a_strictalign_exn_rtti.json",
@@ -59,6 +69,16 @@
             "variant": "armv7a_soft_nofp",
             "json": "armv7a_soft_nofp.json",
             "flags": "--target=armv7-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "armv7a_soft_nofp_strictly_aligned_exn_rtti",
+            "json": "armv7a_soft_nofp_strictly_aligned_exn_rtti.json",
+            "flags": "--target=armv7-unknown-none-eabi -mfpu=none -mno-unaligned-access"
+        },
+        {
+            "variant": "armv7a_soft_nofp_strictly_aligned",
+            "json": "armv7a_soft_nofp_strictly_aligned.json",
+            "flags": "--target=armv7-unknown-none-eabi -mfpu=none -mno-unaligned-access -fno-exceptions -fno-rtti"
         },
         {
             "variant": "armv7a_hard_vfpv3_d16_exn_rtti",
