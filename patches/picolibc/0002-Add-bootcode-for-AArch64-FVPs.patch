@@ -1,7 +1,7 @@
-From 3b0b62ce6d81211a71eebe63b4b4ef0732da93ef Mon Sep 17 00:00:00 2001
+From 58451642e678817d8822b04b8ff07ee4758a8f10 Mon Sep 17 00:00:00 2001
 From: Simi Pallipurath <simi.pallipurath@arm.com>
-Date: Mon, 25 Nov 2024 11:13:50 +0000
-Subject: [PATCH 2/2] [PATCH 2/2] Add bootcode for AArch64 FVPs
+Date: Thu, 14 Nov 2024 10:12:33 +0000
+Subject: Add bootcode for AArch64 FVPs
 
 The AArch64 FVP (Fixed Virtual Platform) models differ from QEMU in a
 few ways which affect the crt0 code:
@@ -886,4 +886,3 @@ index 76965990f..be8f875be 100644
  endforeach
 -- 
 2.34.1
-

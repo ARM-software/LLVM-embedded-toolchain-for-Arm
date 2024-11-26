@@ -10,7 +10,7 @@
             "json": "aarch64a.json",
             "flags": "--target=aarch64-unknown-none-elf -fno-exceptions -fno-rtti"
         },
-        {
+        { 
             "variant": "aarch64a_be_exn_rtti",
             "json": "aarch64a_be_exn_rtti.json",
             "flags": "--target=aarch64_be-unknown-none-elf"
@@ -19,6 +19,16 @@
             "variant": "aarch64a_be",
             "json": "aarch64a_be.json",
             "flags": "--target=aarch64_be-unknown-none-elf -fno-exceptions -fno-rtti"
+        },
+        {
+            "variant": "aarch64a_strictalign_exn_rtti",
+            "json": "aarch64a_strictalign_exn_rtti.json",
+            "flags": "--target=aarch64-unknown-none-elf -mno-unaligned-access"
+        },
+        {
+            "variant": "aarch64a_strictalign",
+            "json": "aarch64a_strictalign.json",
+            "flags": "--target=aarch64-unknown-none-elf -mno-unaligned-access -fno-exceptions -fno-rtti"
         },
         {
             "variant": "armv4t_exn_rtti",
