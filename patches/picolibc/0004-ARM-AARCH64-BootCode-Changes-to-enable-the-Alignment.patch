@@ -1,0 +1,68 @@
+From 11abbd6533eeacbb000fc19bd07316e11fcb6fea Mon Sep 17 00:00:00 2001
+From: Simi Pallipurath <simi.pallipurath@arm.com>
+Date: Tue, 26 Nov 2024 15:20:50 +0000
+Subject: [ARM/AARCH64] BootCode Changes to enable the Alignment Check
+ bit and disable the unaligned access bit
+
+We need changes in both Arm/AArch64 bootcode in
+order for the -mno-unaligned-access to work.
+
+We need to enable the Alignment Check bit in the
+System Control Register (SCTLR)  which is the
+Bit 1 (A) and it turn on alignment fault checking
+for data accesses . If an unaligned data access
+occurs, an alignment fault exception will be generated.
+
+Also need to disable the Unaligned Access Enable(U) bit
+in the System Control Register (SCTLR). As a result,
+unaligned data accesses will generate an alignment fault exception.
+---
+ picocrt/machine/aarch64/crt0.c | 7 ++++++-
+ picocrt/machine/arm/crt0.c     | 6 ++++++
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/picocrt/machine/aarch64/crt0.c b/picocrt/machine/aarch64/crt0.c
+index dfe838111..885282f4d 100644
+--- a/picocrt/machine/aarch64/crt0.c
++++ b/picocrt/machine/aarch64/crt0.c
+@@ -144,7 +144,12 @@ void _cstart(void)
+          */
+         __asm__("mrs    %x0, sctlr_"BOOT_EL"" : "=r" (sctlr));
+         sctlr |= SCTLR_ICACHE | SCTLR_C | SCTLR_MMU;
+-        sctlr &= ~(SCTLR_A | SCTLR_WXN);
++        #ifdef __ARM_FEATURE_UNALIGNED
++            sctlr &= ~SCTLR_A;
++        #else
++            sctlr |= SCTLR_A;
++        #endif
++        sctlr &= ~SCTLR_WXN;
+         __asm__("msr    sctlr_"BOOT_EL", %x0" :: "r" (sctlr));
+         __asm__("isb\n");
+ 
+diff --git a/picocrt/machine/arm/crt0.c b/picocrt/machine/arm/crt0.c
+index 60efafc9c..e27ccb6a9 100644
+--- a/picocrt/machine/arm/crt0.c
++++ b/picocrt/machine/arm/crt0.c
+@@ -246,6 +246,8 @@ _cstart(void)
+ #define SCTLR_BRANCH_PRED (1 << 11)
+ #define SCTLR_ICACHE (1 << 12)
+ #define SCTLR_TRE       (1 << 28)
++#define SCTLR_A (1 << 1)
++#define SCTLR_U (1 << 22)
+ 
+         uint32_t        mmfr0;
+         __asm__("mrc p15, 0, %0, c0, c1, 4" : "=r" (mmfr0));
+@@ -280,6 +282,10 @@ _cstart(void)
+                 uint32_t sctlr;
+                 __asm__("mrc p15, 0, %0, c1, c0, 0" : "=r" (sctlr));
+                 sctlr |= SCTLR_ICACHE | SCTLR_BRANCH_PRED | SCTLR_DATA_L2 | SCTLR_MMU;
++                #ifndef __ARM_FEATURE_UNALIGNED
++                    sctlr |= SCTLR_A;
++                    sctlr &= ~SCTLR_U;
++                #endif
+                 sctlr &= ~SCTLR_TRE;
+                 __asm__("mcr p15, 0, %0, c1, c0, 0\n" :: "r" (sctlr));
+                 __asm__("isb\n");
+-- 
+2.34.1
+
