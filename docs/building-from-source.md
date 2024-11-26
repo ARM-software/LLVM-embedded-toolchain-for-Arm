@@ -47,11 +47,22 @@ which will prompt you to agree to their licenses. Some of the packages do not
 have installers, instead they place their license file into the
 `fvp/license_terms` directory, which you should read before continuing.
 
+The installer for the cryptography plugin requires a graphical display to run:
+it cannot run in a pure terminal session such as you might start via SSH. Also,
+it will prompt for a directory to install the plugin into. You should enter the
+pathname `fvp/install` relative to the root of your checkout. The installer
+will automatically append a subdirectory `FastModelsPortfolio_11.27` to the end
+of that, and respond with a warning such as 'Directory [...] not found (but in
+patch mode). Continue installation?' Say yes to this prompt, and continue
+clicking 'Next' until installation is complete.
+
 For non-interactive use (for example in CI systems), `get_fvps.sh` can be run
-with the `--non-interactive` option, which causes it to implcitly accept all of
-the EULAs. If you have previously downloaded and installed the FVPs outside of
-the source tree, you can set the `-DFVP_INSTALL_DIR=...` cmake option to set
-the path to them.
+with the `--non-interactive` option, which causes it to implicitly accept all
+of the EULAs and set up the correct install directories.
+
+If you have previously downloaded and installed the FVPs outside of the source
+tree, you can set the `-DFVP_INSTALL_DIR=...` cmake option to set the path to
+them.
 
 If the FVPs are not installed, tests which need them will be skipped, but QEMU
 tests will still be run, and all library variants will still be built.
