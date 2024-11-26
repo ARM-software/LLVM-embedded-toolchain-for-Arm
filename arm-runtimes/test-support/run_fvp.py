@@ -67,6 +67,18 @@ def run_fvp(
     if verbose:
         print("running: {}".format(shlex.join(command)))
 
+    # SDDKW-53824: the ":semihosting-features" pseudo-file isn't simulated
+    # by these models. To work around that, we create one ourselves in the
+    # test process's working directory, containing the single feature flag
+    # SH_EXT_EXIT_EXTENDED, meaning that the SYS_EXIT_EXTENDED semihosting
+    # request will work. This permits the test program's exit status to be
+    # propagated to the exit status of the FVP, so that tests returning 77
+    # for "test skipped" can be automatically detected.
+    with open(
+        path.join(working_directory, ":semihosting-features"), "wb"
+    ) as fh:
+        fh.write(b"SHFB\x01")
+
     result = subprocess.run(
         command,
         stdout=subprocess.PIPE,
