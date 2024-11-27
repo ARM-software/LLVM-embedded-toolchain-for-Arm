@@ -23,3 +23,4 @@ FetchContent_Declare(newlib
     SOURCE_SUBDIR do_not_add_newlib_subdir
 )
 FetchContent_MakeAvailable(newlib)
+FetchContent_GetProperties(newlib SOURCE_DIR FETCHCONTENT_SOURCE_DIR_NEWLIB)

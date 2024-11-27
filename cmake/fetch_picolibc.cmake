@@ -29,3 +29,4 @@ FetchContent_Declare(picolibc
     SOURCE_SUBDIR do_not_add_picolibc_subdir
 )
 FetchContent_MakeAvailable(picolibc)
+FetchContent_GetProperties(picolibc SOURCE_DIR FETCHCONTENT_SOURCE_DIR_PICOLIBC)
