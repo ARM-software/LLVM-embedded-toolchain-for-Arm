@@ -31,3 +31,4 @@ FetchContent_Declare(llvmproject
     SOURCE_SUBDIR do_not_add_llvm_subdir_yet
 )
 FetchContent_MakeAvailable(llvmproject)
+FetchContent_GetProperties(llvmproject SOURCE_DIR FETCHCONTENT_SOURCE_DIR_LLVMPROJECT)
