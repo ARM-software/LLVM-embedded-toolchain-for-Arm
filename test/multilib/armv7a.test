@@ -13,7 +13,7 @@
 # RUN: %clang -print-multi-directory --target=armv7ve-none-eabi -mfpu=none -mno-unaligned-access | FileCheck --check-prefix=CHECK-NOUNALIGNED %s
 # RUN: %clang -print-multi-directory --target=armv7ve-none-eabi -mfpu=none -mno-unaligned-access -marm  | FileCheck --check-prefix=CHECK-NOUNALIGNED %s
 # RUN: %clang -print-multi-directory --target=armv7ve-none-eabi -mfpu=none -mno-unaligned-access -mthumb| FileCheck --check-prefix=CHECK-NOUNALIGNED %s
-# CHECK-NOUNALIGNED: arm-none-eabi/armv7a_soft_nofp_strictly_aligned_exn_rtti{{$}}
+# CHECK-NOUNALIGNED: arm-none-eabi/armv7a_soft_nofp_strictalign_exn_rtti{{$}}
 # CHECK-NOUNALIGNED-EMPTY:
 
 # RUN: %clang -print-multi-directory --target=armv7a-none-eabihf -mfpu=vfpv3-d16 | FileCheck --check-prefix=VFPV3 %s
