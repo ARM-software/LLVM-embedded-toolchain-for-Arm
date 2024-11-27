@@ -68,6 +68,8 @@ foreach(arg
     endif()
 endforeach()
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter) # needed by fetch_*.cmake
+
 include(ExternalProject)
 include(${TOOLCHAIN_SOURCE_DIR}/cmake/fetch_llvm.cmake)
 list(APPEND passthrough_dirs "-DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=${FETCHCONTENT_SOURCE_DIR_LLVMPROJECT}")
