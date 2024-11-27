@@ -64,8 +64,10 @@ If you have previously downloaded and installed the FVPs outside of the source
 tree, you can set the `-DFVP_INSTALL_DIR=...` cmake option to set the path to
 them.
 
-If the FVPs are not installed, tests which need them will be skipped, but QEMU
-tests will still be run, and all library variants will still be built.
+Testing with FVPs is disabled by default, but QEMU tests will still be run, and
+all library variants will still be built. Testing with FVPs can be enabled by
+setting the `-DENABLE_FVP_TESTING=ON` CMake option if you have installed the
+models as described above.
 
 ## Customizing
 
