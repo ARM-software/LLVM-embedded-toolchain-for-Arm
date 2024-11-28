@@ -11,14 +11,21 @@ if(NOT VERSIONS_JSON)
 endif()
 read_repo_version(newlib newlib)
 
-set(newlib_patch ${CMAKE_CURRENT_LIST_DIR}/../patches/newlib.patch)
+set(patch_script ${CMAKE_CURRENT_LIST_DIR}/patch_repo.py)
+if(GIT_PATCH_METHOD STREQUAL "am")
+    set(patch_script_args --method am)
+elseif(GIT_PATCH_METHOD STREQUAL "apply")
+    set(patch_script_args --method apply)
+endif()
+set(patch_dir ${CMAKE_CURRENT_LIST_DIR}/../patches)
+set(NEWLIB_PATCH_COMMAND ${Python3_EXECUTABLE} ${patch_script} ${patch_script_args} ${patch_dir}/newlib)
 
 FetchContent_Declare(newlib
     GIT_REPOSITORY https://sourceware.org/git/newlib-cygwin.git
     GIT_TAG "${newlib_TAG}"
     GIT_SHALLOW "${newlib_SHALLOW}"
     GIT_PROGRESS TRUE
-    PATCH_COMMAND git reset --quiet --hard && git clean --quiet --force -dx && git apply ${newlib_patch}
+    PATCH_COMMAND ${NEWLIB_PATCH_COMMAND}
     # Similarly to picolibc, we don't do the configuration here.
     SOURCE_SUBDIR do_not_add_newlib_subdir
 )
