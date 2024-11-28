@@ -157,9 +157,9 @@ if(ENABLE_LIBC_TESTS OR ENABLE_COMPILER_RT_TESTS OR ENABLE_LIBCXX_TESTS)
 
     if(TEST_EXECUTOR STREQUAL qemu)
         if(TARGET_ARCH MATCHES "^aarch64")
-            find_program(QEMU_EXECUTABLE qemu-system-aarch64)
+            find_program(QEMU_EXECUTABLE qemu-system-aarch64 REQUIRED)
         else()
-            find_program(QEMU_EXECUTABLE qemu-system-arm)
+            find_program(QEMU_EXECUTABLE qemu-system-arm REQUIRED)
         endif()
 
         # Use colon as a separator because comma and semicolon are used for
