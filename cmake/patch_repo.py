@@ -44,6 +44,10 @@ def main():
     )
     args = parser.parse_args()
 
+    # If the patch is valid but contain conflicts, using --3way --apply can apply
+    # the patch but leave conflict markers in the source for the user to resolve.
+    # This doesn't return an error code, making it compatible with this script's
+    # --restore_on_fail option, which relies on the error code from running --check.
     if args.method == "apply" and args.restore_on_fail and args.three_way:
         print("--restore_on_fail is incompatible with --3way using apply")
         exit(1)

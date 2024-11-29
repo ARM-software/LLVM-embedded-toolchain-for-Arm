@@ -11,7 +11,7 @@ if(NOT VERSIONS_JSON)
     include(${CMAKE_CURRENT_LIST_DIR}/read_versions.cmake)
 endif()
 read_repo_version(newlib newlib)
-get_patch_command(newlib newlib_patch_command)
+get_patch_command(${CMAKE_CURRENT_LIST_DIR}/.. newlib newlib_patch_command)
 
 FetchContent_Declare(newlib
     GIT_REPOSITORY https://sourceware.org/git/newlib-cygwin.git

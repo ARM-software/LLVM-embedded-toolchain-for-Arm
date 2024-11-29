@@ -11,7 +11,7 @@ if(NOT VERSIONS_JSON)
     include(${CMAKE_CURRENT_LIST_DIR}/read_versions.cmake)
 endif()
 read_repo_version(picolibc picolibc)
-get_patch_command(picolibc picolibc_patch_command)
+get_patch_command(${CMAKE_CURRENT_LIST_DIR}/.. picolibc picolibc_patch_command)
 
 FetchContent_Declare(picolibc
     GIT_REPOSITORY https://github.com/picolibc/picolibc.git
