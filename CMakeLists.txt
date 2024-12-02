@@ -152,12 +152,12 @@ option(
 )
 option(
     ENABLE_QEMU_TESTING
-    "Tests using QEMU are enabled by default, but can be disabled."
+    "Enable tests that use QEMU. This option is ON by default."
     ON
 )
 option(
     ENABLE_FVP_TESTING
-    "Tests using FVP need to be explictly enabled."
+    "Enable tests that use FVPs. This option is OFF by default."
 )
 set(
     FVP_INSTALL_DIR
