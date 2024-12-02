@@ -36,6 +36,10 @@ $ brew install llvm python3 git make ninja qemu cmake
 $ pip install meson
 ```
 
+Testing with QEMU is enabled by default, but can be disabled using the 
+`-DENABLE_QEMU_TESTING=OFF` CMake option if testing is not required or QEMU is
+not installed.
+
 Some recent targets are not supported by QEMU, for these the Arm FVP models are
 used instead. These models are available free-of-change but are not
 open-source, and come with their own licenses.
