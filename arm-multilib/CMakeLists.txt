@@ -136,6 +136,7 @@ math(EXPR lib_count_dec "${lib_count} - 1")
 foreach(lib_idx RANGE ${lib_count_dec})
     string(JSON lib_def GET ${multilib_defs} ${lib_idx})
     string(JSON variant GET ${lib_def} "variant")
+    set(additional_cmake_args "")
 
     if(variant IN_LIST ENABLE_VARIANTS OR ENABLE_VARIANTS STREQUAL "all")
         string(JSON variant_multilib_flags GET ${lib_def} "flags")
@@ -164,12 +165,11 @@ foreach(lib_idx RANGE ${lib_count_dec})
             # FVP testing should default to off, so override any 
             # settings from the JSON.
             if(test_executor STREQUAL "fvp" AND NOT ${ENABLE_FVP_TESTING})
-                set(additional_cmake_args "-DENABLE_LIBC_TESTS=OFF" "-DENABLE_COMPILER_RT_TESTS=OFF" "-DENABLE_LIBCXX_TESTS=OFF")
+                list(APPEND additional_cmake_args "-DENABLE_LIBC_TESTS=OFF" "-DENABLE_COMPILER_RT_TESTS=OFF" "-DENABLE_LIBCXX_TESTS=OFF")
                 set(read_ENABLE_LIBC_TESTS "OFF")
                 set(read_ENABLE_COMPILER_RT_TESTS "OFF")
                 set(read_ENABLE_LIBCXX_TESTS "OFF")
             else()
-                set(additional_cmake_args "")
                 # From the json, check which tests are enabled.
                 foreach(test_enable_var
                     ENABLE_LIBC_TESTS
