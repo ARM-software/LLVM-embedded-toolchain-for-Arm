@@ -151,6 +151,11 @@ option(
     llvm-project to improve performance."
 )
 option(
+    ENABLE_QEMU_TESTING
+    "Tests using QEMU are enabled by default, but can be disabled."
+    ON
+)
+option(
     ENABLE_FVP_TESTING
     "Tests using FVP need to be explictly enabled."
 )
@@ -596,6 +601,7 @@ if(NOT PREBUILT_TARGET_LIBRARIES)
         -DENABLE_VARIANTS=${ENABLE_VARIANTS_PASSTHROUGH}
         -DLIBC_HDRGEN=${LIBC_HDRGEN}
         -DFVP_INSTALL_DIR=${FVP_INSTALL_DIR}
+        -DENABLE_QEMU_TESTING=${ENABLE_QEMU_TESTING}
         -DENABLE_FVP_TESTING=${ENABLE_FVP_TESTING}
         -DFVP_CONFIG_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fvp/config
         -DFETCHCONTENT_SOURCE_DIR_LLVMPROJECT=${FETCHCONTENT_SOURCE_DIR_LLVMPROJECT}

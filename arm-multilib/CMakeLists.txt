@@ -34,6 +34,11 @@ set_property(CACHE C_LIBRARY PROPERTY STRINGS picolibc newlib llvmlibc)
 set(LLVM_BINARY_DIR "" CACHE PATH "Path to LLVM toolchain build or install root.")
 set(LIBC_HDRGEN "" CACHE PATH "Path to prebuilt lbc-hdrgen if not included in LLVM binaries set by LLVM_BINARY_DIR")
 option(
+    ENABLE_QEMU_TESTING
+    "Tests using QEMU are enabled by default, but can be disabled."
+    ON
+)
+option(
     ENABLE_FVP_TESTING
     "Tests using FVP need to be explictly enabled."
 )
@@ -164,7 +169,7 @@ foreach(lib_idx RANGE ${lib_count_dec})
 
             # FVP testing should default to off, so override any 
             # settings from the JSON.
-            if(test_executor STREQUAL "fvp" AND NOT ${ENABLE_FVP_TESTING})
+            if((test_executor STREQUAL "qemu" AND NOT ${ENABLE_QEMU_TESTING}) OR (test_executor STREQUAL "fvp" AND NOT ${ENABLE_FVP_TESTING}))
                 list(APPEND additional_cmake_args "-DENABLE_LIBC_TESTS=OFF" "-DENABLE_COMPILER_RT_TESTS=OFF" "-DENABLE_LIBCXX_TESTS=OFF")
                 set(read_ENABLE_LIBC_TESTS "OFF")
                 set(read_ENABLE_COMPILER_RT_TESTS "OFF")
