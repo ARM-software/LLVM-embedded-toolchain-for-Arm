@@ -169,6 +169,7 @@ foreach(lib_idx RANGE ${lib_count_dec})
                 set(read_ENABLE_COMPILER_RT_TESTS "OFF")
                 set(read_ENABLE_LIBCXX_TESTS "OFF")
             else()
+                set(additional_cmake_args "")
                 # From the json, check which tests are enabled.
                 foreach(test_enable_var
                     ENABLE_LIBC_TESTS
