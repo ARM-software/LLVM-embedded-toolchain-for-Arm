@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Script to apply a set of patches to llvm-project sources.
+Script to apply a set of patches to a git repository.
 """
 
 import argparse
@@ -18,8 +18,8 @@ def main():
         help="Set of patches to apply. This should be a directory containing one or more ordered *.patch files.",
     )
     parser.add_argument(
-        "--llvm_dir",
-        help="Directory of the llvm-project git checkout, if not the current directory.",
+        "--repo_dir",
+        help="Directory of the git checkout, if not the current directory.",
     )
     parser.add_argument(
         "--method",
@@ -36,10 +36,24 @@ def main():
         action="store_true",
         help="If a patch in a series cannot be applied, restore the original state instead of leaving patches missing. Return code will be 2 instead of 1.",
     )
+    parser.add_argument(
+        "--3way",
+        action="store_true",
+        dest="three_way",
+        help="If the patch does not apply cleanly, fall back on 3-way merge.",
+    )
     args = parser.parse_args()
 
-    if args.llvm_dir:
-        git_cmd = ["git", "-C", args.llvm_dir]
+    # If the patch is valid but contain conflicts, using --3way --apply can apply
+    # the patch but leave conflict markers in the source for the user to resolve.
+    # This doesn't return an error code, making it compatible with this script's
+    # --restore_on_fail option, which relies on the error code from running --check.
+    if args.method == "apply" and args.restore_on_fail and args.three_way:
+        print("--restore_on_fail is incompatible with --3way using apply")
+        exit(1)
+
+    if args.repo_dir:
+        git_cmd = ["git", "-C", args.repo_dir]
     else:
         git_cmd = ["git"]
 
@@ -57,7 +71,9 @@ def main():
     print("\n".join(p.name for p in patch_list))
 
     if args.method == "am":
-        merge_args = git_cmd + ["am", "-k", "--ignore-whitespace", "--3way"]
+        merge_args = git_cmd + ["am", "-k", "--ignore-whitespace"]
+        if args.three_way:
+            merge_args.append("--3way")
         for patch in patch_list:
             merge_args.append(str(patch))
         p = subprocess.run(merge_args, capture_output=True, text=True)
@@ -72,8 +88,8 @@ def main():
             # git am doesn't give any specific return codes,
             # so check for unresolved working files.
             rebase_apply_path = os.path.join(".git", "rebase-apply")
-            if args.llvm_dir:
-                rebase_apply_path = os.path.join(args.llvm_dir, rebase_apply_path)
+            if args.repo_dir:
+                rebase_apply_path = os.path.join(args.repo_dir, rebase_apply_path)
             if os.path.isdir(rebase_apply_path):
                 print("Aborting git am...")
                 subprocess.run(git_cmd + ["am", "--abort"], check=True)
@@ -90,10 +106,11 @@ def main():
             apply_check_args = git_cmd + [
                 "apply",
                 "--ignore-whitespace",
-                "--3way",
                 "--check",
-                str(current_patch),
             ]
+            if args.three_way:
+                apply_check_args.append("--3way")
+            apply_check_args.append(str(current_patch))
             p_check = subprocess.run(apply_check_args)
 
             if p_check.returncode == 0:
@@ -102,10 +119,11 @@ def main():
                 apply_args = git_cmd + [
                     "apply",
                     "--ignore-whitespace",
-                    "--3way",
-                    str(current_patch),
                 ]
-                apply_args = subprocess.run(apply_args, check=True)
+                if args.three_way:
+                    apply_args.append("--3way")
+                apply_args.append(str(current_patch))
+                p = subprocess.run(apply_args, check=True)
                 applied_patches.append(current_patch)
             else:
                 # Patch won't apply.
@@ -118,10 +136,11 @@ def main():
                         reverse_args = git_cmd + [
                             "apply",
                             "--ignore-whitespace",
-                            "--3way",
                             "--reverse",
-                            str(previous_patch),
                         ]
+                        if args.three_way:
+                            reverse_args.append("--3way")
+                        reverse_args.append(str(previous_patch))
                         p_check = subprocess.run(reverse_args, check=True)
                     print(
                         f"Rollback successful, failure occured on {current_patch.name}"

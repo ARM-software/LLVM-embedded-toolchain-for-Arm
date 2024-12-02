@@ -1,3 +1,32 @@
+From 0e1475e5112b986ef5d9caee23dac554c749c54b Mon Sep 17 00:00:00 2001
+From: David Candler <david.candler@arm.com>
+Date: Thu, 28 Nov 2024 15:31:35 +0000
+Subject: [PATCH] Enable newlib build
+
+---
+ libgloss/aarch64/syscalls.c             |   6 ++
+ libgloss/arm/cpu-init/rdimon-aem.S      | 107 ++++++++++++------------
+ libgloss/arm/crt0.S                     |   2 +-
+ libgloss/arm/linux-crt0.c               |   2 +-
+ libgloss/arm/syscalls.c                 |   6 +-
+ libgloss/arm/trap.S                     |   2 +-
+ libgloss/libnosys/configure             |   2 +-
+ newlib/libc/include/sys/features.h      |   2 +
+ newlib/libc/machine/aarch64/memchr.S    |   6 +-
+ newlib/libc/machine/aarch64/strchr.S    |   6 +-
+ newlib/libc/machine/aarch64/strchrnul.S |   6 +-
+ newlib/libc/machine/aarch64/strrchr.S   |  10 +--
+ newlib/libc/stdlib/aligned_alloc.c      |   1 +
+ newlib/libc/sys/arm/crt0.S              |   2 +-
+ newlib/libc/sys/arm/trap.S              |   2 +-
+ newlib/libm/machine/arm/sf_ceil.c       |   2 +-
+ newlib/libm/machine/arm/sf_floor.c      |   2 +-
+ newlib/libm/machine/arm/sf_nearbyint.c  |   2 +-
+ newlib/libm/machine/arm/sf_rint.c       |   2 +-
+ newlib/libm/machine/arm/sf_round.c      |   2 +-
+ newlib/libm/machine/arm/sf_trunc.c      |   2 +-
+ 21 files changed, 92 insertions(+), 82 deletions(-)
+
 diff --git a/libgloss/aarch64/syscalls.c b/libgloss/aarch64/syscalls.c
 index 7343cc61f..2c4b63c17 100644
 --- a/libgloss/aarch64/syscalls.c
@@ -5,7 +34,7 @@ index 7343cc61f..2c4b63c17 100644
 @@ -172,6 +172,12 @@ newslot (void)
    return i;
  }
-
+ 
 +int __aarch64_sme_accessible() {
 +  int result = 0;
 +  asm volatile ( "mrs %x[result], id_aa64pfr1_el1" : [result]"=r"(result) :  : );
@@ -635,3 +664,6 @@ index 64e4aeb9a..c08fa6fed 100644
  #include <math.h>
  
  float
+-- 
+2.43.0
+
