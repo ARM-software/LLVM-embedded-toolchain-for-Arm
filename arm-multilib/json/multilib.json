@@ -31,6 +31,11 @@
             "flags": "--target=aarch64-unknown-none-elf -mno-unaligned-access -fno-exceptions -fno-rtti"
         },
         {
+            "variant": "aarch64a_soft_nofp",
+            "json": "aarch64a_soft_nofp.json",
+            "flags": "--target=aarch64-unknown-none-elf -march=armv8-a+nofp+nosimd -mabi=aapcs-soft"
+        },
+        {
             "variant": "armv4t_exn_rtti",
             "json": "armv4t_exn_rtti.json",
             "flags": "--target=armv4t-unknown-none-eabi -mfpu=none"
