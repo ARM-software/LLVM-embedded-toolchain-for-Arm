@@ -1,4 +1,4 @@
-From 028fe75e045951a9d091008a85971523358160db Mon Sep 17 00:00:00 2001
+From bd1dcaa0e3e77260e264cc0c2580bf32f704a0ed Mon Sep 17 00:00:00 2001
 From: Simi Pallipurath <simi.pallipurath@arm.com>
 Date: Thu, 14 Nov 2024 10:07:08 +0000
 Subject: Enable libcxx builds
@@ -11,10 +11,10 @@ libc++ builds.
  2 files changed, 15 insertions(+)
 
 diff --git a/meson.build b/meson.build
-index 012d664bd..4161d6574 100644
+index b8f43c800..9d3f5c672 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -1318,6 +1318,18 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
+@@ -1319,6 +1319,18 @@ if get_option('newlib-retargetable-locking') != get_option('newlib-multithread')
    error('newlib-retargetable-locking and newlib-multithread must be set to the same value')
  endif
  
@@ -48,5 +48,5 @@ index 7b63ba172..cda5e1e7e 100644
  		KEEP (*(.fini .fini.*))
  		@PREFIX@__text_end = .;
 -- 
-2.39.5 (Apple Git-154)
+2.43.0
 

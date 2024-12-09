@@ -1,4 +1,4 @@
-From 79f3ce1b5f730b0293e8452d4e028e34c0e71736 Mon Sep 17 00:00:00 2001
+From ef4378c3f62947b9ce1eac19b717ac44d5aeecb7 Mon Sep 17 00:00:00 2001
 From: Lucas Prates <lucas.prates@arm.com>
 Date: Mon, 11 Nov 2024 16:37:04 +0000
 Subject: Add support for strict-align/no-unaligned-access in AArch64
@@ -427,5 +427,5 @@ index 1fccba9f8..2f0cdc0c7 100644
  #else
  
 -- 
-2.39.5 (Apple Git-154)
+2.43.0
 
