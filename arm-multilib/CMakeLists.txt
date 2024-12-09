@@ -143,6 +143,15 @@ foreach(lib_idx RANGE ${lib_count_dec})
     string(JSON variant GET ${lib_def} "variant")
     set(additional_cmake_args "")
 
+    # If a variant doesn't support all possible C library
+    # options, check if it should be skipped.
+    string(JSON variant_support ERROR_VARIABLE json_error GET ${lib_def} "libraries_supported")
+    if(NOT variant_support STREQUAL "libraries_supported-NOTFOUND")
+        if(NOT C_LIBRARY IN_LIST variant_support)
+            continue()
+        endif()
+    endif()
+
     if(variant IN_LIST ENABLE_VARIANTS OR ENABLE_VARIANTS STREQUAL "all")
         string(JSON variant_multilib_flags GET ${lib_def} "flags")
         # Placeholder libraries won't have a json, so store the error in
