@@ -1,8 +1,8 @@
-From 11abbd6533eeacbb000fc19bd07316e11fcb6fea Mon Sep 17 00:00:00 2001
+From e6a1281ca4e08c0fe4da97e2dbb8d2bd1f049b1b Mon Sep 17 00:00:00 2001
 From: Simi Pallipurath <simi.pallipurath@arm.com>
 Date: Tue, 26 Nov 2024 15:20:50 +0000
-Subject: [ARM/AARCH64] BootCode Changes to enable the Alignment Check
- bit and disable the unaligned access bit
+Subject: [ARM/AARCH64] BootCode Changes to enable the Alignment Check bit and
+ disable the unaligned access bit
 
 We need changes in both Arm/AArch64 bootcode in
 order for the -mno-unaligned-access to work.
@@ -64,5 +64,5 @@ index 60efafc9c..e27ccb6a9 100644
                  __asm__("mcr p15, 0, %0, c1, c0, 0\n" :: "r" (sctlr));
                  __asm__("isb\n");
 -- 
-2.34.1
+2.43.0
 
