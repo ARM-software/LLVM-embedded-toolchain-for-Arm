@@ -31,21 +31,15 @@
             "flags": "--target=aarch64-unknown-none-elf -mno-unaligned-access -fno-exceptions -fno-rtti"
         },
         {
-            "variant": "aarch64a_soft_nofp",
-            "json": "aarch64a_soft_nofp.json",
-            "flags": "--target=aarch64-unknown-none-elf -march=armv8-a+nofp+nosimd -mabi=aapcs-soft -fno-exceptions -fno-rtti",
-            "libraries_supported": "picolibc,newlib"
-        },
-        {
-            "variant": "aarch64a_be_soft_nofp",
-            "json": "aarch64a_be_soft_nofp.json",
-            "flags": "--target=aarch64_be-unknown-none-elf -march=armv8-a+nofp+nosimd -mabi=aapcs-soft -fno-exceptions -fno-rtti",
-            "libraries_supported": "picolibc,newlib"
-        },
-        {
             "variant": "aarch64a_soft_nofp_exn_rtti",
             "json": "aarch64a_soft_nofp_exn_rtti.json",
             "flags": "--target=aarch64-unknown-none-elf -march=armv8-a+nofp+nosimd -mabi=aapcs-soft",
+            "libraries_supported": "picolibc,newlib"
+        },
+        {
+            "variant": "aarch64a_soft_nofp",
+            "json": "aarch64a_soft_nofp.json",
+            "flags": "--target=aarch64-unknown-none-elf -march=armv8-a+nofp+nosimd -mabi=aapcs-soft -fno-exceptions -fno-rtti",
             "libraries_supported": "picolibc,newlib"
         },
         {
@@ -54,7 +48,12 @@
             "flags": "--target=aarch64_be-unknown-none-elf -march=armv8-a+nofp+nosimd -mabi=aapcs-soft",
             "libraries_supported": "picolibc,newlib"
         },
-
+        {
+            "variant": "aarch64a_be_soft_nofp",
+            "json": "aarch64a_be_soft_nofp.json",
+            "flags": "--target=aarch64_be-unknown-none-elf -march=armv8-a+nofp+nosimd -mabi=aapcs-soft -fno-exceptions -fno-rtti",
+            "libraries_supported": "picolibc,newlib"
+        },
         {
             "variant": "armv4t_exn_rtti",
             "json": "armv4t_exn_rtti.json",
