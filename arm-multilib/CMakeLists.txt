@@ -147,6 +147,8 @@ foreach(lib_idx RANGE ${lib_count_dec})
     # options, check if it should be skipped.
     string(JSON variant_support ERROR_VARIABLE json_error GET ${lib_def} "libraries_supported")
     if(NOT variant_support STREQUAL "libraries_supported-NOTFOUND")
+        # Replace colons with semi-colons so CMake comprehends the list.
+        string(REPLACE "," ";" variant_support ${variant_support})
         if(NOT C_LIBRARY IN_LIST variant_support)
             continue()
         endif()
