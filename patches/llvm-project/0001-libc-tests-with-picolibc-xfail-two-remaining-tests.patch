@@ -1,4 +1,4 @@
-From cb6cfe0e5fc29d3867f523900f0d46a4ef5dff1b Mon Sep 17 00:00:00 2001
+From 9fb80381b839fdbe15ddfa732bed5c25d6e4a5a2 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Dominik=20W=C3=B3jt?= <dominik.wojt@arm.com>
 Date: Mon, 16 Oct 2023 11:35:48 +0200
 Subject: [libc++] tests with picolibc: xfail two remaining tests
@@ -25,10 +25,10 @@ index c9c2ba200214..4898a9a06e09 100644
  // architectures.
  // XFAIL: target={{.+}}-pc-windows-msvc
 diff --git a/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp b/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp
-index 5a70ea5bd570..92dfbe8eb1ab 100644
+index d8eff69cb53f..e16048df722e 100644
 --- a/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp
 +++ b/libcxx/test/std/language.support/support.start.term/quick_exit.pass.cpp
-@@ -16,6 +16,9 @@
+@@ -17,6 +17,9 @@
  
  // test quick_exit and at_quick_exit
  
