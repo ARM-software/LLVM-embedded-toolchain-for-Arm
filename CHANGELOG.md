@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [19.1.5]
+
+### Changed
+- LLVM tag updated to 19.1.5
+- Volatile access defect fixed (https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/pull/595).
+
 ## [19.0.0]
 
 ### Added
