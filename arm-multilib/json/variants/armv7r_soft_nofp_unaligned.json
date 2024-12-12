@@ -2,8 +2,8 @@
     "args": {
         "common": {
             "TARGET_ARCH": "armv7r",
-            "VARIANT": "armv7r_hard_vfpv3xd",
-            "COMPILE_FLAGS": "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3xd -mno-unaligned-access",
+            "VARIANT": "armv7r_soft_nofp",
+            "COMPILE_FLAGS": "-mfloat-abi=soft -march=armv7r -mfpu=none",
             "ENABLE_EXCEPTIONS": "OFF",
             "ENABLE_RTTI": "OFF",
             "TEST_EXECUTOR": "qemu",

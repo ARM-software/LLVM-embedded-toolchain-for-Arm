@@ -1,14 +1,14 @@
 {
     "args": {
         "common": {
-            "TARGET_ARCH": "armv7r",
-            "VARIANT": "armv7r_hard_vfpv3xd",
-            "COMPILE_FLAGS": "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3xd -mno-unaligned-access",
-            "ENABLE_EXCEPTIONS": "OFF",
-            "ENABLE_RTTI": "OFF",
+            "TARGET_ARCH": "armv7a",
+            "VARIANT": "armv7a_soft_nofp_exn_rtti",
+            "COMPILE_FLAGS": "-mfloat-abi=soft -march=armv7a -mfpu=none",
+            "ENABLE_EXCEPTIONS": "ON",
+            "ENABLE_RTTI": "ON",
             "TEST_EXECUTOR": "qemu",
             "QEMU_MACHINE": "none",
-            "QEMU_CPU": "cortex-r5f",
+            "QEMU_CPU": "cortex-a7",
             "QEMU_PARAMS": "-m 1G",
             "BOOT_FLASH_ADDRESS": "0x00000000",
             "BOOT_FLASH_SIZE": "0x1000",
