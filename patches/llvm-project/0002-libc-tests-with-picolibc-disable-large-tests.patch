@@ -51,7 +51,8 @@ index ad131bb3a8a7..ac612c79f71c 100644
 -// XFAIL: LIBCXX-PICOLIBC-FIXME
 +// REQUIRES: large_tests
  
- // This test exercises support for char array initializer lists added in dd8b266ef.
+ // This test exercises support for char array initializer lists added in
+ // dd8b266ef.
  // UNSUPPORTED: using-built-library-before-llvm-20
 -- 
 2.39.5 (Apple Git-154)
