@@ -285,8 +285,9 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0004-libc-tests-with-picolibc-mark-sort-test-as-long-one.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0005-libc-tests-with-picolibc-XFAIL-uses-of-atomics.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0006-libc-tests-with-picolibc-mark-two-more-large-tests.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0007-Remove-ctime.timespec.compile.pass.cpp-xfail.patch
-    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0008-libc-AArch64-Add-an-AArch64-setjmp-longjmp-101177.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0007-PATCH-Remove-ctime.timespec.compile.pass.cpp-xfail.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0008-PATCH-libc-AArch64-Add-an-AArch64-setjmp-longjmp.-10.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0009-DAGISel-Keep-flags-when-converting-FP-load-store-to-.patch
 )
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
