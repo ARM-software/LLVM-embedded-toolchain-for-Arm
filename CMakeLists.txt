@@ -288,6 +288,7 @@ set(
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0007-PATCH-Remove-ctime.timespec.compile.pass.cpp-xfail.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0008-PATCH-libc-AArch64-Add-an-AArch64-setjmp-longjmp.-10.patch
     ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0009-DAGISel-Keep-flags-when-converting-FP-load-store-to-.patch
+    ${CMAKE_CURRENT_SOURCE_DIR}/patches/llvm-project/0010-libcxx-Make-std--unique-lock-available.patch
 )
 FetchContent_Declare(llvmproject
     GIT_REPOSITORY https://github.com/llvm/llvm-project.git
