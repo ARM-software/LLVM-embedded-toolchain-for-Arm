@@ -1,0 +1,25 @@
+From 627a98558d991df235b58eb33c666d9e674d54be Mon Sep 17 00:00:00 2001
+From: Vrukesh V Panse <vrukesh.panse@arm.com>
+Date: Wed, 18 Dec 2024 20:34:23 +0000
+Subject: Add 64bit atomic check in the is_always_lock_free_pass test
+
+---
+ .../std/atomics/atomics.lockfree/is_always_lock_free.pass.cpp   | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libcxx/test/std/atomics/atomics.lockfree/is_always_lock_free.pass.cpp b/libcxx/test/std/atomics/atomics.lockfree/is_always_lock_free.pass.cpp
+index 723e7b36f503..0e3f5dbf423a 100644
+--- a/libcxx/test/std/atomics/atomics.lockfree/is_always_lock_free.pass.cpp
++++ b/libcxx/test/std/atomics/atomics.lockfree/is_always_lock_free.pass.cpp
+@@ -7,7 +7,7 @@
+ //===----------------------------------------------------------------------===//
+ 
+ // UNSUPPORTED: c++03, c++11, c++14
+-// XFAIL: LIBCXX-PICOLIBC-FIXME
++// XFAIL: !has-64-bit-atomics 
+ 
+ // <atomic>
+ //
+-- 
+2.34.1
+
