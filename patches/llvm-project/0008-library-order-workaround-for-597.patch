@@ -1,0 +1,15 @@
+diff --git a/clang/lib/Driver/ToolChains/BareMetal.cpp b/clang/lib/Driver/ToolChains/BareMetal.cpp
+index eecaaa9a4293..7d07079b5dd4 100644
+--- a/clang/lib/Driver/ToolChains/BareMetal.cpp
++++ b/clang/lib/Driver/ToolChains/BareMetal.cpp
+@@ -491,9 +491,8 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+   }
+ 
+   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+-    AddRunTimeLibs(TC, D, CmdArgs, Args);
+-
+     CmdArgs.push_back("-lc");
++    AddRunTimeLibs(TC, D, CmdArgs, Args);
+   }
+ 
+   if (D.isUsingLTO()) {
