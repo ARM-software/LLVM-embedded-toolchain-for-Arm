@@ -95,16 +95,6 @@
             "flags": "--target=armv7-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
         },
         {
-            "variant": "armv7a_soft_nofp_strictalign_exn_rtti",
-            "json": "armv7a_soft_nofp_strictalign_exn_rtti.json",
-            "flags": "--target=armv7-unknown-none-eabi -mfpu=none -mno-unaligned-access"
-        },
-        {
-            "variant": "armv7a_soft_nofp_strictalign",
-            "json": "armv7a_soft_nofp_strictalign.json",
-            "flags": "--target=armv7-unknown-none-eabi -mfpu=none -mno-unaligned-access -fno-exceptions -fno-rtti"
-        },
-        {
             "variant": "armv7a_hard_vfpv3_d16_exn_rtti",
             "json": "armv7a_hard_vfpv3_d16_exn_rtti.json",
             "flags": "--target=armv7-unknown-none-eabihf -mfpu=vfpv3-d16"

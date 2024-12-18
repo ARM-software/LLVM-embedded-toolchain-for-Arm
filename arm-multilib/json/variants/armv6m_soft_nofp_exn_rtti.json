@@ -3,7 +3,7 @@
         "common": {
             "TARGET_ARCH": "armv6m",
             "VARIANT": "armv6m_soft_nofp_exn_rtti",
-            "COMPILE_FLAGS": "-mfloat-abi=soft -march=armv6m -mfpu=none",
+            "COMPILE_FLAGS": "-mfloat-abi=soft -march=armv6m -mfpu=none -mno-unaligned-access",
             "ENABLE_EXCEPTIONS": "ON",
             "ENABLE_RTTI": "ON",
             "TEST_EXECUTOR": "qemu",
