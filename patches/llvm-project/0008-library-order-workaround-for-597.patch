@@ -1,3 +1,12 @@
+From f037d9740bf53cf43142595330355a3b61304dd7 Mon Sep 17 00:00:00 2001
+From: Volodymyr Turanskyy <volodymyr.turanskyy@arm.com>
+Date: Wed, 18 Dec 2024 16:29:25 +0000
+Subject: [PATCH] Revert order of libraries on the command line
+
+---
+ clang/lib/Driver/ToolChains/BareMetal.cpp | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
 diff --git a/clang/lib/Driver/ToolChains/BareMetal.cpp b/clang/lib/Driver/ToolChains/BareMetal.cpp
 index eecaaa9a4293..7d07079b5dd4 100644
 --- a/clang/lib/Driver/ToolChains/BareMetal.cpp
@@ -13,3 +22,6 @@ index eecaaa9a4293..7d07079b5dd4 100644
    }
  
    if (D.isUsingLTO()) {
+-- 
+2.47.0
+
