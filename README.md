@@ -54,8 +54,12 @@ picolibc   | https://github.com/picolibc/picolibc
 
 ## License
 
-Content of this repository is licensed under Apache-2.0. See
-[LICENSE.txt](LICENSE.txt).
+Content of this repository is licensed under Apache-2.0, see
+[LICENSE.txt](LICENSE.txt). Individual patch files under the
+[patches](https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/tree/main/patches)
+folder may contain code under the upstream project license, if they are
+cherry-picks of upstream commits into the LLVM Embedded Toolchain for Arm
+release branches, see corresponding pull requests for references.
 
 The resulting binaries are covered under their respective open source licenses,
 see component links above.
