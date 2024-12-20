@@ -21,9 +21,9 @@
         "picolibc": {
             "PICOLIBC_BUILD_TYPE": "minsize",
             "ENABLE_CXX_LIBS": "ON",
-            "ENABLE_LIBC_TESTS": "OFF",
-            "ENABLE_COMPILER_RT_TESTS": "OFF",
-            "ENABLE_LIBCXX_TESTS": "OFF"
+            "ENABLE_LIBC_TESTS": "ON",
+            "ENABLE_COMPILER_RT_TESTS": "ON",
+            "ENABLE_LIBCXX_TESTS": "ON"
         },
         "newlib": {
             "ENABLE_CXX_LIBS": "ON",
