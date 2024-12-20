@@ -773,9 +773,8 @@ install(
 add_custom_target(
     install-llvm-toolchain
 )
-set(LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS_ALL ${LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS})
 if(LLVM_TOOLCHAIN_CROSS_BUILD_MINGW)
-    list(APPEND LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS_ALL llvm-toolchain-mingw)
+    list(APPEND LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS llvm-toolchain-mingw)
 endif()
 foreach(component ${LLVM_TOOLCHAIN_DISTRIBUTION_COMPONENTS})
     add_custom_target(
