@@ -1,0 +1,1236 @@
+From e9d5842ac7bd8d9b5700dc415910425ca796f4c1 Mon Sep 17 00:00:00 2001
+From: Paul Kirth <paulkirth@google.com>
+Date: Wed, 31 Jul 2024 08:15:55 -0700
+Subject: [PATCH] [libc++] Make std::unique_lock available with
+ _LIBCPP_HAS_NO_THREADS (#99562)
+
+This is a follow up to https://github.com/llvm/llvm-project/pull/98717,
+which made lock_guard available under _LIBCPP_HAS_NO_THREADS. We can
+make unique_lock available under similar circumstances. This patch
+follows the example in #98717, by:
+
+  - Removing the preprocessor guards for _LIBCPP_HAS_NO_THREADS in the
+    unique_lock header.
+  - providing a set of custom mutex implementations in a local header.
+  - using custom locks in tests that can be made to work under
+    `no-threads`.
+---
+ libcxx/include/__mutex/unique_lock.h          |  4 -
+ .../thread.lock.unique/implicit_ctad.pass.cpp |  6 +-
+ ....fail.cpp => copy_assign.compile.pass.cpp} | 19 +---
+ ...le.fail.cpp => copy_ctor.compile.pass.cpp} | 17 +---
+ .../thread.lock.unique.cons/default.pass.cpp  | 14 ++-
+ .../move_assign.pass.cpp                      | 20 ++---
+ .../move_ctor.pass.cpp                        | 20 ++---
+ .../mutex_adopt_lock.pass.cpp                 | 19 ++--
+ .../mutex_defer_lock.pass.cpp                 | 19 ++--
+ .../thread.lock.unique.locking/lock.pass.cpp  |  4 +-
+ .../try_lock.pass.cpp                         | 67 +++++---------
+ .../try_lock_for.pass.cpp                     | 72 ++++++---------
+ .../try_lock_until.pass.cpp                   | 73 ++++++---------
+ .../unlock.pass.cpp                           | 55 ++++--------
+ .../member_swap.pass.cpp                      | 34 +++----
+ .../nonmember_swap.pass.cpp                   | 34 +++----
+ .../thread.lock.unique.mod/release.pass.cpp   | 48 ++++------
+ .../thread.lock.unique.obs/mutex.pass.cpp     | 22 +++--
+ .../thread.lock.unique.obs/op_bool.pass.cpp   | 28 +++---
+ .../thread.lock.unique.obs/owns_lock.pass.cpp | 22 +++--
+ ...{types.pass.cpp => types.compile.pass.cpp} | 11 +--
+ .../thread.lock/thread.lock.unique/types.h    | 88 +++++++++++++++++++
+ 22 files changed, 314 insertions(+), 382 deletions(-)
+ rename libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/{copy_assign.compile.fail.cpp => copy_assign.compile.pass.cpp} (59%)
+ rename libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/{copy_ctor.compile.fail.cpp => copy_ctor.compile.pass.cpp} (61%)
+ rename libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/{types.pass.cpp => types.compile.pass.cpp} (74%)
+ create mode 100644 libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.h
+
+diff --git a/libcxx/include/__mutex/unique_lock.h b/libcxx/include/__mutex/unique_lock.h
+index 4a616ba51ee1cf..5df791de4c7427 100644
+--- a/libcxx/include/__mutex/unique_lock.h
++++ b/libcxx/include/__mutex/unique_lock.h
+@@ -22,8 +22,6 @@
+ #  pragma GCC system_header
+ #endif
+ 
+-#ifndef _LIBCPP_HAS_NO_THREADS
+-
+ _LIBCPP_BEGIN_NAMESPACE_STD
+ 
+ template <class _Mutex>
+@@ -172,6 +170,4 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(unique_lock<_Mutex>& __x, unique_lock<_Mu
+ 
+ _LIBCPP_END_NAMESPACE_STD
+ 
+-#endif // _LIBCPP_HAS_NO_THREADS
+-
+ #endif // _LIBCPP___MUTEX_UNIQUE_LOCK_H
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/implicit_ctad.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/implicit_ctad.pass.cpp
+index 337ad4c45a94d1..8c7ca4279eead0 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/implicit_ctad.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/implicit_ctad.pass.cpp
+@@ -6,7 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ 
+-// UNSUPPORTED: no-threads
+ // UNSUPPORTED: c++03, c++11, c++14
+ 
+ // <mutex>
+@@ -18,12 +17,13 @@
+ #include <mutex>
+ 
+ #include "test_macros.h"
++#include "types.h"
+ 
+ int main(int, char**) {
+-  std::mutex mutex;
++  MyMutex mutex;
+   {
+     std::unique_lock lock(mutex);
+-    ASSERT_SAME_TYPE(decltype(lock), std::unique_lock<std::mutex>);
++    ASSERT_SAME_TYPE(decltype(lock), std::unique_lock<MyMutex>);
+   }
+ 
+   return 0;
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_assign.compile.fail.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_assign.compile.pass.cpp
+similarity index 59%
+rename from libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_assign.compile.fail.cpp
+rename to libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_assign.compile.pass.cpp
+index 799cb61f9b21e0..9ab8369637cdc5 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_assign.compile.fail.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_assign.compile.pass.cpp
+@@ -13,22 +13,7 @@
+ // unique_lock& operator=(unique_lock const&) = delete;
+ 
+ #include <mutex>
+-#include <cassert>
+ 
+-int main(int, char**)
+-{
+-    {
+-    typedef std::mutex M;
+-    M m0;
+-    M m1;
+-    std::unique_lock<M> lk0(m0);
+-    std::unique_lock<M> lk1(m1);
+-    lk1 = lk0;
+-    assert(lk1.mutex() == &m0);
+-    assert(lk1.owns_lock() == true);
+-    assert(lk0.mutex() == nullptr);
+-    assert(lk0.owns_lock() == false);
+-    }
++#include "../types.h"
+ 
+-  return 0;
+-}
++static_assert(!std::is_copy_assignable<std::lock_guard<MyMutex> >::value, "");
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_ctor.compile.fail.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_ctor.compile.pass.cpp
+similarity index 61%
+rename from libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_ctor.compile.fail.cpp
+rename to libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_ctor.compile.pass.cpp
+index e258198e60bbf7..e846061f5fbd08 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_ctor.compile.fail.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/copy_ctor.compile.pass.cpp
+@@ -13,20 +13,7 @@
+ // unique_lock(unique_lock const&) = delete;
+ 
+ #include <mutex>
+-#include <cassert>
+ 
+-int main(int, char**)
+-{
+-    {
+-    typedef std::mutex M;
+-    M m;
+-    std::unique_lock<M> lk0(m);
+-    std::unique_lock<M> lk = lk0;
+-    assert(lk.mutex() == &m);
+-    assert(lk.owns_lock() == true);
+-    assert(lk0.mutex() == nullptr);
+-    assert(lk0.owns_lock() == false);
+-    }
++#include "../types.h"
+ 
+-  return 0;
+-}
++static_assert(!std::is_copy_constructible<std::lock_guard<MyMutex> >::value, "");
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/default.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/default.pass.cpp
+index 2034a26b1d9132..6fc4f7f23ced3a 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/default.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/default.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads
+ 
+ // <mutex>
+ 
+@@ -14,16 +12,16 @@
+ 
+ // unique_lock();
+ 
+-#include <mutex>
+ #include <cassert>
++#include <mutex>
+ 
+ #include "test_macros.h"
++#include "../types.h"
+ 
+-int main(int, char**)
+-{
+-    std::unique_lock<std::mutex> ul;
+-    assert(!ul.owns_lock());
+-    assert(ul.mutex() == nullptr);
++int main(int, char**) {
++  std::unique_lock<MyMutex> ul;
++  assert(!ul.owns_lock());
++  assert(ul.mutex() == nullptr);
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/move_assign.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/move_assign.pass.cpp
+index 0af918c1e20eee..9563fdebd3e060 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/move_assign.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/move_assign.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads, c++03
+ 
+ // <mutex>
+ 
+@@ -14,16 +12,16 @@
+ 
+ // unique_lock& operator=(unique_lock&& u);
+ 
+-#include <mutex>
+ #include <cassert>
+-#include "nasty_containers.h"
++#include <mutex>
+ 
++#include "nasty_containers.h"
++#include "../types.h"
+ #include "test_macros.h"
+ 
+-int main(int, char**)
+-{
+-    {
+-    typedef std::mutex M;
++int main(int, char**) {
++  {
++    typedef MyMutex M;
+     M m0;
+     M m1;
+     std::unique_lock<M> lk0(m0);
+@@ -33,8 +31,8 @@ int main(int, char**)
+     assert(lk1.owns_lock() == true);
+     assert(lk0.mutex() == nullptr);
+     assert(lk0.owns_lock() == false);
+-    }
+-    {
++  }
++  {
+     typedef nasty_mutex M;
+     M m0;
+     M m1;
+@@ -45,7 +43,7 @@ int main(int, char**)
+     assert(lk1.owns_lock() == true);
+     assert(lk0.mutex() == nullptr);
+     assert(lk0.owns_lock() == false);
+-    }
++  }
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/move_ctor.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/move_ctor.pass.cpp
+index cce0eb5fb90572..08f6fc8410e25e 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/move_ctor.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/move_ctor.pass.cpp
+@@ -6,7 +6,7 @@
+ //
+ //===----------------------------------------------------------------------===//
+ //
+-// UNSUPPORTED: no-threads, c++03
++// UNSUPPORTED: c++03
+ 
+ // <mutex>
+ 
+@@ -14,16 +14,16 @@
+ 
+ // unique_lock(unique_lock&& u);
+ 
+-#include <mutex>
+ #include <cassert>
+-#include "nasty_containers.h"
++#include <mutex>
+ 
++#include "nasty_containers.h"
++#include "../types.h"
+ #include "test_macros.h"
+ 
+-int main(int, char**)
+-{
+-    {
+-    typedef std::mutex M;
++int main(int, char**) {
++  {
++    typedef MyMutex M;
+     M m;
+     std::unique_lock<M> lk0(m);
+     std::unique_lock<M> lk = std::move(lk0);
+@@ -31,8 +31,8 @@ int main(int, char**)
+     assert(lk.owns_lock() == true);
+     assert(lk0.mutex() == nullptr);
+     assert(lk0.owns_lock() == false);
+-    }
+-    {
++  }
++  {
+     typedef nasty_mutex M;
+     M m;
+     std::unique_lock<M> lk0(m);
+@@ -41,7 +41,7 @@ int main(int, char**)
+     assert(lk.owns_lock() == true);
+     assert(lk0.mutex() == nullptr);
+     assert(lk0.owns_lock() == false);
+-    }
++  }
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/mutex_adopt_lock.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/mutex_adopt_lock.pass.cpp
+index 4adbe26777d0bd..28cc43853180e6 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/mutex_adopt_lock.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/mutex_adopt_lock.pass.cpp
+@@ -6,7 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ //
+-// UNSUPPORTED: no-threads
+ // UNSUPPORTED: c++03
+ 
+ // <mutex>
+@@ -15,30 +14,30 @@
+ 
+ // unique_lock(mutex_type& m, adopt_lock_t);
+ 
+-#include <mutex>
+ #include <cassert>
+-#include "nasty_containers.h"
++#include <mutex>
+ 
++#include "nasty_containers.h"
++#include "../types.h"
+ #include "test_macros.h"
+ 
+-int main(int, char**)
+-{
+-    {
+-    typedef std::mutex M;
++int main(int, char**) {
++  {
++    typedef MyMutex M;
+     M m;
+     m.lock();
+     std::unique_lock<M> lk(m, std::adopt_lock);
+     assert(lk.mutex() == std::addressof(m));
+     assert(lk.owns_lock() == true);
+-    }
+-    {
++  }
++  {
+     typedef nasty_mutex M;
+     M m;
+     m.lock();
+     std::unique_lock<M> lk(m, std::adopt_lock);
+     assert(lk.mutex() == std::addressof(m));
+     assert(lk.owns_lock() == true);
+-    }
++  }
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/mutex_defer_lock.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/mutex_defer_lock.pass.cpp
+index 06ef2043edcef9..96a9afbc9438c4 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/mutex_defer_lock.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.cons/mutex_defer_lock.pass.cpp
+@@ -6,7 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ //
+-// UNSUPPORTED: no-threads
+ // UNSUPPORTED: c++03
+ 
+ // <mutex>
+@@ -15,28 +14,28 @@
+ 
+ // unique_lock(mutex_type& m, defer_lock_t);
+ 
+-#include <mutex>
+ #include <cassert>
+-#include "nasty_containers.h"
++#include <mutex>
+ 
++#include "nasty_containers.h"
++#include "../types.h"
+ #include "test_macros.h"
+ 
+-int main(int, char**)
+-{
+-    {
+-    typedef std::mutex M;
++int main(int, char**) {
++  {
++    typedef MyMutex M;
+     M m;
+     std::unique_lock<M> lk(m, std::defer_lock);
+     assert(lk.mutex() == std::addressof(m));
+     assert(lk.owns_lock() == false);
+-    }
+-    {
++  }
++  {
+     typedef nasty_mutex M;
+     M m;
+     std::unique_lock<M> lk(m, std::defer_lock);
+     assert(lk.mutex() == std::addressof(m));
+     assert(lk.owns_lock() == false);
+-    }
++  }
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/lock.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/lock.pass.cpp
+index 920baa71317cf5..6767e11a1f8b49 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/lock.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/lock.pass.cpp
+@@ -51,7 +51,7 @@ void f()
+     }
+     catch (std::system_error& e)
+     {
+-        assert(e.code().value() == EDEADLK);
++      assert(e.code() == std::errc::resource_deadlock_would_occur);
+     }
+ #endif
+     lk.unlock();
+@@ -64,7 +64,7 @@ void f()
+     }
+     catch (std::system_error& e)
+     {
+-        assert(e.code().value() == EPERM);
++      assert(e.code() == std::errc::operation_not_permitted);
+     }
+ #endif
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock.pass.cpp
+index 4cf5ec2ab5ccfa..2ee5d3766eb18e 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock.pass.cpp
+@@ -6,7 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ //
+-// UNSUPPORTED: no-threads
+ // UNSUPPORTED: c++03
+ // ALLOW_RETRIES: 2
+ 
+@@ -21,53 +20,35 @@
+ #include <system_error>
+ 
+ #include "test_macros.h"
++#include "../types.h"
+ 
+-bool try_lock_called = false;
++MyTimedMutex m;
+ 
+-struct mutex
+-{
+-    bool try_lock()
+-    {
+-        try_lock_called = !try_lock_called;
+-        return try_lock_called;
+-    }
+-    void unlock() {}
+-};
+-
+-mutex m;
+-
+-int main(int, char**)
+-{
+-    std::unique_lock<mutex> lk(m, std::defer_lock);
+-    assert(lk.try_lock() == true);
+-    assert(try_lock_called == true);
+-    assert(lk.owns_lock() == true);
++int main(int, char**) {
++  std::unique_lock<MyTimedMutex> lk(m, std::defer_lock);
++  assert(lk.try_lock() == true);
++  assert(m.try_lock_called == true);
++  assert(lk.owns_lock() == true);
+ #ifndef TEST_HAS_NO_EXCEPTIONS
+-    try
+-    {
+-        TEST_IGNORE_NODISCARD lk.try_lock();
+-        assert(false);
+-    }
+-    catch (std::system_error& e)
+-    {
+-        assert(e.code().value() == EDEADLK);
+-    }
++  try {
++    TEST_IGNORE_NODISCARD lk.try_lock();
++    assert(false);
++  } catch (std::system_error& e) {
++    assert(e.code() == std::errc::resource_deadlock_would_occur);
++  }
+ #endif
+-    lk.unlock();
+-    assert(lk.try_lock() == false);
+-    assert(try_lock_called == false);
+-    assert(lk.owns_lock() == false);
+-    lk.release();
++  lk.unlock();
++  assert(lk.try_lock() == false);
++  assert(m.try_lock_called == false);
++  assert(lk.owns_lock() == false);
++  lk.release();
+ #ifndef TEST_HAS_NO_EXCEPTIONS
+-    try
+-    {
+-        TEST_IGNORE_NODISCARD lk.try_lock();
+-        assert(false);
+-    }
+-    catch (std::system_error& e)
+-    {
+-        assert(e.code().value() == EPERM);
+-    }
++  try {
++    TEST_IGNORE_NODISCARD lk.try_lock();
++    assert(false);
++  } catch (std::system_error& e) {
++    assert(e.code() == std::errc::operation_not_permitted);
++  }
+ #endif
+ 
+   return 0;
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock_for.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock_for.pass.cpp
+index 8e7004e5eec850..603cc7b185620c 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock_for.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock_for.pass.cpp
+@@ -6,7 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ //
+-// UNSUPPORTED: no-threads
+ // UNSUPPORTED: c++03
+ 
+ // <mutex>
+@@ -21,57 +20,36 @@
+ #include <system_error>
+ 
+ #include "test_macros.h"
++#include "../types.h"
+ 
+-bool try_lock_for_called = false;
++MyTimedMutex m;
+ 
+-typedef std::chrono::milliseconds ms;
+-
+-struct mutex
+-{
+-    template <class Rep, class Period>
+-        bool try_lock_for(const std::chrono::duration<Rep, Period>& rel_time)
+-    {
+-        assert(rel_time == ms(5));
+-        try_lock_for_called = !try_lock_for_called;
+-        return try_lock_for_called;
+-    }
+-    void unlock() {}
+-};
+-
+-mutex m;
+-
+-int main(int, char**)
+-{
+-    std::unique_lock<mutex> lk(m, std::defer_lock);
+-    assert(lk.try_lock_for(ms(5)) == true);
+-    assert(try_lock_for_called == true);
+-    assert(lk.owns_lock() == true);
++int main(int, char**) {
++  using ms = std::chrono::milliseconds;
++  std::unique_lock<MyTimedMutex> lk(m, std::defer_lock);
++  assert(lk.try_lock_for(ms(5)) == true);
++  assert(m.try_lock_for_called == true);
++  assert(lk.owns_lock() == true);
+ #ifndef TEST_HAS_NO_EXCEPTIONS
+-    try
+-    {
+-        TEST_IGNORE_NODISCARD lk.try_lock_for(ms(5));
+-        assert(false);
+-    }
+-    catch (std::system_error& e)
+-    {
+-        assert(e.code().value() == EDEADLK);
+-    }
++  try {
++    TEST_IGNORE_NODISCARD lk.try_lock_for(ms(5));
++    assert(false);
++  } catch (std::system_error& e) {
++    assert(e.code() == std::errc::resource_deadlock_would_occur);
++  }
+ #endif
+-    lk.unlock();
+-    assert(lk.try_lock_for(ms(5)) == false);
+-    assert(try_lock_for_called == false);
+-    assert(lk.owns_lock() == false);
+-    lk.release();
++  lk.unlock();
++  assert(lk.try_lock_for(ms(5)) == false);
++  assert(m.try_lock_for_called == false);
++  assert(lk.owns_lock() == false);
++  lk.release();
+ #ifndef TEST_HAS_NO_EXCEPTIONS
+-    try
+-    {
+-        TEST_IGNORE_NODISCARD lk.try_lock_for(ms(5));
+-        assert(false);
+-    }
+-    catch (std::system_error& e)
+-    {
+-        assert(e.code().value() == EPERM);
+-    }
++  try {
++    TEST_IGNORE_NODISCARD lk.try_lock_for(ms(5));
++    assert(false);
++  } catch (std::system_error& e) {
++    assert(e.code() == std::errc::operation_not_permitted);
++  }
+ #endif
+ 
+   return 0;
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock_until.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock_until.pass.cpp
+index 077bc517399abb..46ab95197311c0 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock_until.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/try_lock_until.pass.cpp
+@@ -6,7 +6,6 @@
+ //
+ //===----------------------------------------------------------------------===//
+ //
+-// UNSUPPORTED: no-threads
+ // UNSUPPORTED: c++03
+ 
+ // <mutex>
+@@ -17,61 +16,41 @@
+ //   bool try_lock_until(const chrono::time_point<Clock, Duration>& abs_time);
+ 
+ #include <cassert>
++#include <chrono>
+ #include <mutex>
+ #include <system_error>
+ 
+ #include "test_macros.h"
++#include "../types.h"
+ 
+-bool try_lock_until_called = false;
++MyTimedMutex m;
+ 
+-struct mutex
+-{
+-    template <class Clock, class Duration>
+-        bool try_lock_until(const std::chrono::time_point<Clock, Duration>& abs_time)
+-    {
+-        typedef std::chrono::milliseconds ms;
+-        assert(Clock::now() - abs_time < ms(5));
+-        try_lock_until_called = !try_lock_until_called;
+-        return try_lock_until_called;
+-    }
+-    void unlock() {}
+-};
+-
+-mutex m;
+-
+-int main(int, char**)
+-{
+-    typedef std::chrono::steady_clock Clock;
+-    std::unique_lock<mutex> lk(m, std::defer_lock);
+-    assert(lk.try_lock_until(Clock::now()) == true);
+-    assert(try_lock_until_called == true);
+-    assert(lk.owns_lock() == true);
++int main(int, char**) {
++  typedef std::chrono::system_clock Clock;
++  std::unique_lock<MyTimedMutex> lk(m, std::defer_lock);
++  assert(lk.try_lock_until(Clock::now()) == true);
++  assert(m.try_lock_until_called == true);
++  assert(lk.owns_lock() == true);
+ #ifndef TEST_HAS_NO_EXCEPTIONS
+-    try
+-    {
+-        TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
+-        assert(false);
+-    }
+-    catch (std::system_error& e)
+-    {
+-        assert(e.code().value() == EDEADLK);
+-    }
++  try {
++    TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
++    assert(false);
++  } catch (std::system_error& e) {
++    assert(e.code() == std::errc::resource_deadlock_would_occur);
++  }
+ #endif
+-    lk.unlock();
+-    assert(lk.try_lock_until(Clock::now()) == false);
+-    assert(try_lock_until_called == false);
+-    assert(lk.owns_lock() == false);
+-    lk.release();
++  lk.unlock();
++  assert(lk.try_lock_until(Clock::now()) == false);
++  assert(m.try_lock_until_called == false);
++  assert(lk.owns_lock() == false);
++  lk.release();
+ #ifndef TEST_HAS_NO_EXCEPTIONS
+-    try
+-    {
+-        TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
+-        assert(false);
+-    }
+-    catch (std::system_error& e)
+-    {
+-        assert(e.code().value() == EPERM);
+-    }
++  try {
++    TEST_IGNORE_NODISCARD lk.try_lock_until(Clock::now());
++    assert(false);
++  } catch (std::system_error& e) {
++    assert(e.code() == std::errc::operation_not_permitted);
++  }
+ #endif
+ 
+   return 0;
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/unlock.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/unlock.pass.cpp
+index 30c795150daced..97808f60f2e552 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/unlock.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.locking/unlock.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads
+ 
+ // <mutex>
+ 
+@@ -19,45 +17,30 @@
+ #include <system_error>
+ 
+ #include "test_macros.h"
++#include "../types.h"
+ 
+-bool unlock_called = false;
+-
+-struct mutex
+-{
+-    void lock() {}
+-    void unlock() {unlock_called = true;}
+-};
+-
+-mutex m;
++MyMutex m;
+ 
+-int main(int, char**)
+-{
+-    std::unique_lock<mutex> lk(m);
+-    lk.unlock();
+-    assert(unlock_called == true);
+-    assert(lk.owns_lock() == false);
++int main(int, char**) {
++  std::unique_lock<MyMutex> lk(m);
++  lk.unlock();
++  assert(lk.owns_lock() == false);
+ #ifndef TEST_HAS_NO_EXCEPTIONS
+-    try
+-    {
+-        lk.unlock();
+-        assert(false);
+-    }
+-    catch (std::system_error& e)
+-    {
+-        assert(e.code().value() == EPERM);
+-    }
++  try {
++    lk.unlock();
++    assert(false);
++  } catch (std::system_error& e) {
++    assert(e.code() == std::errc::operation_not_permitted);
++  }
+ #endif
+-    lk.release();
++  lk.release();
+ #ifndef TEST_HAS_NO_EXCEPTIONS
+-    try
+-    {
+-        lk.unlock();
+-        assert(false);
+-    }
+-    catch (std::system_error& e)
+-    {
+-        assert(e.code().value() == EPERM);
+-    }
++  try {
++    lk.unlock();
++    assert(false);
++  } catch (std::system_error& e) {
++    assert(e.code() == std::errc::operation_not_permitted);
++  }
+ #endif
+ 
+   return 0;
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/member_swap.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/member_swap.pass.cpp
+index fc12d3baea202c..361c85e0150597 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/member_swap.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/member_swap.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads
+ 
+ // <mutex>
+ 
+@@ -14,28 +12,22 @@
+ 
+ // void swap(unique_lock& u);
+ 
+-#include <mutex>
+ #include <cassert>
++#include <mutex>
+ 
+ #include "test_macros.h"
+-
+-struct mutex
+-{
+-    void lock() {}
+-    void unlock() {}
+-};
+-
+-mutex m;
+-
+-int main(int, char**)
+-{
+-    std::unique_lock<mutex> lk1(m);
+-    std::unique_lock<mutex> lk2;
+-    lk1.swap(lk2);
+-    assert(lk1.mutex() == nullptr);
+-    assert(lk1.owns_lock() == false);
+-    assert(lk2.mutex() == &m);
+-    assert(lk2.owns_lock() == true);
++#include "../types.h"
++
++MyMutex m;
++
++int main(int, char**) {
++  std::unique_lock<MyMutex> lk1(m);
++  std::unique_lock<MyMutex> lk2;
++  lk1.swap(lk2);
++  assert(lk1.mutex() == nullptr);
++  assert(lk1.owns_lock() == false);
++  assert(lk2.mutex() == &m);
++  assert(lk2.owns_lock() == true);
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/nonmember_swap.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/nonmember_swap.pass.cpp
+index 03d268c4b9306a..5133032f6ae39e 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/nonmember_swap.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/nonmember_swap.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads
+ 
+ // <mutex>
+ 
+@@ -15,28 +13,22 @@
+ // template <class Mutex>
+ //   void swap(unique_lock<Mutex>& x, unique_lock<Mutex>& y);
+ 
+-#include <mutex>
+ #include <cassert>
++#include <mutex>
+ 
+ #include "test_macros.h"
+-
+-struct mutex
+-{
+-    void lock() {}
+-    void unlock() {}
+-};
+-
+-mutex m;
+-
+-int main(int, char**)
+-{
+-    std::unique_lock<mutex> lk1(m);
+-    std::unique_lock<mutex> lk2;
+-    swap(lk1, lk2);
+-    assert(lk1.mutex() == nullptr);
+-    assert(lk1.owns_lock() == false);
+-    assert(lk2.mutex() == &m);
+-    assert(lk2.owns_lock() == true);
++#include "../types.h"
++
++MyMutex m;
++
++int main(int, char**) {
++  std::unique_lock<MyMutex> lk1(m);
++  std::unique_lock<MyMutex> lk2;
++  swap(lk1, lk2);
++  assert(lk1.mutex() == nullptr);
++  assert(lk1.owns_lock() == false);
++  assert(lk2.mutex() == &m);
++  assert(lk2.owns_lock() == true);
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/release.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/release.pass.cpp
+index 4f2d59c3d333d4..a726c8ccc060a1 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/release.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.mod/release.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads
+ 
+ // <mutex>
+ 
+@@ -14,36 +12,28 @@
+ 
+ // mutex_type* release() noexcept;
+ 
+-#include <mutex>
+ #include <cassert>
++#include <mutex>
+ 
+ #include "test_macros.h"
+-
+-struct mutex
+-{
+-    static int lock_count;
+-    static int unlock_count;
+-    void lock() {++lock_count;}
+-    void unlock() {++unlock_count;}
+-};
+-
+-int mutex::lock_count = 0;
+-int mutex::unlock_count = 0;
+-
+-mutex m;
+-
+-int main(int, char**)
+-{
+-    std::unique_lock<mutex> lk(m);
+-    assert(lk.mutex() == &m);
+-    assert(lk.owns_lock() == true);
+-    assert(mutex::lock_count == 1);
+-    assert(mutex::unlock_count == 0);
+-    assert(lk.release() == &m);
+-    assert(lk.mutex() == nullptr);
+-    assert(lk.owns_lock() == false);
+-    assert(mutex::lock_count == 1);
+-    assert(mutex::unlock_count == 0);
++#include "../types.h"
++
++int MyCountingMutex::lock_count   = 0;
++int MyCountingMutex::unlock_count = 0;
++
++MyCountingMutex m;
++
++int main(int, char**) {
++  std::unique_lock<MyCountingMutex> lk(m);
++  assert(lk.mutex() == &m);
++  assert(lk.owns_lock() == true);
++  assert(MyCountingMutex::lock_count == 1);
++  assert(MyCountingMutex::unlock_count == 0);
++  assert(lk.release() == &m);
++  assert(lk.mutex() == nullptr);
++  assert(lk.owns_lock() == false);
++  assert(MyCountingMutex::lock_count == 1);
++  assert(MyCountingMutex::unlock_count == 0);
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/mutex.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/mutex.pass.cpp
+index dd2f5239645f91..72346e8c67e257 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/mutex.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/mutex.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads
+ 
+ // <mutex>
+ 
+@@ -14,21 +12,21 @@
+ 
+ // mutex_type *mutex() const;
+ 
+-#include <mutex>
+ #include <cassert>
++#include <mutex>
+ 
+ #include "test_macros.h"
++#include "../types.h"
+ 
+-std::mutex m;
++MyMutex m;
+ 
+-int main(int, char**)
+-{
+-    std::unique_lock<std::mutex> lk0;
+-    assert(lk0.mutex() == nullptr);
+-    std::unique_lock<std::mutex> lk1(m);
+-    assert(lk1.mutex() == &m);
+-    lk1.unlock();
+-    assert(lk1.mutex() == &m);
++int main(int, char**) {
++  std::unique_lock<MyMutex> lk0;
++  assert(lk0.mutex() == nullptr);
++  std::unique_lock<MyMutex> lk1(m);
++  assert(lk1.mutex() == &m);
++  lk1.unlock();
++  assert(lk1.mutex() == &m);
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/op_bool.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/op_bool.pass.cpp
+index ea05eb7d023a9f..3759302a483eb2 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/op_bool.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/op_bool.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads
+ 
+ // <mutex>
+ 
+@@ -14,26 +12,26 @@
+ 
+ // explicit operator bool() const noexcept;
+ 
+-#include <mutex>
+ #include <cassert>
++#include <mutex>
+ #include <type_traits>
+ 
+ #include "test_macros.h"
++#include "../types.h"
+ 
+-std::mutex m;
++MyMutex m;
+ 
+-int main(int, char**)
+-{
+-    static_assert(std::is_constructible<bool, std::unique_lock<std::mutex> >::value, "");
+-    static_assert(!std::is_convertible<std::unique_lock<std::mutex>, bool>::value, "");
++int main(int, char**) {
++  static_assert(std::is_constructible<bool, std::unique_lock<MyMutex> >::value, "");
++  static_assert(!std::is_convertible<std::unique_lock<MyMutex>, bool>::value, "");
+ 
+-    std::unique_lock<std::mutex> lk0;
+-    assert(static_cast<bool>(lk0) == false);
+-    std::unique_lock<std::mutex> lk1(m);
+-    assert(static_cast<bool>(lk1) == true);
+-    lk1.unlock();
+-    assert(static_cast<bool>(lk1) == false);
+-    ASSERT_NOEXCEPT(static_cast<bool>(lk0));
++  std::unique_lock<MyMutex> lk0;
++  assert(static_cast<bool>(lk0) == false);
++  std::unique_lock<MyMutex> lk1(m);
++  assert(static_cast<bool>(lk1) == true);
++  lk1.unlock();
++  assert(static_cast<bool>(lk1) == false);
++  ASSERT_NOEXCEPT(static_cast<bool>(lk0));
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/owns_lock.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/owns_lock.pass.cpp
+index 9b192fbcd621e8..163942786323af 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/owns_lock.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/thread.lock.unique.obs/owns_lock.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads
+ 
+ // <mutex>
+ 
+@@ -14,21 +12,21 @@
+ 
+ // bool owns_lock() const;
+ 
+-#include <mutex>
+ #include <cassert>
++#include <mutex>
+ 
+ #include "test_macros.h"
++#include "../types.h"
+ 
+-std::mutex m;
++MyMutex m;
+ 
+-int main(int, char**)
+-{
+-    std::unique_lock<std::mutex> lk0;
+-    assert(lk0.owns_lock() == false);
+-    std::unique_lock<std::mutex> lk1(m);
+-    assert(lk1.owns_lock() == true);
+-    lk1.unlock();
+-    assert(lk1.owns_lock() == false);
++int main(int, char**) {
++  std::unique_lock<MyMutex> lk0;
++  assert(lk0.owns_lock() == false);
++  std::unique_lock<MyMutex> lk1(m);
++  assert(lk1.owns_lock() == true);
++  lk1.unlock();
++  assert(lk1.owns_lock() == false);
+ 
+   return 0;
+ }
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.pass.cpp b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.compile.pass.cpp
+similarity index 74%
+rename from libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.pass.cpp
+rename to libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.compile.pass.cpp
+index d8497888f59bba..312863ae8e743a 100644
+--- a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.pass.cpp
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.compile.pass.cpp
+@@ -5,8 +5,6 @@
+ // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ //
+ //===----------------------------------------------------------------------===//
+-//
+-// UNSUPPORTED: no-threads
+ 
+ // <mutex>
+ 
+@@ -22,11 +20,6 @@
+ #include <type_traits>
+ 
+ #include "test_macros.h"
++#include "types.h"
+ 
+-int main(int, char**)
+-{
+-    static_assert((std::is_same<std::unique_lock<std::mutex>::mutex_type,
+-                   std::mutex>::value), "");
+-
+-  return 0;
+-}
++static_assert((std::is_same<std::unique_lock<MyMutex>::mutex_type, MyMutex>::value), "");
+diff --git a/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.h b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.h
+new file mode 100644
+index 00000000000000..15a1a531487f50
+--- /dev/null
++++ b/libcxx/test/std/thread/thread.mutex/thread.lock/thread.lock.unique/types.h
+@@ -0,0 +1,88 @@
++//===----------------------------------------------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef TEST_STD_THREAD_THREAD_MUTEX_THREAD_LOCK_THREAD_LOCK_GUARD_TYPES_H
++#define TEST_STD_THREAD_THREAD_MUTEX_THREAD_LOCK_THREAD_LOCK_GUARD_TYPES_H
++
++#include <cassert>
++#include <chrono>
++
++struct MyMutex {
++  bool locked = false;
++
++  MyMutex() = default;
++  ~MyMutex() { assert(!locked); }
++
++  void lock() {
++    assert(!locked);
++    locked = true;
++  }
++
++  void unlock() {
++    assert(locked);
++    locked = false;
++  }
++
++  bool try_lock() {
++    if (locked)
++      return false;
++    lock();
++    return true;
++  }
++
++  template <class Rep, class Period>
++  bool try_lock_for(const std::chrono::duration<Rep, Period>& rel_time) {
++    using ms = std::chrono::milliseconds;
++    assert(rel_time == ms(5));
++    if (locked)
++      return false;
++    lock();
++    return true;
++  }
++
++  MyMutex(MyMutex const&)            = delete;
++  MyMutex& operator=(MyMutex const&) = delete;
++};
++
++struct MyTimedMutex {
++  using ms = std::chrono::milliseconds;
++
++  bool try_lock_called       = false;
++  bool try_lock_for_called   = false;
++  bool try_lock_until_called = false;
++
++  bool try_lock() {
++    try_lock_called = !try_lock_called;
++    return try_lock_called;
++  }
++
++  template <class Rep, class Period>
++  bool try_lock_for(const std::chrono::duration<Rep, Period>& rel_time) {
++    assert(rel_time == ms(5));
++    try_lock_for_called = !try_lock_for_called;
++    return try_lock_for_called;
++  }
++
++  template <class Clock, class Duration>
++  bool try_lock_until(const std::chrono::time_point<Clock, Duration>& abs_time) {
++    assert(Clock::now() - abs_time < ms(5));
++    try_lock_until_called = !try_lock_until_called;
++    return try_lock_until_called;
++  }
++
++  void unlock() {}
++};
++
++struct MyCountingMutex {
++  static int lock_count;
++  static int unlock_count;
++  void lock() { ++lock_count; }
++  void unlock() { ++unlock_count; }
++};
++
++#endif // TEST_STD_THREAD_THREAD_MUTEX_THREAD_LOCK_THREAD_LOCK_GUARD_TYPES_H
