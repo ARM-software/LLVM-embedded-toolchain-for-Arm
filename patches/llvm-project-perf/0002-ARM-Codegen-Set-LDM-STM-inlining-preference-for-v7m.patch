@@ -1,14 +1,8 @@
-From 8aa999e52ef03be7d8c05f4bd151d7df60d17e8f Mon Sep 17 00:00:00 2001
-From: Scott Douglass <scott.douglass@arm.com>
-Date: Tue, 13 Aug 2024 10:55:51 +0100
-Subject: [PATCH] [ARM][CodeGen]Prefer MEMCPY LDM/STM inlining for v7-m
+From 411bab1ff439215c060127b6a5188ed0c9ed5d65 Mon Sep 17 00:00:00 2001
+From: Vrukesh V Panse <vrukesh.panse@arm.com>
+Date: Thu, 2 Jan 2025 10:29:56 +0000
+Subject: [NFC]: Update the patch file with upstream changes of SelectionDAG
 
-This patch changes the behaviour of memcpy inlining on v7m targets.
-The old behaviour was to inline memcpys with LDM/STM instructions.
-Alternatively, using LD/ST instructions for memcpy inlining allowed
-for performance gains of 1% to 2% on selected benchmarks.
-
-Co-authored-by: Nashe Mncube <nashe.mncube@arm.com>
 ---
  llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp | 120 +++++++++++++++
  llvm/lib/Target/ARM/ARMSelectionDAGInfo.h   |   6 +
@@ -17,7 +11,7 @@ Co-authored-by: Nashe Mncube <nashe.mncube@arm.com>
  create mode 100644 llvm/test/CodeGen/ARM/memcpy-v7m.ll
 
 diff --git a/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp b/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp
-index e7ea10ff971a..09ed4ab219a1 100644
+index a39487c318f8..ca8de16e66c4 100644
 --- a/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp
 +++ b/llvm/lib/Target/ARM/ARMSelectionDAGInfo.cpp
 @@ -30,6 +30,10 @@ cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
@@ -28,10 +22,10 @@ index e7ea10ff971a..09ed4ab219a1 100644
 +    "enable-inline-memcpy-ld-st", cl::init(false), cl::Hidden,
 +    cl::desc("Inline memcpy with LD/ST instructions."));
 +
- // Emit, if possible, a specialized version of the given Libcall. Typically this
- // means selecting the appropriately aligned version, but we also convert memset
- // of 0 into memclr.
-@@ -136,6 +140,118 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
+ bool ARMSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+   return Opcode >= ARMISD::FIRST_MEMORY_OPCODE &&
+          Opcode <= ARMISD::LAST_MEMORY_OPCODE;
+@@ -141,6 +145,118 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
    return CallResult.second;
  }
  
@@ -150,7 +144,7 @@ index e7ea10ff971a..09ed4ab219a1 100644
  static bool shouldGenerateInlineTPLoop(const ARMSubtarget &Subtarget,
                                         const SelectionDAG &DAG,
                                         ConstantSDNode *ConstantSize,
-@@ -190,6 +306,10 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
+@@ -195,6 +311,10 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
      return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                    Alignment.value(), RTLIB::MEMCPY);
  
@@ -162,10 +156,10 @@ index e7ea10ff971a..09ed4ab219a1 100644
    unsigned NumMemOps = SizeVal >> 2;
    unsigned EmittedNumMemOps = 0;
 diff --git a/llvm/lib/Target/ARM/ARMSelectionDAGInfo.h b/llvm/lib/Target/ARM/ARMSelectionDAGInfo.h
-index 275b1c0f8dc0..6ff422c15b12 100644
+index d68150e66567..bdc9bbd697a3 100644
 --- a/llvm/lib/Target/ARM/ARMSelectionDAGInfo.h
 +++ b/llvm/lib/Target/ARM/ARMSelectionDAGInfo.h
-@@ -44,6 +44,12 @@ public:
+@@ -46,6 +46,12 @@ public:
                                    MachinePointerInfo DstPtrInfo,
                                    MachinePointerInfo SrcPtrInfo) const override;
  
@@ -180,7 +174,7 @@ index 275b1c0f8dc0..6ff422c15b12 100644
                             SDValue Dst, SDValue Src, SDValue Size,
 diff --git a/llvm/test/CodeGen/ARM/memcpy-v7m.ll b/llvm/test/CodeGen/ARM/memcpy-v7m.ll
 new file mode 100644
-index 000000000000..12f74c04087e
+index 000000000000..e549958494dc
 --- /dev/null
 +++ b/llvm/test/CodeGen/ARM/memcpy-v7m.ll
 @@ -0,0 +1,161 @@
