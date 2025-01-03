@@ -1,34 +1,24 @@
-From 0e1475e5112b986ef5d9caee23dac554c749c54b Mon Sep 17 00:00:00 2001
-From: David Candler <david.candler@arm.com>
-Date: Thu, 28 Nov 2024 15:31:35 +0000
-Subject: [PATCH] Enable newlib build
+From ff1718e7c6fdb4cace44c90213a00bc6db6450f5 Mon Sep 17 00:00:00 2001
+From: Volodymyr Turanskyy <volodymyr.turanskyy@arm.com>
+Date: Thu, 2 Jan 2025 16:23:27 +0000
+Subject: [PATCH] Update patch for newlib-4.5.0 tag
 
+Change-Id: Iec24f4305ad35a3a6df1672bb14555bf81249130
 ---
- libgloss/aarch64/syscalls.c             |   6 ++
- libgloss/arm/cpu-init/rdimon-aem.S      | 107 ++++++++++++------------
- libgloss/arm/crt0.S                     |   2 +-
- libgloss/arm/linux-crt0.c               |   2 +-
- libgloss/arm/syscalls.c                 |   6 +-
- libgloss/arm/trap.S                     |   2 +-
- libgloss/libnosys/configure             |   2 +-
- newlib/libc/include/sys/features.h      |   2 +
- newlib/libc/machine/aarch64/memchr.S    |   6 +-
- newlib/libc/machine/aarch64/strchr.S    |   6 +-
- newlib/libc/machine/aarch64/strchrnul.S |   6 +-
- newlib/libc/machine/aarch64/strrchr.S   |  10 +--
- newlib/libc/stdlib/aligned_alloc.c      |   1 +
- newlib/libc/sys/arm/crt0.S              |   2 +-
- newlib/libc/sys/arm/trap.S              |   2 +-
- newlib/libm/machine/arm/sf_ceil.c       |   2 +-
- newlib/libm/machine/arm/sf_floor.c      |   2 +-
- newlib/libm/machine/arm/sf_nearbyint.c  |   2 +-
- newlib/libm/machine/arm/sf_rint.c       |   2 +-
- newlib/libm/machine/arm/sf_round.c      |   2 +-
- newlib/libm/machine/arm/sf_trunc.c      |   2 +-
- 21 files changed, 92 insertions(+), 82 deletions(-)
+ libgloss/aarch64/syscalls.c        |   6 ++
+ libgloss/arm/cpu-init/rdimon-aem.S | 107 +++++++++++++++--------------
+ libgloss/arm/crt0.S                |   2 +-
+ libgloss/arm/linux-crt0.c          |   2 +-
+ libgloss/arm/syscalls.c            |   6 +-
+ libgloss/arm/trap.S                |   2 +-
+ newlib/libc/include/sys/features.h |   2 +
+ newlib/libc/machine/arm/setjmp.S   |   4 +-
+ newlib/libc/sys/arm/crt0.S         |   2 +-
+ newlib/libc/sys/arm/trap.S         |   2 +-
+ 10 files changed, 72 insertions(+), 63 deletions(-)
 
 diff --git a/libgloss/aarch64/syscalls.c b/libgloss/aarch64/syscalls.c
-index 7343cc61f..2c4b63c17 100644
+index 5b4071893..cfe1d6d23 100644
 --- a/libgloss/aarch64/syscalls.c
 +++ b/libgloss/aarch64/syscalls.c
 @@ -172,6 +172,12 @@ newslot (void)
@@ -325,10 +315,10 @@ index 95b86e4d4..b91034ae6 100644
      movt        r9, #0xff0f
      and         r8, r8, r9
 diff --git a/libgloss/arm/crt0.S b/libgloss/arm/crt0.S
-index 8490bde2f..8b85b28f4 100644
+index 9ff0e6323..b9e768007 100644
 --- a/libgloss/arm/crt0.S
 +++ b/libgloss/arm/crt0.S
-@@ -565,7 +565,7 @@ change_back:
+@@ -566,7 +566,7 @@ change_back:
  
  	/* For Thumb, constants must be after the code since only 
  	   positive offsets are supported for PC relative addresses.  */
@@ -351,7 +341,7 @@ index 6b2d62a9b..000a2c728 100644
  #endif
  {
 diff --git a/libgloss/arm/syscalls.c b/libgloss/arm/syscalls.c
-index fc394f94b..0b3287df4 100644
+index 710a741ee..9e710b09a 100644
 --- a/libgloss/arm/syscalls.c
 +++ b/libgloss/arm/syscalls.c
 @@ -180,7 +180,7 @@ initialise_monitor_handles (void)
@@ -393,21 +383,8 @@ index 845ad0173..2056c2adf 100644
          .global __rt_stkovf_split_big
          .global __rt_stkovf_split_small
  
-diff --git a/libgloss/libnosys/configure b/libgloss/libnosys/configure
-index 7c23c7a0a..2fc584169 100755
---- a/libgloss/libnosys/configure
-+++ b/libgloss/libnosys/configure
-@@ -2058,7 +2058,7 @@ case "${target}" in
- esac
- 
- case "${target}" in
--  *-*-elf)
-+  *-*-elf|*-*-eabi*)
-         $as_echo "#define HAVE_ELF 1" >>confdefs.h
- 
- 
 diff --git a/newlib/libc/include/sys/features.h b/newlib/libc/include/sys/features.h
-index 218807178..b86caeaff 100644
+index 325acdf5f..12cb6465b 100644
 --- a/newlib/libc/include/sys/features.h
 +++ b/newlib/libc/include/sys/features.h
 @@ -27,6 +27,8 @@ extern "C" {
@@ -419,152 +396,28 @@ index 218807178..b86caeaff 100644
  /* Macro to test version of GCC.  Returns 0 for non-GCC or too old GCC. */
  #ifndef __GNUC_PREREQ
  # if defined __GNUC__ && defined __GNUC_MINOR__
-diff --git a/newlib/libc/machine/aarch64/memchr.S b/newlib/libc/machine/aarch64/memchr.S
-index 53f5d6bc0..81fcecccd 100644
---- a/newlib/libc/machine/aarch64/memchr.S
-+++ b/newlib/libc/machine/aarch64/memchr.S
-@@ -110,7 +110,7 @@ def_fn memchr
- 	and	vhas_chr2.16b, vhas_chr2.16b, vrepmask.16b
- 	addp	vend.16b, vhas_chr1.16b, vhas_chr2.16b		/* 256->128 */
- 	addp	vend.16b, vend.16b, vend.16b			/* 128->64 */
--	mov	synd, vend.2d[0]
-+	mov	synd, vend.d[0]
- 	/* Clear the soff*2 lower bits */
- 	lsl	tmp, soff, #1
- 	lsr	synd, synd, tmp
-@@ -130,7 +130,7 @@ def_fn memchr
- 	/* Use a fast check for the termination condition */
- 	orr	vend.16b, vhas_chr1.16b, vhas_chr2.16b
- 	addp	vend.2d, vend.2d, vend.2d
--	mov	synd, vend.2d[0]
-+	mov	synd, vend.d[0]
- 	/* We're not out of data, loop if we haven't found the character */
- 	cbz	synd, .Lloop
- 
-@@ -140,7 +140,7 @@ def_fn memchr
- 	and	vhas_chr2.16b, vhas_chr2.16b, vrepmask.16b
- 	addp	vend.16b, vhas_chr1.16b, vhas_chr2.16b		/* 256->128 */
- 	addp	vend.16b, vend.16b, vend.16b			/* 128->64 */
--	mov	synd, vend.2d[0]
-+	mov	synd, vend.d[0]
- 	/* Only do the clear for the last possible block */
- 	b.hi	.Ltail
- 
-diff --git a/newlib/libc/machine/aarch64/strchr.S b/newlib/libc/machine/aarch64/strchr.S
-index 2448dbc7d..706107836 100644
---- a/newlib/libc/machine/aarch64/strchr.S
-+++ b/newlib/libc/machine/aarch64/strchr.S
-@@ -117,7 +117,7 @@ def_fn strchr
- 	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
- 	lsr	tmp1, tmp3, tmp1
- 
--	mov	tmp3, vend1.2d[0]
-+	mov	tmp3, vend1.d[0]
- 	bic	tmp1, tmp3, tmp1	// Mask padding bits.
- 	cbnz	tmp1, .Ltail
- 
-@@ -132,7 +132,7 @@ def_fn strchr
- 	orr	vend2.16b, vhas_nul2.16b, vhas_chr2.16b
- 	orr	vend1.16b, vend1.16b, vend2.16b
- 	addp	vend1.2d, vend1.2d, vend1.2d
--	mov	tmp1, vend1.2d[0]
-+	mov	tmp1, vend1.d[0]
- 	cbz	tmp1, .Lloop
- 
- 	/* Termination condition found.  Now need to establish exactly why
-@@ -146,7 +146,7 @@ def_fn strchr
- 	addp	vend1.16b, vend1.16b, vend2.16b		// 256->128
- 	addp	vend1.16b, vend1.16b, vend2.16b		// 128->64
- 
--	mov	tmp1, vend1.2d[0]
-+	mov	tmp1, vend1.d[0]
- .Ltail:
- 	/* Count the trailing zeros, by bit reversing...  */
- 	rbit	tmp1, tmp1
-diff --git a/newlib/libc/machine/aarch64/strchrnul.S b/newlib/libc/machine/aarch64/strchrnul.S
-index a0ac13b7f..fd2002f0d 100644
---- a/newlib/libc/machine/aarch64/strchrnul.S
-+++ b/newlib/libc/machine/aarch64/strchrnul.S
-@@ -109,7 +109,7 @@ def_fn strchrnul
- 	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
- 	lsr	tmp1, tmp3, tmp1
- 
--	mov	tmp3, vend1.2d[0]
-+	mov	tmp3, vend1.d[0]
- 	bic	tmp1, tmp3, tmp1	// Mask padding bits.
- 	cbnz	tmp1, .Ltail
- 
-@@ -124,7 +124,7 @@ def_fn strchrnul
- 	orr	vhas_chr2.16b, vhas_nul2.16b, vhas_chr2.16b
- 	orr	vend1.16b, vhas_chr1.16b, vhas_chr2.16b
- 	addp	vend1.2d, vend1.2d, vend1.2d
--	mov	tmp1, vend1.2d[0]
-+	mov	tmp1, vend1.d[0]
- 	cbz	tmp1, .Lloop
- 
- 	/* Termination condition found.  Now need to establish exactly why
-@@ -134,7 +134,7 @@ def_fn strchrnul
- 	addp	vend1.16b, vhas_chr1.16b, vhas_chr2.16b		// 256->128
- 	addp	vend1.16b, vend1.16b, vend1.16b		// 128->64
- 
--	mov	tmp1, vend1.2d[0]
-+	mov	tmp1, vend1.d[0]
- .Ltail:
- 	/* Count the trailing zeros, by bit reversing...  */
- 	rbit	tmp1, tmp1
-diff --git a/newlib/libc/machine/aarch64/strrchr.S b/newlib/libc/machine/aarch64/strrchr.S
-index d64fc09b1..1b6f07562 100644
---- a/newlib/libc/machine/aarch64/strrchr.S
-+++ b/newlib/libc/machine/aarch64/strrchr.S
-@@ -120,10 +120,10 @@ def_fn strrchr
- 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr2.16b	// 256->128
- 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul1.16b	// 128->64
- 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr1.16b	// 128->64
--	mov	nul_match, vhas_nul1.2d[0]
-+	mov	nul_match, vhas_nul1.d[0]
- 	lsl	tmp1, tmp1, #1
- 	mov	const_m1, #~0
--	mov	chr_match, vhas_chr1.2d[0]
-+	mov	chr_match, vhas_chr1.d[0]
- 	lsr	tmp3, const_m1, tmp1
- 
- 	bic	nul_match, nul_match, tmp3	// Mask padding bits.
-@@ -146,15 +146,15 @@ def_fn strrchr
- 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr2.16b	// 256->128
- 	addp	vend1.16b, vend1.16b, vend1.16b	// 128->64
- 	addp	vhas_chr1.16b, vhas_chr1.16b, vhas_chr1.16b	// 128->64
--	mov	nul_match, vend1.2d[0]
--	mov	chr_match, vhas_chr1.2d[0]
-+	mov	nul_match, vend1.d[0]
-+	mov	chr_match, vhas_chr1.d[0]
- 	cbz	nul_match, .Lloop
- 
- 	and	vhas_nul1.16b, vhas_nul1.16b, vrepmask_0.16b
- 	and	vhas_nul2.16b, vhas_nul2.16b, vrepmask_0.16b
- 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul2.16b
- 	addp	vhas_nul1.16b, vhas_nul1.16b, vhas_nul1.16b
--	mov	nul_match, vhas_nul1.2d[0]
-+	mov	nul_match, vhas_nul1.d[0]
- 
- .Ltail:
- 	/* Work out exactly where the string ends.  */
-diff --git a/newlib/libc/stdlib/aligned_alloc.c b/newlib/libc/stdlib/aligned_alloc.c
-index feb22c24b..06b3883cf 100644
---- a/newlib/libc/stdlib/aligned_alloc.c
-+++ b/newlib/libc/stdlib/aligned_alloc.c
-@@ -28,6 +28,7 @@
- 
- #include <reent.h>
- #include <stdlib.h>
-+#include <malloc.h>
- 
- void *
- aligned_alloc (size_t align, size_t size)
+diff --git a/newlib/libc/machine/arm/setjmp.S b/newlib/libc/machine/arm/setjmp.S
+index 0070f17cd..a53f7918e 100644
+--- a/newlib/libc/machine/arm/setjmp.S
++++ b/newlib/libc/machine/arm/setjmp.S
+@@ -78,10 +78,10 @@
+     covers all the cases we need in this file for hardware
+     floating-point and should be compatible with all required FPUs
+     that we need to support.  */
+-# if __ARM_FP
++# if __ARM_FP && !__clang__
+ 	.fpu vfpxd
+ # endif
+-# if __ARM_FEATURE_MVE
++# if __ARM_FEATURE_MVE && !__clang__
+ 	.arch_extension mve
+ # endif
+ #endif
 diff --git a/newlib/libc/sys/arm/crt0.S b/newlib/libc/sys/arm/crt0.S
-index 5e677a23c..6faf74096 100644
+index dae0f0465..51e86d549 100644
 --- a/newlib/libc/sys/arm/crt0.S
 +++ b/newlib/libc/sys/arm/crt0.S
-@@ -556,7 +556,7 @@ change_back:
+@@ -557,7 +557,7 @@ change_back:
  
  	/* For Thumb, constants must be after the code since only 
  	   positive offsets are supported for PC relative addresses.  */
@@ -586,84 +439,6 @@ index 681b3dbe0..8a49f39f3 100644
          .global __rt_stkovf_split_big
          .global __rt_stkovf_split_small
  
-diff --git a/newlib/libm/machine/arm/sf_ceil.c b/newlib/libm/machine/arm/sf_ceil.c
-index b6efbff0b..44fdf834a 100644
---- a/newlib/libm/machine/arm/sf_ceil.c
-+++ b/newlib/libm/machine/arm/sf_ceil.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
- #include <math.h>
- 
- float
-diff --git a/newlib/libm/machine/arm/sf_floor.c b/newlib/libm/machine/arm/sf_floor.c
-index 7bc95808c..44c38c42c 100644
---- a/newlib/libm/machine/arm/sf_floor.c
-+++ b/newlib/libm/machine/arm/sf_floor.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
- #include <math.h>
- 
- float
-diff --git a/newlib/libm/machine/arm/sf_nearbyint.c b/newlib/libm/machine/arm/sf_nearbyint.c
-index c70d84442..126673e97 100644
---- a/newlib/libm/machine/arm/sf_nearbyint.c
-+++ b/newlib/libm/machine/arm/sf_nearbyint.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
- #include <math.h>
- 
- float
-diff --git a/newlib/libm/machine/arm/sf_rint.c b/newlib/libm/machine/arm/sf_rint.c
-index d9c383a7e..5def21009 100644
---- a/newlib/libm/machine/arm/sf_rint.c
-+++ b/newlib/libm/machine/arm/sf_rint.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
- #include <math.h>
- 
- float
-diff --git a/newlib/libm/machine/arm/sf_round.c b/newlib/libm/machine/arm/sf_round.c
-index 232fc0848..88c53ba13 100644
---- a/newlib/libm/machine/arm/sf_round.c
-+++ b/newlib/libm/machine/arm/sf_round.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
- #include <math.h>
- 
- float
-diff --git a/newlib/libm/machine/arm/sf_trunc.c b/newlib/libm/machine/arm/sf_trunc.c
-index 64e4aeb9a..c08fa6fed 100644
---- a/newlib/libm/machine/arm/sf_trunc.c
-+++ b/newlib/libm/machine/arm/sf_trunc.c
-@@ -24,7 +24,7 @@
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
- 
--#if __ARM_ARCH >= 8 && !defined (__SOFTFP__)
-+#if __ARM_ARCH >= 8 && (__ARM_FP & 0x4) && !defined (__SOFTFP__)
- #include <math.h>
- 
- float
 -- 
-2.43.0
+2.47.1
 
