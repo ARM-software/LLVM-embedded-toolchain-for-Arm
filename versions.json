@@ -17,7 +17,7 @@
     },
     "newlib": {
       "tagType": "tag",
-      "tag": "newlib-4.1.0"
+      "tag": "newlib-4.5.0"
     }
   }
 }
