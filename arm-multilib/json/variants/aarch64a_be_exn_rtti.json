@@ -3,7 +3,7 @@
         "common": {
             "TARGET_ARCH": "aarch64a",
             "VARIANT": "aarch64a_be_exn_rtti",
-            "COMPILE_FLAGS": "-march=armv8-a -mbig-endian",
+            "COMPILE_FLAGS": "-march=armv8-a -mbig-endian -mno-unaligned-access",
             "ENABLE_EXCEPTIONS": "ON",
             "ENABLE_RTTI": "ON",
             "TEST_EXECUTOR": "fvp",
