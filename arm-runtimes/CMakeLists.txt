@@ -463,7 +463,6 @@ if(C_LIBRARY STREQUAL newlib)
         "CC_FOR_TARGET=${LLVM_BINARY_DIR}/bin/clang -target ${target_triple} -ffreestanding"
         "CXX_FOR_TARGET=${LLVM_BINARY_DIR}/bin/clang++ -target ${target_triple} -ffreestanding"
         "AR_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-ar"
-        "AS_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-as"
         "NM_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-nm"
         "OBJDUMP_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-objdump"
         "RANLIB_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-ranlib"
