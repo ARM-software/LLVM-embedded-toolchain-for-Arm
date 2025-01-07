@@ -1,10 +1,11 @@
-From ff1718e7c6fdb4cace44c90213a00bc6db6450f5 Mon Sep 17 00:00:00 2001
+From 928f527624c6cbc1d897c5f36309981971f47873 Mon Sep 17 00:00:00 2001
 From: Volodymyr Turanskyy <volodymyr.turanskyy@arm.com>
 Date: Thu, 2 Jan 2025 16:23:27 +0000
 Subject: [PATCH] Update patch for newlib-4.5.0 tag
 
 Change-Id: Iec24f4305ad35a3a6df1672bb14555bf81249130
 ---
+ libgloss/Makefile.in               |   2 +-
  libgloss/aarch64/syscalls.c        |   6 ++
  libgloss/arm/cpu-init/rdimon-aem.S | 107 +++++++++++++++--------------
  libgloss/arm/crt0.S                |   2 +-
@@ -15,8 +16,21 @@ Change-Id: Iec24f4305ad35a3a6df1672bb14555bf81249130
  newlib/libc/machine/arm/setjmp.S   |   4 +-
  newlib/libc/sys/arm/crt0.S         |   2 +-
  newlib/libc/sys/arm/trap.S         |   2 +-
- 10 files changed, 72 insertions(+), 63 deletions(-)
+ 11 files changed, 73 insertions(+), 64 deletions(-)
 
+diff --git a/libgloss/Makefile.in b/libgloss/Makefile.in
+index 54a00614d..be1450749 100644
+--- a/libgloss/Makefile.in
++++ b/libgloss/Makefile.in
+@@ -1864,7 +1864,7 @@ AM_V_texidevnull = $(am__v_texidevnull_@AM_V@)
+ am__v_texidevnull_ = $(am__v_texidevnull_@AM_DEFAULT_V@)
+ am__v_texidevnull_0 = > /dev/null
+ am__v_texidevnull_1 = 
+-INFO_DEPS = $(srcdir)/doc/porting.info
++INFO_DEPS = 
+ am__TEXINFO_TEX_DIR = $(srcdir)/../texinfo
+ DVIS = doc/porting.dvi
+ PDFS = doc/porting.pdf
 diff --git a/libgloss/aarch64/syscalls.c b/libgloss/aarch64/syscalls.c
 index 5b4071893..cfe1d6d23 100644
 --- a/libgloss/aarch64/syscalls.c
