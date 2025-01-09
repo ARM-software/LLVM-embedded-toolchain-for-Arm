@@ -468,8 +468,8 @@ if(C_LIBRARY STREQUAL newlib)
         "RANLIB_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-ranlib"
         "READELF_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-readelf"
         "STRIP_FOR_TARGET=${LLVM_BINARY_DIR}/bin/llvm-strip"
-        "CFLAGS_FOR_TARGET=${flags} -Wno-error=implicit-function-declaration -D__USES_INITFINI__ -UHAVE_INIT_FINI__ -U_HAVE_INIT_FINI__ -UHAVE_INIT_FINI --sysroot ${TEMP_LIB_DIR}"
-        "CCASFLAGS=${flags} -Wno-error=implicit-function-declaration -D__USES_INITFINI__ -UHAVE_INIT_FINI__ -U_HAVE_INIT_FINI__ -UHAVE_INIT_FINI --sysroot ${TEMP_LIB_DIR}"
+        "CFLAGS_FOR_TARGET=${flags} -Wno-error=implicit-function-declaration -D__USES_INITFINI__ -U_HAVE_INIT_FINI --sysroot ${TEMP_LIB_DIR}"
+        "CCASFLAGS=${flags} -Wno-error=implicit-function-declaration -D__USES_INITFINI__ -U_HAVE_INIT_FINI --sysroot ${TEMP_LIB_DIR}"
     )
 
     include(ProcessorCount)
