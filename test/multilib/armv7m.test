@@ -1,21 +1,75 @@
-# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none | FileCheck %s --check-prefix=NONE
-# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -mfloat-abi=softfp | FileCheck %s --check-prefix=NONE
-# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=none -mfloat-abi=softfp | FileCheck %s --check-prefix=NONE
-# NONE: arm-none-eabi/armv7m_soft_nofp_exn_rtti{{$}}
-# NONE-EMPTY:
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none | FileCheck %s --check-prefix=NOFP-EXN-RTTI-UNALIGNED
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -mfloat-abi=softfp | FileCheck %s --check-prefix=NOFP-EXN-RTTI-UNALIGNED
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=none -mfloat-abi=softfp | FileCheck %s --check-prefix=NOFP-EXN-RTTI-UNALIGNED
+# NOFP-EXN-RTTI-UNALIGNED: arm-none-eabi/armv7m_soft_nofp_exn_rtti_unaligned{{$}}
+# NOFP-EXN-RTTI-UNALIGNED-EMPTY:
 
-# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4 %s
-# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4 %s
-# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4 %s
-# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4 %s
-# SOFT-FPV4: arm-none-eabi/armv7m_soft_fpv4_sp_d16_exn_rtti{{$}}
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -mno-unaligned-access | FileCheck %s --check-prefix=NOFP-EXN-RTTI
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -mfloat-abi=softfp -mno-unaligned-access | FileCheck %s --check-prefix=NOFP-EXN-RTTI
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=none -mfloat-abi=softfp -mno-unaligned-access | FileCheck %s --check-prefix=NOFP-EXN-RTTI
+# NOFP-EXN-RTTI: arm-none-eabi/armv7m_soft_nofp_exn_rtti{{$}}
+# NOFP-EXN-RTTI-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -fno-exceptions -fno-rtti | FileCheck %s --check-prefix=NOFP-UNALIGNED
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -fno-exceptions -fno-rtti -mfloat-abi=softfp | FileCheck %s --check-prefix=NOFP-UNALIGNED
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=none -fno-exceptions -fno-rtti -mfloat-abi=softfp | FileCheck %s --check-prefix=NOFP-UNALIGNED
+# NOFP-UNALIGNED: arm-none-eabi/armv7m_soft_nofp_unaligned{{$}}
+# NOFP-UNALIGNED-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -fno-exceptions -fno-rtti -mno-unaligned-access | FileCheck %s --check-prefix=NOFP
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=none -fno-exceptions -fno-rtti -mfloat-abi=softfp -mno-unaligned-access | FileCheck %s --check-prefix=NOFP
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=none -fno-exceptions -fno-rtti -mfloat-abi=softfp -mno-unaligned-access | FileCheck %s --check-prefix=NOFP
+# NOFP: arm-none-eabi/armv7m_soft_nofp{{$}}
+# NOFP-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4-EXN-RTTI-UNALIGNED %s
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4-EXN-RTTI-UNALIGNED %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4-EXN-RTTI-UNALIGNED %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp | FileCheck --check-prefix=SOFT-FPV4-EXN-RTTI-UNALIGNED %s
+# SOFT-FPV4-EXN-RTTI-UNALIGNED: arm-none-eabi/armv7m_soft_fpv4_sp_d16_exn_rtti_unaligned{{$}}
+# SOFT-FPV4-EXN-RTTI-UNALIGNED-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp -mno-unaligned-access | FileCheck --check-prefix=SOFT-FPV4-EXN-RTTI %s
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp -mno-unaligned-access | FileCheck --check-prefix=SOFT-FPV4-EXN-RTTI %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp -mno-unaligned-access | FileCheck --check-prefix=SOFT-FPV4-EXN-RTTI %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp -mno-unaligned-access | FileCheck --check-prefix=SOFT-FPV4-EXN-RTTI %s
+# SOFT-FPV4-EXN-RTTI: arm-none-eabi/armv7m_soft_fpv4_sp_d16_exn_rtti{{$}}
+# SOFT-FPV4-EXN-RTTI-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp -fno-exceptions -fno-rtti | FileCheck --check-prefix=SOFT-FPV4-UNALIGNED %s
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp -fno-exceptions -fno-rtti | FileCheck --check-prefix=SOFT-FPV4-UNALIGNED %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp -fno-exceptions -fno-rtti | FileCheck --check-prefix=SOFT-FPV4-UNALIGNED %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp -fno-exceptions -fno-rtti | FileCheck --check-prefix=SOFT-FPV4-UNALIGNED %s
+# SOFT-FPV4-UNALIGNED: arm-none-eabi/armv7m_soft_fpv4_sp_d16_unaligned{{$}}
+# SOFT-FPV4-UNALIGNED-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp -fno-exceptions -fno-rtti -mno-unaligned-access | FileCheck --check-prefix=SOFT-FPV4 %s
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp -fno-exceptions -fno-rtti -mno-unaligned-access | FileCheck --check-prefix=SOFT-FPV4 %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv4-sp-d16 -mfloat-abi=softfp -fno-exceptions -fno-rtti -mno-unaligned-access | FileCheck --check-prefix=SOFT-FPV4 %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabi -mfpu=fpv5-d16 -mfloat-abi=softfp -fno-exceptions -fno-rtti -mno-unaligned-access | FileCheck --check-prefix=SOFT-FPV4 %s
+# SOFT-FPV4: arm-none-eabi/armv7m_soft_fpv4_sp_d16{{$}}
 # SOFT-FPV4-EMPTY:
-#
-# RUN: %clang -print-multi-directory --target=armv7m-none-eabihf -mfpu=fpv4-sp-d16 | FileCheck --check-prefix=FPV4 %s
-# RUN: %clang -print-multi-directory --target=armv7em-none-eabihf -mfpu=fpv4-sp-d16 | FileCheck --check-prefix=FPV4 %s
-# FPV4: arm-none-eabi/armv7m_hard_fpv4_sp_d16_exn_rtti{{$}}
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabihf -mfpu=fpv4-sp-d16 | FileCheck --check-prefix=FPV4-EXN-RTTI-UNALIGNED %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabihf -mfpu=fpv4-sp-d16 | FileCheck --check-prefix=FPV4-EXN-RTTI-UNALIGNED %s
+# FPV4-EXN-RTTI-UNALIGNED: arm-none-eabi/armv7m_hard_fpv4_sp_d16_exn_rtti_unaligned{{$}}
+# FPV4-EXN-RTTI-UNALIGNED-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabihf -mfpu=fpv4-sp-d16 -mno-unaligned-access | FileCheck --check-prefix=FPV4-EXN-RTTI %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabihf -mfpu=fpv4-sp-d16 -mno-unaligned-access | FileCheck --check-prefix=FPV4-EXN-RTTI %s
+# FPV4-EXN-RTTI: arm-none-eabi/armv7m_hard_fpv4_sp_d16_exn_rtti{{$}}
+# FPV4-EXN-RTTI-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabihf -mfpu=fpv4-sp-d16 -fno-exceptions -fno-rtti | FileCheck --check-prefix=FPV4-UNALIGNED %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabihf -mfpu=fpv4-sp-d16 -fno-exceptions -fno-rtti | FileCheck --check-prefix=FPV4-UNALIGNED %s
+# FPV4-UNALIGNED: arm-none-eabi/armv7m_hard_fpv4_sp_d16_unaligned{{$}}
+# FPV4-UNALIGNED-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv7m-none-eabihf -mfpu=fpv4-sp-d16 -fno-exceptions -fno-rtti -mno-unaligned-access | FileCheck --check-prefix=FPV4 %s
+# RUN: %clang -print-multi-directory --target=armv7em-none-eabihf -mfpu=fpv4-sp-d16 -fno-exceptions -fno-rtti -mno-unaligned-access | FileCheck --check-prefix=FPV4 %s
+# FPV4: arm-none-eabi/armv7m_hard_fpv4_sp_d16{{$}}
 # FPV4-EMPTY:
-#
+
 # RUN: %clang -print-multi-directory --target=armv7m-none-eabihf -mfpu=fpv5-d16 | FileCheck --check-prefix=FPV5 %s
 # RUN: %clang -print-multi-directory --target=armv7em-none-eabihf -mfpu=fpv5-d16 | FileCheck --check-prefix=FPV5 %s
 # FPV5: arm-none-eabi/armv7m_hard_fpv5_d16_exn_rtti{{$}}

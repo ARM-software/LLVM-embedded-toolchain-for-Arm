@@ -8,5 +8,5 @@
 
 # Fallback to armv7m
 # RUN: %clang -print-multi-directory --target=armv8m.main-none-eabi -mfpu=fpv5-sp-d16 | FileCheck --check-prefix=SOFTFP %s
-# SOFTFP: arm-none-eabi/armv7m_soft_fpv4_sp_d16_exn_rtti{{$}}
+# SOFTFP: arm-none-eabi/armv7m_soft_fpv4_sp_d16_exn_rtti_unaligned{{$}}
 # SOFTFP-EMPTY:

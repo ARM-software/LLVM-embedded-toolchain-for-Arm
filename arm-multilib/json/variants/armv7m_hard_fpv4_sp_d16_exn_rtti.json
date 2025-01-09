@@ -3,7 +3,7 @@
         "common": {
             "TARGET_ARCH": "armv7m",
             "VARIANT": "armv7m_hard_fpv4_sp_d16_exn_rtti",
-            "COMPILE_FLAGS": "-mfloat-abi=hard -march=armv7m -mfpu=fpv4-sp-d16",
+            "COMPILE_FLAGS": "-mfloat-abi=hard -march=armv7m -mfpu=fpv4-sp-d16 -mno-unaligned-access",
             "ENABLE_EXCEPTIONS": "ON",
             "ENABLE_RTTI": "ON",
             "TEST_EXECUTOR": "qemu",
