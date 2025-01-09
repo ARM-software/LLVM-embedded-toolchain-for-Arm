@@ -26,7 +26,7 @@ def main():
         help="Directory containing FVP config files",
         required=True,
     )
-    main_arg_group.add_argument(
+    parser.add_argument(
         "--fvp-model",
         help="model name for FVP",
         required=True,
