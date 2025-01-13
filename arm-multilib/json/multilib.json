@@ -95,6 +95,16 @@
             "flags": "--target=thumbv6m-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti -mno-unaligned-access"
         },
         {
+            "variant": "armebv6m_soft_nofp_exn_rtti",
+            "json": "armebv6m_soft_nofp_exn_rtti.json",
+            "flags": "--target=thumbebv6m-unknown-none-eabi -mfpu=none"
+        },
+        {
+            "variant": "armebv6m_soft_nofp",
+            "json": "armebv6m_soft_nofp.json",
+            "flags": "--target=thumbebv6m-unknown-none-eabi -mfpu=none -fno-exceptions -fno-rtti"
+        },
+        {
             "variant": "armv7a_soft_nofp_exn_rtti_unaligned",
             "json": "armv7a_soft_nofp_exn_rtti_unaligned.json",
             "flags": "--target=armv7-unknown-none-eabi -mfpu=none"
