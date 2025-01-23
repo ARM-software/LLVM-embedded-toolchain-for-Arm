@@ -210,7 +210,10 @@ set(compile_arch_flags "--target=${target_triple} ${COMPILE_FLAGS}")
 # flags, and requires a sysroot.
 set(lib_compile_flags "${compile_arch_flags} -ffunction-sections -fdata-sections -fno-ident --sysroot ${TEMP_LIB_DIR}")
 
-# Declare this target now, since compiler-rt requires the dependency.
+# Generic target names for the C library.
+# Declare these now, since compiler-rt requires the 'install' dependency.
+add_custom_target(clib-configure)
+add_custom_target(clib-build)
 add_custom_target(clib-install)
 
 ###############################################################################
@@ -288,8 +291,8 @@ ExternalProject_Add(
     -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}
     -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
     ${compiler_rt_test_cmake_args}
-    STEP_TARGETS build install
-    USES_TERMINAL_CONFIGURE FALSE
+    STEP_TARGETS configure build install
+    USES_TERMINAL_CONFIGURE TRUE
     USES_TERMINAL_BUILD TRUE
     USES_TERMINAL_INSTALL TRUE
     LIST_SEPARATOR ,
@@ -399,12 +402,13 @@ if(C_LIBRARY STREQUAL picolibc)
             <SOURCE_DIR>
         BUILD_COMMAND ${MESON_EXECUTABLE} compile
         INSTALL_COMMAND ${MESON_EXECUTABLE} install ${MESON_INSTALL_QUIET}
-        USES_TERMINAL_CONFIGURE FALSE
+        USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
+        USES_TERMINAL_INSTALL TRUE
         LIST_SEPARATOR ,
         CONFIGURE_HANDLED_BY_BUILD TRUE
         TEST_EXCLUDE_FROM_MAIN TRUE
-        STEP_TARGETS build install
+        STEP_TARGETS configure build install
     )
 
     add_custom_target(check-picolibc)
@@ -523,12 +527,13 @@ if(C_LIBRARY STREQUAL newlib)
             <BINARY_DIR>/${target_triple}/libgloss/${cpu_family}/libcrt0-nosys.a
             ${TEMP_LIB_DIR}/lib
         # FIXME: TEST_COMMAND?
-        USES_TERMINAL_CONFIGURE FALSE
+        USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
+        USES_TERMINAL_INSTALL TRUE
         # Always run the build command so that incremental builds are correct.
         CONFIGURE_HANDLED_BY_BUILD TRUE
         TEST_EXCLUDE_FROM_MAIN TRUE
-        STEP_TARGETS install # FIXME: test?
+        STEP_TARGETS configure build install # FIXME: test?
     )
 endif()
 
@@ -620,11 +625,10 @@ if(C_LIBRARY STREQUAL llvmlibc)
         -DLLVM_ENABLE_RUNTIMES=libc
         -DLLVM_INCLUDE_TESTS=OFF # llvmlibc's tests require C++, so can't be built until llvmlibc can support libc++
         -DLLVM_LIBC_FULL_BUILD=ON
-        STEP_TARGETS build install
-        USES_TERMINAL_CONFIGURE FALSE
+        STEP_TARGETS configure build install
+        USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
-        USES_TERMINAL_TEST TRUE
         LIST_SEPARATOR ,
         CONFIGURE_HANDLED_BY_BUILD TRUE
         INSTALL_COMMAND ${CMAKE_COMMAND} --install .
@@ -652,7 +656,7 @@ if(C_LIBRARY STREQUAL llvmlibc)
         ${compiler_launcher_cmake_args}
         ${common_llvmlibc_cmake_args}
         STEP_TARGETS build install
-        USES_TERMINAL_CONFIGURE FALSE
+        USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
         USES_TERMINAL_TEST TRUE
@@ -661,6 +665,8 @@ if(C_LIBRARY STREQUAL llvmlibc)
     )
 endif()
 
+add_dependencies(clib-configure ${C_LIBRARY}-configure)
+add_dependencies(clib-build ${C_LIBRARY}-build)
 add_dependencies(clib-install ${C_LIBRARY}-install)
 
 ###############################################################################
@@ -758,11 +764,10 @@ if(ENABLE_CXX_LIBS)
         -DRUNTIME_VARIANT_NAME=${VARIANT}
         ${cxxlibs_extra_cmake_options}
         ${cxxlibs_test_cmake_options}
-        STEP_TARGETS build install
-        USES_TERMINAL_CONFIGURE FALSE
+        STEP_TARGETS configure build install
+        USES_TERMINAL_CONFIGURE TRUE
         USES_TERMINAL_BUILD TRUE
         USES_TERMINAL_INSTALL TRUE
-        USES_TERMINAL_TEST TRUE
         LIST_SEPARATOR ,
         CONFIGURE_HANDLED_BY_BUILD TRUE
     )
