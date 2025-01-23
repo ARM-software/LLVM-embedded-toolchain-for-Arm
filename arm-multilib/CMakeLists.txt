@@ -50,6 +50,25 @@ set(
     fvp/get_fvps.sh"
 )
 set(FVP_CONFIG_DIR "${TOOLCHAIN_SOURCE_DIR}/fvp/config" CACHE STRING "The directory in which the FVP models are installed.")
+option(
+    ENABLE_PARALLEL_LIB_CONFIG
+    "Run the library variant configuration steps in parallel."
+    ON
+)
+option(
+    ENABLE_PARALLEL_LIB_BUILD
+    "Run the library variant build steps in parallel."
+    OFF
+)
+set(PARALLEL_LIB_BUILD_LEVELS
+    "1" CACHE STRING
+    "If ENABLE_PARALLEL_LIB_BUILD is ON, this number of processes will be assigned to each variant built."
+)
+if(NOT CMAKE_GENERATOR MATCHES "Ninja")
+    if (ENABLE_PARALLEL_LIB_CONFIG OR ENABLE_PARALLEL_LIB_BUILD)
+        message(WARNING "Library build parallelization should only be enabled with the Ninja generator.")
+    endif()
+endif()
 
 # If a compiler launcher such as ccache has been set, it should be
 # passed down to each subproject build.
@@ -130,6 +149,34 @@ add_dependencies(
     check-cxxabi
     check-unwind
 )
+
+if(ENABLE_PARALLEL_LIB_CONFIG OR ENABLE_PARALLEL_LIB_BUILD)
+    # Additional targets to build the variant subprojects in parallel.
+    # The build steps can use multible jobs to compile in parallel, but
+    # the configuration steps are largely single threaded. This creates a
+    # bottleneck if each variant is built in series.
+    # It is significantly faster to run all the subproject configuration
+    # steps in parallel, run the build steps, then run the next set of
+    # configuration steps in parallel, etc.
+    set(
+        subtargets
+        compiler_rt-configure
+        compiler_rt-build
+        clib-configure
+        clib-build
+        cxxlibs-configure
+        cxxlibs-build
+    )
+    set(subtarget_deps none ${subtargets})
+    list(REMOVE_AT subtarget_deps 6)
+
+    foreach(subtarget subtarget_dep IN ZIP_LISTS subtargets subtarget_deps)
+        add_custom_target(${subtarget}-all)
+        if(NOT subtarget_dep STREQUAL "none")
+            add_dependencies(${subtarget}-all ${subtarget_dep}-all)
+        endif()
+    endforeach()
+endif()
 
 # Read the JSON file to load a multilib configuration.
 file(READ ${MULTILIB_JSON} multilib_json_str)
@@ -218,11 +265,58 @@ foreach(lib_idx RANGE ${lib_count_dec})
                 STEP_TARGETS build install
                 USES_TERMINAL_CONFIGURE FALSE
                 USES_TERMINAL_BUILD TRUE
-                USES_TERMINAL_TEST TRUE
                 LIST_SEPARATOR ,
                 CONFIGURE_HANDLED_BY_BUILD TRUE
                 TEST_EXCLUDE_FROM_MAIN TRUE
             )
+
+            if(ENABLE_PARALLEL_LIB_CONFIG OR ENABLE_PARALLEL_LIB_BUILD)
+                # Create additional steps to configure/build the subprojects.
+                # These are collected to be run together, so that all the
+                # configuration steps can be run in parallel.
+                # Each step should depend on the previous, with the first depending on the pre-defined
+                # 'configure' step, and the pre-defined 'build' step depending on the last.
+                set(subtarget_deps configure ${subtargets} build)
+                list(SUBLIST subtarget_deps 0 6 subtarget_dependees)
+                list(SUBLIST subtarget_deps 2 6 subtarget_dependers)
+
+                # First loop to add the steps and targets.
+                foreach(subtarget subtarget_dependee IN ZIP_LISTS subtargets subtarget_dependees)
+                    # Enabling USES_TERMINAL puts the step in Ninja's "console" job pool, which
+                    # prevents the steps from being run in parallel since each must be given
+                    # exclusive access to the terminal. When disabled, the console won't be updated
+                    # with any output from the step until it completes.
+                    set(step_uses_terminal ON)
+                    set(step_extra_env "")
+                    if(${subtarget} MATCHES "-configure$" AND ENABLE_PARALLEL_LIB_CONFIG)
+                        set(step_uses_terminal OFF)
+                    elseif(${subtarget} MATCHES "-build$" AND ENABLE_PARALLEL_LIB_BUILD)
+                        set(step_uses_terminal OFF)
+                        set(step_extra_env ${CMAKE_COMMAND} -E env CMAKE_BUILD_PARALLEL_LEVEL=${PARALLEL_LIB_BUILD_LEVELS})
+                    endif()
+                    ExternalProject_Add_Step(
+                        runtimes-${variant}
+                        ${subtarget}
+                        COMMAND ${step_extra_env} ${CMAKE_COMMAND} --build <BINARY_DIR> --target ${subtarget}
+                        DEPENDEES ${subtarget_dependee}
+                        DEPENDERS build
+                        USES_TERMINAL ${step_uses_terminal}
+                    )
+                    ExternalProject_Add_StepTargets(runtimes-${variant} ${subtarget})
+                    add_dependencies(${subtarget}-all runtimes-${variant}-${subtarget})
+                endforeach()
+
+                # Second loop to set the steps that will depend on the new targets.
+                foreach(subtarget subtarget_depender IN ZIP_LISTS subtargets subtarget_dependers)
+                    ExternalProject_Add_StepDependencies(
+                        runtimes-${variant}
+                        ${subtarget_depender}
+                        ${subtarget}-all
+                    )
+                endforeach()
+            endif()
+
+            # Add custom check targets.
             set(check_targets "")
             if(read_ENABLE_LIBC_TESTS)
                 list(APPEND check_targets check-${C_LIBRARY})
