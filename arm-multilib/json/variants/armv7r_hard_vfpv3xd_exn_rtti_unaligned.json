@@ -2,10 +2,10 @@
     "args": {
         "common": {
             "TARGET_ARCH": "armv7r",
-            "VARIANT": "armv7r_hard_vfpv3xd",
-            "COMPILE_FLAGS": "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3xd -mno-unaligned-access",
-            "ENABLE_EXCEPTIONS": "OFF",
-            "ENABLE_RTTI": "OFF",
+            "VARIANT": "armv7r_hard_vfpv3xd_exn_rtti",
+            "COMPILE_FLAGS": "-mfloat-abi=hard -march=armv7r -mfpu=vfpv3xd",
+            "ENABLE_EXCEPTIONS": "ON",
+            "ENABLE_RTTI": "ON",
             "TEST_EXECUTOR": "qemu",
             "QEMU_MACHINE": "none",
             "QEMU_CPU": "cortex-r5f",

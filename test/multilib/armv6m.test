@@ -1,3 +1,25 @@
-# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mfpu=none | FileCheck %s
-# CHECK: arm-none-eabi/armv6m_soft_nofp_exn_rtti{{$}}
-# CHECK-EMPTY:
+# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mfpu=none | FileCheck %s --check-prefix=CHECK-NOFP-EXN-RTTI-UNALIGNED
+# CHECK-NOFP-EXN-RTTI-UNALIGNED: arm-none-eabi/armv6m_soft_nofp_exn_rtti_unaligned{{$}}
+# CHECK-NOFP-EXN-RTTI-UNALIGNED-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mfpu=none -mno-unaligned-access | FileCheck %s --check-prefix=CHECK-NOFP-EXN-RTTI
+# CHECK-NOFP-EXN-RTTI: arm-none-eabi/armv6m_soft_nofp_exn_rtti{{$}}
+# CHECK-NOFP-EXN-RTTI-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mfpu=none -fno-exceptions -fno-rtti | FileCheck %s --check-prefix=CHECK-NOFP-UNALIGNED
+# CHECK-NOFP-UNALIGNED: arm-none-eabi/armv6m_soft_nofp_unaligned{{$}}
+# CHECK-NOFP-UNALIGNED-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mfpu=none -fno-exceptions -fno-rtti -mno-unaligned-access | FileCheck %s --check-prefix=CHECK-NOFP
+# CHECK-NOFP: arm-none-eabi/armv6m_soft_nofp{{$}}
+# CHECK-NOFP-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mbig-endian -mfpu=none -fno-exceptions -fno-rtti | FileCheck %s --check-prefix=CHECK-BE-NOFP
+# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mbig-endian -mfpu=none -fno-exceptions -fno-rtti -mno-unaligned-access | FileCheck %s --check-prefix=CHECK-BE-NOFP
+# CHECK-BE-NOFP: arm-none-eabi/armebv6m_soft_nofp{{$}}
+# CHECK-BE-NOFP-EMPTY:
+
+# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mbig-endian -mfpu=none | FileCheck %s --check-prefix=CHECK-BE-NOFP-EXN-RTTI
+# RUN: %clang -print-multi-directory --target=armv6m-none-eabi -mbig-endian -mfpu=none -mno-unaligned-access | FileCheck %s --check-prefix=CHECK-BE-NOFP-EXN-RTTI
+# CHECK-BE-NOFP-EXN-RTTI: arm-none-eabi/armebv6m_soft_nofp_exn_rtti{{$}}
+# CHECK-BE-NOFP-EXN-RTTI-EMPTY:
