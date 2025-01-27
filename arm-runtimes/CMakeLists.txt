@@ -771,6 +771,14 @@ if(ENABLE_CXX_LIBS)
         endforeach()
     endif()
 
+else() # if not ENABLE_CXX_LIBS
+
+    # The parent arm-multilib cmake script will still want to invoke
+    # build targets like 'cxxlibs-configure', whether we actually have
+    # C++ libraries or not. So we should define them, even if they
+    # don't do anything.
+    add_custom_target(cxxlibs-configure)
+    add_custom_target(cxxlibs-build)
 endif()
 
 install(
