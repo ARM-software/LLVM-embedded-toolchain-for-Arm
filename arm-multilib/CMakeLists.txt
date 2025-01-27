@@ -32,7 +32,6 @@ set(ENABLE_VARIANTS "all" CACHE STRING "Semicolon separated list of variants to 
 set(C_LIBRARY "picolibc" CACHE STRING "Which C library to use.")
 set_property(CACHE C_LIBRARY PROPERTY STRINGS picolibc newlib llvmlibc)
 set(LLVM_BINARY_DIR "" CACHE PATH "Path to LLVM toolchain build or install root.")
-set(LIBC_HDRGEN "" CACHE PATH "Path to prebuilt lbc-hdrgen if not included in LLVM binaries set by LLVM_BINARY_DIR")
 option(
     ENABLE_QEMU_TESTING
     "Enable tests that use QEMU. This option is ON by default."
@@ -83,7 +82,6 @@ endif()
 # Arguments to pass down to the library projects.
 foreach(arg
     LLVM_BINARY_DIR
-    LIBC_HDRGEN
     FVP_INSTALL_DIR
     FVP_CONFIG_DIR
 )
@@ -107,31 +105,6 @@ endif()
 
 # Target for any dependencies to build the runtimes project.
 add_custom_target(runtimes-depends)
-
-# If building llvm-libc, ensure libc-hdrgen is available.
-if(C_LIBRARY STREQUAL llvmlibc)
-    if(NOT LIBC_HDRGEN)
-        if(EXISTS ${LLVM_BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
-            set(LIBC_HDRGEN ${LLVM_BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
-        else()
-            ExternalProject_Add(
-                libc_hdrgen
-                SOURCE_DIR ${llvmproject_SOURCE_DIR}/llvm
-                CMAKE_ARGS
-                    -DLLVM_ENABLE_RUNTIMES=libc
-                    -DLLVM_LIBC_FULL_BUILD=ON
-                    -DCMAKE_BUILD_TYPE=Debug
-                BUILD_COMMAND ${CMAKE_COMMAND} --build . --target libc-hdrgen
-                INSTALL_COMMAND ${CMAKE_COMMAND} -E true
-                CONFIGURE_HANDLED_BY_BUILD TRUE
-            )
-            ExternalProject_Get_property(libc_hdrgen BINARY_DIR)
-            set(LIBC_HDRGEN ${BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
-            add_dependencies(runtimes-depends libc_hdrgen)
-        endif()
-    endif()
-    list(APPEND passthrough_dirs "-DLIBC_HDRGEN=${LIBC_HDRGEN}")
-endif()
 
 # Create one target to run all the tests.
 add_custom_target(check-${C_LIBRARY})

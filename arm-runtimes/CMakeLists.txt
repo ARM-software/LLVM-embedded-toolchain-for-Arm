@@ -96,7 +96,6 @@ set(ENABLE_LIBC_TESTS ${ENABLE_LIBC_TESTS_def} CACHE BOOL "Enable libc tests (pi
 set(ENABLE_COMPILER_RT_TESTS ${ENABLE_COMPILER_RT_TESTS_def} CACHE BOOL "Enable compiler-rt tests.")
 set(ENABLE_LIBCXX_TESTS ${ENABLE_LIBCXX_TESTS_def} CACHE BOOL "Enable libcxx tests.")
 set(LLVM_BINARY_DIR "" CACHE PATH "Path to LLVM toolchain root to build libraries with")
-set(LIBC_HDRGEN "" CACHE PATH "Path to prebuilt lbc-hdrgen if not included in LLVM binaries set by LLVM_BINARY_DIR")
 
 # Temporary location to collect the libraries as they are built.
 set(TEMP_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/tmp_install")
@@ -585,39 +584,14 @@ if(C_LIBRARY STREQUAL llvmlibc)
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
     )
 
-    if(LIBC_HDRGEN)
-        # If libc-hdrgen is provided, there is no need to build it,
-        # but a target is still needed to satisfy the dependency.
-        add_custom_target(libc_hdrgen)
-    elseif(EXISTS ${LLVM_BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
-        set(LIBC_HDRGEN ${LLVM_BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
-        add_custom_target(libc_hdrgen)
-    else()
-        ExternalProject_Add(
-            libc_hdrgen
-            SOURCE_DIR ${llvmproject_SOURCE_DIR}/llvm
-            CMAKE_ARGS
-                -DLLVM_ENABLE_RUNTIMES=libc
-                -DLLVM_LIBC_FULL_BUILD=ON
-                -DCMAKE_BUILD_TYPE=Debug
-            BUILD_COMMAND ${CMAKE_COMMAND} --build . --target libc-hdrgen
-            INSTALL_COMMAND ${CMAKE_COMMAND} -E true
-            CONFIGURE_HANDLED_BY_BUILD TRUE
-        )
-        ExternalProject_Get_property(libc_hdrgen BINARY_DIR)
-        set(LIBC_HDRGEN ${BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
-    endif()
-
     ExternalProject_Add(
         llvmlibc
         SOURCE_DIR ${llvmproject_SOURCE_DIR}/runtimes
         INSTALL_DIR llvmlibc/install
-        DEPENDS libc_hdrgen
         CMAKE_ARGS
         ${compiler_launcher_cmake_args}
         ${common_llvmlibc_cmake_args}
         -DLIBC_TARGET_TRIPLE=${target_triple}
-        -DLIBC_HDRGEN_EXE=${LIBC_HDRGEN}
         -DLIBC_CONFIG_PATH=${LIBC_CFG_DIR}
         -DLIBC_CONF_TIME_64BIT=ON
         -DLLVM_CMAKE_DIR=${LLVM_BINARY_DIR}/lib/cmake/llvm

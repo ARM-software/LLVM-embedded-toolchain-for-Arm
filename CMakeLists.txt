@@ -350,25 +350,6 @@ if(LLVM_TOOLCHAIN_C_LIBRARY STREQUAL llvmlibc)
       COMPONENT llvm-toolchain-llvmlibc-configs
     )
 
-    # We need to build libc-hdrgen
-    ExternalProject_Add(
-        libc_hdrgen
-        SOURCE_DIR ${llvmproject_SOURCE_DIR}/llvm
-        DEPENDS ${lib_tool_dependencies}
-        CMAKE_ARGS
-            -DLLVM_ENABLE_RUNTIMES=libc
-            -DLLVM_LIBC_FULL_BUILD=ON
-            -DCMAKE_BUILD_TYPE=Debug
-        STEP_TARGETS build install
-        BUILD_COMMAND ${CMAKE_COMMAND} --build . --target libc-hdrgen
-        INSTALL_COMMAND ${CMAKE_COMMAND} -E true
-        # Always run the build command so that incremental builds are correct.
-        BUILD_ALWAYS TRUE
-        CONFIGURE_HANDLED_BY_BUILD TRUE
-    )
-    ExternalProject_Get_property(libc_hdrgen BINARY_DIR)
-    set(LIBC_HDRGEN ${BINARY_DIR}/bin/libc-hdrgen${CMAKE_EXECUTABLE_SUFFIX})
-
     # LLVM libc lacks a configuration for AArch64, but the AArch32 one works
     # fine. However, setting the configuration for both architectures to the
     # arm config directory means the baremetal config.json is never loaded,
@@ -616,7 +597,6 @@ if(NOT PREBUILT_TARGET_LIBRARIES)
         -DENABLE_PARALLEL_LIB_CONFIG=${ENABLE_PARALLEL_LIB_CONFIG}
         -DENABLE_PARALLEL_LIB_BUILD=${ENABLE_PARALLEL_LIB_BUILD}
         -DPARALLEL_LIB_BUILD_LEVELS=${PARALLEL_LIB_BUILD_LEVELS}
-        -DLIBC_HDRGEN=${LIBC_HDRGEN}
         -DFVP_INSTALL_DIR=${FVP_INSTALL_DIR}
         -DENABLE_QEMU_TESTING=${ENABLE_QEMU_TESTING}
         -DENABLE_FVP_TESTING=${ENABLE_FVP_TESTING}
