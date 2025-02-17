@@ -1,3 +1,14 @@
+> [!WARNING] 
+> This repository is deprecated!
+>
+> LLVM Embedded Toolchain for Arm is now
+> [Arm Toolchain for Embedded](https://github.com/arm/arm-toolchain/tree/arm-software/arm-software/embedded)
+> maintained in the unified Arm Toolchain [repository](https://github.com/arm/arm-toolchain)
+> hosting embedded and Linux toolchains.
+>
+> 19.1.5 is the last release of the LLVM Embedded Toolchain for Arm.
+> Use Arm Toolchain for Embedded [releases](https://github.com/arm/arm-toolchain/releases) for LLVM 20 and later.
+
 # LLVM Embedded Toolchain for Arm
 
 This repository contains build scripts and auxiliary material for building a
