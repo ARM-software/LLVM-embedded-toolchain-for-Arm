@@ -31,8 +31,8 @@ index 1184123c7710..6dc45d85927a 100644
  void PassBuilder::invokePeepholeEPCallbacks(FunctionPassManager &FPM,
                                              OptimizationLevel Level) {
    for (auto &C : PeepholeEPCallbacks)
-@@ -1940,6 +1944,18 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
-   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
+@@ -2018,6 +2022,18 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
+   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
  
    FunctionPassManager FPM;
 +
