@@ -12,8 +12,8 @@
       "tag": "main"
     },
     "picolibc": {
-      "tagType": "branch",
-      "tag": "main"
+      "tagType": "commithash",
+      "tag": "be1b69f5f5910d216c16f9fca927c1bdb4d38a51"
     },
     "newlib": {
       "tagType": "tag",
