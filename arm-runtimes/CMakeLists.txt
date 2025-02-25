@@ -390,6 +390,7 @@ if(C_LIBRARY STREQUAL picolibc)
             -Dlibdir=lib
             -Dspecsdir=none
             -Dmultilib=false
+            -Ddebug=false
             -Dtests-enable-stack-protector=false
             -Dtest-long-double=${enable_picolibc_long_double_test}
             -Dtest-machine=${TEST_EXECUTOR}
